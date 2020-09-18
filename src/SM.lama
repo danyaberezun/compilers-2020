@@ -9,7 +9,19 @@ import Util;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+    return foldl(fun ([stack, s, w], instr) {
+        -- printf("Instr: %s\n", instr.string);
+        case [instr, stack] of
+        [Binop(op), arg2:arg1:other] -> [singleton(apply(op, arg1, arg2)) +++ other, s, w] |
+        [St(x), arg:other] -> [other, s <- [x, arg], w] |
+        [Ld(x), _] -> [singleton(s(x)) +++ stack, s, w] |
+        [Read, _] -> fun (stack, s, [n, w]) {
+            [singleton(n) +++ stack, s, w]
+        } (stack, s, readWorld(w)) |
+        [Write, arg:other] -> [other, s, writeWorld(arg, w)] |
+        [Const(x), _] -> [singleton(x) +++ stack, s, w]
+        esac
+    }, c, insns)
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -21,12 +33,21 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+    return case expr of
+    Binop(op, e1, e2) -> compileExpr(e1) +++ compileExpr(e2) +++ singleton(Binop(op)) |
+    Var(x) -> singleton(Ld(x)) |
+    Const(x) -> singleton(Const(x))
+    esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+    case stmt of
+    Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2) |
+    Read(x) -> {Read, St(x)} |
+    Write(e) -> compileExpr(e) +++ singleton(Write) |
+    Assn(x, e) -> compileExpr(e) +++ singleton(St(x))
+    esac
 }

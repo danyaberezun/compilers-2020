@@ -2,10 +2,16 @@
 
 import List;
 import State;
-
+import Util;
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
+
 public fun evalExpr (st, expr) {
-  failure ("evalExpr not implemented\n")
+    -- printf("Expr: %s : %s\n", expr.string, st.string);
+    case expr of
+    Binop(op, e1, e2) -> apply(op, evalExpr(st, e1), evalExpr(st, e2)) |
+    Var(x) -> st(x) |
+    Const(x) -> x
+    esac
 }

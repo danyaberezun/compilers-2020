@@ -1,0 +1,5 @@
+src/*.o
+src/*.i
+src/*.s
+regression/test???
+regression/*.log

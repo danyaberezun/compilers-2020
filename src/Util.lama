@@ -24,3 +24,21 @@ public fun deepFlatten (l) {
   
   res [1]
 }
+
+public fun apply(op, x, y) {
+    case op of
+    "+" -> x + y |
+    "-" -> x - y |
+    "*" -> x * y |
+    "/" -> x / y |
+    "%" -> x % y |
+    "==" -> x == y |
+    "!=" -> x != y |
+    "<" -> x < y |
+    ">" -> x > y |
+    "<=" -> x <= y |
+    ">=" -> x >= y |
+    "&&" -> x && y |
+    "!!" -> x !! y
+    esac
+}
