@@ -2,10 +2,28 @@
 
 import List;
 import State;
-import Util;
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
+
+public fun apply(op, x, y) {
+    case op of
+    "+" -> x + y |
+    "-" -> x - y |
+    "*" -> x * y |
+    "/" -> x / y |
+    "%" -> x % y |
+    "==" -> x == y |
+    "!=" -> x != y |
+    "<" -> x < y |
+    ">" -> x > y |
+    "<=" -> x <= y |
+    ">=" -> x >= y |
+    "&&" -> x && y |
+    "!!" -> x !! y
+    esac
+}
+
 
 public fun evalExpr (st, expr) {
     -- printf("Expr: %s : %s\n", expr.string, st.string);
