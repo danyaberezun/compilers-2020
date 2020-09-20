@@ -18,7 +18,7 @@ public fun evalBinop (op, l, r) {
   | ">=" -> l >= r
   | "&&" -> l && r
   | "!!" -> l !! r
-  | _    -> 0
+  | _    -> failure ("failure of operation '%s'", op)
   esac
 }
 

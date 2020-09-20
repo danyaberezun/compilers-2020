@@ -18,17 +18,19 @@ fun eval (c, insns) {
         r := c[0].hd;
         l := c[0].tl.hd;
         result := evalBinop (op, l, r);
-        [{result, c[0].tl.tl}.flatten, c[1], c[2]]
+        -- printf("%d %s %d = %d\n", l, op, r, result);
+        [(result : c[0].tl.tl), c[1], c[2]]
+       
     | CONST (n)  ->
-        [{n, c[0]}.flatten, c[1], c[2]]
+        [(n : c[0]), c[1], c[2]]
     | READ ->
         local r; 
         r := readWorld(c[2]);
-        [{r[0], c[0]}.flatten, c[1], r[1]]
+        [(r[0] : c[0]), c[1], r[1]]
     | WRITE ->
         [c[0].tl, c[1], writeWorld(c[0].hd, c[2])]
     | LD (x) ->
-        [{c[1] (x), c[0]}.flatten, c[1], c[2]]
+        [(c[1] (x) : c[0]), c[1], c[2]]
     | ST (x) ->
         [c[0].tl, c[1] <- [x, c[0].hd], c[2]]
     esac
