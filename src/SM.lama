@@ -18,7 +18,7 @@ fun eval (c, insns) {
                 [(calc(op, b, a):rest), state, world]
             esac
           | Const(n) -> [(n:stack), state, world]
-          | ST(x) -> {[(state(x):stack), state, world]}
+          | ST(x) -> [(state(x):stack), state, world]
           | LD(x) -> 
             case stack of (t:rest) -> 
                [rest, state<-[x, t], world] 
