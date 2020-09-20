@@ -10,7 +10,10 @@ import Util;
 -- returns a final configuration
 fun eval (c, insns) {
 --  failure ("SM eval not implemented\n");
-  fun evalInsn (c, insn) {  
+  fun evalInsn (c, insn) {
+    printf("instruction: %s\n", insn.string);
+--    printf("BINOP -> %s\n", BINOP ("+").string);
+--    printf("fun deepFl - %s\n", deepFlatten);  
     case insn of
       BINOP (op) -> 
         c[0][1][0] := evalBinop (op, c[0][1][0], c[0][0]);
@@ -31,8 +34,15 @@ fun eval (c, insns) {
         [c[0][1], c[1] <- [x, c[0][0]], c[2]]
     esac
   }
-
-  iter (evalInsn, deepFlatten (insns))
+  
+  local flatInsns;
+  flatInsns := deepFlatten (insns);
+  printf("all instr: %s\n", flatInsns.string);
+--  iter (evalInsn, flatInsns)
+  while flatInsns.length != 0 do
+    evalInsn (flatInsns[0]);
+    flatInsns := flatInsns[1]
+  od
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
