@@ -10,8 +10,8 @@ import Util;
 -- returns a final configuration
 fun eval (c, insns) {
   fun evalInsn (c, insn) {
-    printf("curr stack:  %s\n", c[0].string);
-    printf("--->instr: %s\n", insn.string);  
+--    printf("curr stack:  %s\n", c[0].string);
+--    printf("--->instr: %s\n", insn.string);  
     case insn of
       BINOP (op) ->
         local l, r, result;
@@ -38,7 +38,7 @@ fun eval (c, insns) {
 
   local flatInsns;
   flatInsns := deepFlatten (insns);
-  printf("all instr: %s\n", flatInsns.string);
+--  printf("all instr: %s\n", flatInsns.string);
   
   while flatInsns != {} do
     c := evalInsn (c, flatInsns.hd);
