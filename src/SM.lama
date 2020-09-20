@@ -20,7 +20,9 @@ fun eval (c, insns) {
         c[0] := {n, c[0]};
         c
     | READ ->
-        [{readWorld(c[2])[0], c[0]}, c[1], readWorld(c[2])[1]]
+        local r;
+        r = readWorld(c[2]);
+        [{r[0], c[0]}, c[1], r[1]]
     | WRITE ->
         [c[0][1], c[1], writeWorld(c[0][0], c[2])]
     | LD (x) ->
