@@ -11,38 +11,51 @@ import Util;
 fun eval (c, insns) {
 --  failure ("SM eval not implemented\n");
   fun evalInsn (c, insn) {
-    printf("instruction: %s\n", insn.string);
+    printf("curr stack:  %s\n", c[0].string);
+    printf("--->instr: %s\n", insn.string);
 --    printf("BINOP -> %s\n", BINOP ("+").string);
---    printf("fun deepFl - %s\n", deepFlatten);  
+--    printf("fun deepFl - %s\n", deepFlatten);
+--    printf("curr stack:  %s\n", c[0].string);  
     case insn of
-      BINOP (op) -> 
-        c[0][1][0] := evalBinop (op, c[0][1][0], c[0][0]);
-        c[0] := c[0][1];
-        c
+      BINOP (op) ->
+        local l, r, result;
+        r := c[0].hd;
+        l := c[0].tl.hd;
+        result := evalBinop (op, l, r);
+--        c[0][1][0] := evalBinop (op, c[0][1][0], c[0][0]);
+--        c[0] := c[0][1];
+        [{result, c[0].tl.tl}.flatten, c[1], c[2]]
     | CONST (n)  ->
-        c[0] := {n, c[0]};
-        c
+--        c[0] := {n, c[0]};
+        [{n, c[0]}.flatten, c[1], c[2]]
     | READ ->
         local r; 
         r := readWorld(c[2]);
-        [{r[0], c[0]}, c[1], r[1]]
+        [{r[0], c[0]}.flatten, c[1], r[1]]
     | WRITE ->
-        [c[0][1], c[1], writeWorld(c[0][0], c[2])]
+        [c[0].tl, c[1], writeWorld(c[0].hd, c[2])]
     | LD (x) ->
-        [{c[1] (x), c[0]}, c[1], c[2]]
+        [{c[1] (x), c[0]}.flatten, c[1], c[2]]
     | ST (x) ->
-        [c[0][1], c[1] <- [x, c[0][0]], c[2]]
+        [c[0].tl, c[1] <- [x, c[0].hd], c[2]]
     esac
   }
-  
+
+--  evalInsn (c, B);  -- doesnt work
   local flatInsns;
+--  evalInsn (c, B);  -- works 
   flatInsns := deepFlatten (insns);
   printf("all instr: %s\n", flatInsns.string);
---  iter (evalInsn, flatInsns)
-  while flatInsns.length != 0 do
-    evalInsn (flatInsns[0]);
-    flatInsns := flatInsns[1]
-  od
+--  iter (evalInsn, flatInsns[0])
+--  flatInsns := flatInsns[0];
+  printf("first insn: %s\n", flatInsns.hd.string);
+  printf("others insns: %s\n", flatInsns.tl.string);
+  
+  while flatInsns != {} do
+    c := evalInsn (c, flatInsns.hd);
+    flatInsns := flatInsns.tl
+  od;
+  c
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
