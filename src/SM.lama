@@ -9,7 +9,37 @@ import Util;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+  case insns of (x:tail) -> {
+    local nconf;
+    nconf := case c of [stack, state, world] ->
+      case x of 
+          Binop(op) ->
+            case stack of (a:b:rest) ->
+                [(calc(op, b, a):rest), state, world]
+            esac
+          | Const(n) -> [(n:stack), state, world]
+          | ST(x) -> {[(state(x):stack), state, world]}
+          | LD(x) -> 
+            case stack of (t:rest) -> 
+               [rest, state<-[x, t], world] 
+            esac
+          
+          | Read -> case readWorld(world) of [n, nworld] -> 
+                [(n:stack), state, nworld]
+            esac
+          | Write ->
+            case stack of (t:rest) -> {
+              local nworld;
+              nworld := writeWorld(t, world);
+              [rest, state, nworld]
+            }
+            esac
+      esac
+    esac;
+    eval(nconf, tail)
+  }
+  | _ -> c
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -21,12 +51,27 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+   Const(n) -> singleton(Const(n))
+  | Var(x) -> singleton(ST(x))
+  | Binop(op, lefto, righto) -> {
+    local leftr, rightr;
+    leftr := compileExpr(lefto);
+    rightr := compileExpr(righto);
+    leftr +++ rightr +++ singleton(Binop(op))
+  }
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of 
+    Read(x) -> {Read, LD(x)}
+    | Write(expr) -> compileExpr(expr) +++ singleton(Write)
+    | Assn(x, expr) -> compileExpr(expr) +++ singleton(LD(x))
+    | Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2)
+    | Skip -> {}
+  esac
 }

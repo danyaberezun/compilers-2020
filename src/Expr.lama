@@ -3,9 +3,28 @@
 import List;
 import State;
 
+public fun calc(op, lefto, righto) {
+  case op of "+" -> lefto + righto
+           | "-" -> lefto - righto
+           | "*" -> lefto * righto
+           | "/" -> lefto / righto
+           | "%" -> lefto % righto
+           | "<" -> lefto < righto
+           | "<=" -> lefto <= righto
+           | "==" -> lefto == righto
+           | "!=" -> lefto != righto
+           | ">=" -> lefto >= righto
+           | ">" -> lefto > righto
+  esac
+}
+
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
 public fun evalExpr (st, expr) {
-  failure ("evalExpr not implemented\n")
+  case expr of 
+    Const(n) -> n
+    | Var(x) -> st(x)
+    | Binop(op, lefto, righto) -> calc(op, evalExpr(st, lefto), evalExpr(st, righto))
+  esac
 }
