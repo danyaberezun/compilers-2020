@@ -9,24 +9,17 @@ import Util;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c, insns) {
---  failure ("SM eval not implemented\n");
   fun evalInsn (c, insn) {
     printf("curr stack:  %s\n", c[0].string);
-    printf("--->instr: %s\n", insn.string);
---    printf("BINOP -> %s\n", BINOP ("+").string);
---    printf("fun deepFl - %s\n", deepFlatten);
---    printf("curr stack:  %s\n", c[0].string);  
+    printf("--->instr: %s\n", insn.string);  
     case insn of
       BINOP (op) ->
         local l, r, result;
         r := c[0].hd;
         l := c[0].tl.hd;
         result := evalBinop (op, l, r);
---        c[0][1][0] := evalBinop (op, c[0][1][0], c[0][0]);
---        c[0] := c[0][1];
         [{result, c[0].tl.tl}.flatten, c[1], c[2]]
     | CONST (n)  ->
---        c[0] := {n, c[0]};
         [{n, c[0]}.flatten, c[1], c[2]]
     | READ ->
         local r; 
@@ -41,15 +34,9 @@ fun eval (c, insns) {
     esac
   }
 
---  evalInsn (c, B);  -- doesnt work
   local flatInsns;
---  evalInsn (c, B);  -- works 
   flatInsns := deepFlatten (insns);
   printf("all instr: %s\n", flatInsns.string);
---  iter (evalInsn, flatInsns[0])
---  flatInsns := flatInsns[0];
-  printf("first insn: %s\n", flatInsns.hd.string);
-  printf("others insns: %s\n", flatInsns.tl.string);
   
   while flatInsns != {} do
     c := evalInsn (c, flatInsns.hd);
@@ -67,7 +54,6 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
---  failure ("compileExpr not implemented\n")
   case expr of
     Const (n)        -> {CONST (n)}
   | Var (x)          -> {LD (x)}
@@ -79,7 +65,6 @@ fun compileExpr (expr) {
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
---  failure ("compileSM not implemented\n")
   case stmt of
     Assn (x, e)  -> {compileExpr (e), ST (x)}
   | Read (x)     -> {READ, ST (x)}
