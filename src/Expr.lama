@@ -63,8 +63,28 @@ fun evalList (c, exprs) {
   esac
 }
 
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+public fun evalExpr (st, expr) {
+  case expr of
+    Binop(op, l, r) -> (
+      case op of
+        "+"  -> infix + |
+        "-"  -> infix - |
+        "*"  -> infix * |
+        "/"  -> infix / |
+        "%"  -> infix % |
+        "==" -> infix == |
+        "!=" -> infix != |
+        "<"  -> infix < |
+        "<=" -> infix <= |
+        ">"  -> infix > |
+        ">=" -> infix >= |
+        "&&" -> infix && |
+        "!!" -> infix !!
+      esac 
+    )(evalExpr(st, l), evalExpr(st, r)) |
+    Var(x) -> st(x) |
+    Const(n) -> n
+  esac
 }
 
 

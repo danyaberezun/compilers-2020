@@ -59,8 +59,30 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (c, insns) {
+  fun helper(c@[st, state, w], i) {
+    case i of
+        BINOP(op) -> case st of 
+          a:b:r -> [(evalExpr(state, Binop(op, Const(a), Const(b)))):r, state, w] 
+        esac |
+        CONST(n)  -> [n:st, state, w] |
+        READ ->
+          local tmp;
+          tmp := readWorld(w);
+          [tmp[0]:st, state, tmp[1]] |
+        WRITE -> case st of 
+          a:r -> [r, state, writeWorld(a, w)] 
+        esac |
+        LD(x) -> [state(x) : st, state, w] |
+        ST(x) -> case st of 
+          a:r -> [r, state <- [x, a], w] 
+        esac
+      esac
+  }
+  case insns of
+    {} -> c |
+    i:is -> eval((helper(c, i)), is)
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -98,9 +120,28 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list of stack machine
+-- Takes an expression, returns a list (of, possibly, lists)
+-- of stack machine instructions
+fun compileExpr (expr) {
+  case expr of
+    Binop(op, l, r) -> {compileExpr(r), compileExpr(l), BINOP(op)} |
+    Var(x) -> LD(x) |
+    Const(n) -> CONST(n)
+  esac
+}
+
+-- Compiles a statement into a stack machine code.
+-- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  fun helper(stmt) { 
+    case stmt of
+      Skip -> {} |
+      Assn(x, e) -> {compileExpr(e), ST(x)} |
+      Read(x) -> {READ, ST(x)} |
+      Write(e) -> {compileExpr(e), WRITE} |
+      Seq(s1, s2) -> {helper(s1), helper(s2)}
+    esac
+  }
+  deepFlatten(helper(stmt))
 }
