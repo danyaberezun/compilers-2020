@@ -7,5 +7,18 @@ import State;
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
 public fun evalExpr (st, expr) {
-  failure ("evalExpr not implemented\n")
+  local evaluated = case expr of
+      Var (name@_) -> st(name)
+    | Const (val@_) -> val
+    | Binop (op@_, expr1@_, expr2@_) -> case op of
+        "*" -> evalExpr(st, expr1) * evalExpr(st, expr2)
+      | "+" -> evalExpr(st, expr1) + evalExpr(st, expr2)
+      | "-" -> evalExpr(st, expr1) - evalExpr(st, expr2)
+      | "/" -> evalExpr(st, expr1) / evalExpr(st, expr2)
+      | "%" -> evalExpr(st, expr1) % evalExpr(st, expr2)
+    esac
+  esac;
+  -- printf ("Expression ""%s"" evaluated to ""%s""\n", expr.string, evaluated.string);
+  evaluated
+  --failure ("evalExpr not implemented\n")
 }
