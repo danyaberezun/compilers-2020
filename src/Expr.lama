@@ -11,11 +11,19 @@ public fun evalExpr (st, expr) {
       Var (name@_) -> st(name)
     | Const (val@_) -> val
     | Binop (op@_, expr1@_, expr2@_) -> case op of
-        "*" -> evalExpr(st, expr1) * evalExpr(st, expr2)
-      | "+" -> evalExpr(st, expr1) + evalExpr(st, expr2)
-      | "-" -> evalExpr(st, expr1) - evalExpr(st, expr2)
-      | "/" -> evalExpr(st, expr1) / evalExpr(st, expr2)
-      | "%" -> evalExpr(st, expr1) % evalExpr(st, expr2)
+        "*"  -> evalExpr(st, expr1) * evalExpr(st, expr2)
+      | "+"  -> evalExpr(st, expr1) + evalExpr(st, expr2)
+      | "-"  -> evalExpr(st, expr1) - evalExpr(st, expr2)
+      | "/"  -> evalExpr(st, expr1) / evalExpr(st, expr2)
+      | "%"  -> evalExpr(st, expr1) % evalExpr(st, expr2)
+      | "==" -> evalExpr(st, expr1) == evalExpr(st, expr2)
+      | "!=" -> evalExpr(st, expr1) != evalExpr(st, expr2)
+      | "<"  -> evalExpr(st, expr1) < evalExpr(st, expr2)
+      | "<=" -> evalExpr(st, expr1) <= evalExpr(st, expr2)
+      | ">"  -> evalExpr(st, expr1) > evalExpr(st, expr2)
+      | ">=" -> evalExpr(st, expr1) >= evalExpr(st, expr2)
+      | "&&" -> evalExpr(st, expr1) && evalExpr(st, expr2)
+      | "!!" -> evalExpr(st, expr1) !! evalExpr(st, expr2)
     esac
   esac;
   -- printf ("Expression ""%s"" evaluated to ""%s""\n", expr.string, evaluated.string);
