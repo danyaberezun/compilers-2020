@@ -4,7 +4,25 @@ import List;
 import World;
 import State;
 import Expr;
-import Util;
+import Buffer;
+import Fun;
+
+-- Stack code printer. Takes a list of SM instructions, return its
+-- string representation.
+public fun showSMInsn (i) {
+  case i of
+    READ      -> sprintf ("READ")
+  | WRITE     -> sprintf ("WRITE")
+  | BINOP (s) -> sprintf ("BINOP %s", s)
+  | LD    (x) -> sprintf ("LD %s", x)
+  | ST    (x) -> sprintf ("ST %s", x)
+  | CONST (n) -> sprintf ("CONST %d", n)
+  esac
+}
+
+public fun showSM (prg) {
+  map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
+}
 
 public fun binopCalc (op, a, b) {
 	case op of
@@ -30,13 +48,13 @@ fun eval (c, insns) {
 	if size(insns) <= 0 then c 
 	else
 		case insns[0] of
-			{"BINOP", op} -> eval([singleton(binopCalc(op, c[0][1][0], c[0][0])) +++ c[0][1][1], c[1], c[2]], insns[1])
-		  | {"CONST", n}  -> eval([singleton(n) +++ c[0], c[1], c[2]], insns[1])
-		  | {"LD", x}     -> eval([singleton(c[1](x)) +++ c[0], c[1], c[2]], insns[1])
-		  | {"ST", x}     -> eval([c[0][1], c[1] <- [x, c[0][0]], c[2]], insns[1])
-		  | "READ"        -> local r = readWorld(c[2]); 
+			BINOP(op) -> eval([singleton(binopCalc(op, c[0][1][0], c[0][0])) +++ c[0][1][1], c[1], c[2]], insns[1])
+		  | CONST(n)  -> eval([singleton(n) +++ c[0], c[1], c[2]], insns[1])
+		  | LD(x)     -> eval([singleton(c[1](x)) +++ c[0], c[1], c[2]], insns[1])
+		  | ST(x)     -> eval([c[0][1], c[1] <- [x, c[0][0]], c[2]], insns[1])
+		  | READ        -> local r = readWorld(c[2]); 
 		 					 eval([singleton(r[0]) +++ c[0], c[1], r[1]], insns[1])
-		  | "WRITE"       -> local r = writeWorld(c[0][0], c[2]); eval([c[0][1], c[1], r], insns[1])
+		  | WRITE       -> local r = writeWorld(c[0][0], c[2]); eval([c[0][1], c[1], r], insns[1])
 		  | _             -> printf("??\n"); c
 		esac
 	fi
@@ -52,9 +70,9 @@ public fun evalSM (input, insns) {
 -- of stack machine instructions
 fun compileExpr (expr) {
 	case expr of
-		Var(x)           -> singleton({"LD", x})
-	  | Const(n)         -> singleton({"CONST", n})
-	  | Binop(c, e1, e2) -> compileExpr(e1) +++ compileExpr(e2) +++ singleton({"BINOP", c})
+		Var(x)           -> singleton(LD(x))
+	  | Const(n)         -> singleton(CONST(n))
+	  | Binop(c, e1, e2) -> compileExpr(e1) +++ compileExpr(e2) +++ singleton(BINOP(c))
 	  | _                -> singleton("Can't recognize expr")
 	esac
 }
@@ -64,9 +82,9 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
 	case stmt of
-	    Assn(x, e)       -> compileExpr(e) +++ singleton({"ST", x})
-	  | Read(x)          -> singleton("READ") +++ singleton({"ST", x})
-	  | Write(e)         -> compileExpr(e) +++ singleton("WRITE")
+	    Assn(x, e)       -> compileExpr(e) +++ singleton(ST(x))
+	  | Read(x)          -> singleton(READ) +++ singleton(ST(x))
+	  | Write(e)         -> compileExpr(e) +++ singleton(WRITE)
 	  | Seq(s1, s2)      -> compileSM(s1) +++ compileSM(s2)
 	  | _                -> singleton("Can't recognize stmt instruction")
 	esac
