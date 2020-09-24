@@ -34,13 +34,13 @@ fun eval (c, insns) {
 	else
 		local i = insns[1], s = c[0], d = c[1], w = c[2];
 		case insns[0] of
-			  {"LD", v}     -> eval([singleton(d(v)) +++ s, d, w], i)
-			| {"CONST", ct} -> eval([singleton(ct) +++ s, d, w], i)
-			| {"BINOP", op} -> eval([singleton(evalBinop(op, s[1][0], s[0])) +++ s[1][1], d, w], i)
-			| "READ"        -> local v = readWorld(w);
+			  LD(v)     -> eval([singleton(d(v)) +++ s, d, w], i)
+			| CONST(ct) -> eval([singleton(ct) +++ s, d, w], i)
+			| BINOP(op) -> eval([singleton(evalBinop(op, s[1][0], s[0])) +++ s[1][1], d, w], i)
+			| READ      -> local v = readWorld(w);
 							eval([singleton(v[0]) +++ s, d, v[1]], i)
-			| "WRITE"       -> eval([s[1], d, writeWorld(s[0], w)], i)
-			| {"ST", v}     -> eval([s[1], d <- [v, s[0]], w], i)
+			| WRITE     -> eval([s[1], d, writeWorld(s[0], w)], i)
+			| ST(v)     -> eval([s[1], d <- [v, s[0]], w], i)
 		esac
 	fi
 }
@@ -73,9 +73,9 @@ public fun evalSM (input, insns) {
 -- of stack machine instructions
 fun compileExpr (expr) {
 	case expr of
-		  Var (v)            -> singleton({"LD", v})
-		| Const (c)          -> singleton({"CONST", c})
-		| Binop (op, s1, s2) -> compileExpr(s1) +++ compileExpr(s2) +++ singleton({"BINOP", op})
+		  Var (v)            -> singleton(LD(v))
+		| Const (c)          -> singleton(CONST(c))
+		| Binop (op, s1, s2) -> compileExpr(s1) +++ compileExpr(s2) +++ singleton(BINOP(op))
 	esac
 }
 
@@ -84,9 +84,9 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
 	case stmt of
-		  Read (v)      -> singleton("READ") +++ singleton({"ST", v})
-		| Write (s)     -> compileExpr(s) +++ singleton("WRITE")
-		| Assn (v, s)   -> compileExpr (s) +++ singleton({"ST", v})
+		  Read (v)      -> singleton(READ) +++ singleton(ST(v))
+		| Write (s)     -> compileExpr(s) +++ singleton(WRITE)
+		| Assn (v, s)   -> compileExpr (s) +++ singleton(ST(v))
 		| Seq (s1, s2)  -> compileSM (s1) +++ compileSM(s2)
 	esac
 }

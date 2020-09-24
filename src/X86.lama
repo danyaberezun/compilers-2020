@@ -281,13 +281,47 @@ fun compile (env, code) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
           READ ->
-            case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
+			case env.allocate of
+				[s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
+			esac             
         | WRITE ->
-            case env.pop of
-              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
-            esac
+			case env.pop of
+				[s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
+			esac
+		| ST (v) -> 
+			case env.addGlobal(v).pop of
+				[s, env] -> [env, code <+> move(s, env.loc(v))] 
+			esac
+		| LD (v) ->
+			case env.addGlobal(v).allocate of
+				[s, env] -> [env, code <+> move(env.loc(v), s)]
+			esac
+		| CONST (n) ->
+			case env.allocate of
+				[s, env] -> [env, code <+ Mov (L(n), s)]
+			esac
+		| BINOP (op) ->
+			case env.pop2 of
+				[x, y, env] ->
+					case env.allocate of
+						[s, env] ->
+							case op of
+								  "*"  -> [env, code <+ Binop(op, x, y)]
+								| "+"  -> [env, code <+ Binop(op, x, y)]
+								| "-"  -> [env, code <+ Binop(op, x, y)]
+								| "&&" -> [env, code <+ Binop(op, x, y)]
+								| "!!" -> [env, code <+ Binop(op, x, y)]
+								| "%"  -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
+								| "/"  -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
+								| "<"  -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+								| "<=" -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+								| "==" -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+								| "!=" -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+								| ">=" -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+								| ">"  -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+							esac
+					esac
+			esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
