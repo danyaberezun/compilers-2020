@@ -30,14 +30,14 @@ fun eval (c, insns) {
     return foldl(fun ([stack, s, w], instr) {
         -- printf("Instr: %s\n", instr.string);
         case [instr, stack] of
-        [Binop(op), arg2:arg1:other] -> [singleton(apply(op, arg1, arg2)) +++ other, s, w] |
-        [St(x), arg:other] -> [other, s <- [x, arg], w] |
-        [Ld(x), _] -> [singleton(s(x)) +++ stack, s, w] |
-        [Read, _] -> fun (stack, s, [n, w]) {
+        [BINOP(op), arg2:arg1:other] -> [singleton(apply(op, arg1, arg2)) +++ other, s, w] |
+        [ST(x), arg:other] -> [other, s <- [x, arg], w] |
+        [LD(x), _] -> [singleton(s(x)) +++ stack, s, w] |
+        [READ, _] -> fun (stack, s, [n, w]) {
             [singleton(n) +++ stack, s, w]
         } (stack, s, readWorld(w)) |
-        [Write, arg:other] -> [other, s, writeWorld(arg, w)] |
-        [Const(x), _] -> [singleton(x) +++ stack, s, w]
+        [WRITE, arg:other] -> [other, s, writeWorld(arg, w)] |
+        [CONST(x), _] -> [singleton(x) +++ stack, s, w]
         esac
     }, c, insns)
 }
@@ -52,9 +52,9 @@ public fun evalSM (input, insns) {
 -- of stack machine instructions
 fun compileExpr (expr) {
     return case expr of
-    Binop(op, e1, e2) -> compileExpr(e1) +++ compileExpr(e2) +++ singleton(Binop(op)) |
-    Var(x) -> singleton(Ld(x)) |
-    Const(x) -> singleton(Const(x))
+    Binop(op, e1, e2) -> compileExpr(e1) +++ compileExpr(e2) +++ singleton(BINOP(op)) |
+    Var(x) -> singleton(LD(x)) |
+    Const(x) -> singleton(CONST(x))
     esac
 }
 
@@ -64,8 +64,8 @@ fun compileExpr (expr) {
 public fun compileSM (stmt) {
     case stmt of
     Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2) |
-    Read(x) -> {Read, St(x)} |
-    Write(e) -> compileExpr(e) +++ singleton(Write) |
-    Assn(x, e) -> compileExpr(e) +++ singleton(St(x))
+    Read(x) -> {READ, ST(x)} |
+    Write(e) -> compileExpr(e) +++ singleton(WRITE) |
+    Assn(x, e) -> compileExpr(e) +++ singleton(ST(x))
     esac
 }

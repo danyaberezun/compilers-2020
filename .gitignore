@@ -1,7 +1,9 @@
-src/*.o
-src/*.i
-src/*.s
+*.o
+*.i
+*.s
+*.run
 regression/test???
 regression/*.log
 regression/tmp.i
 regression/tmp.s
+regression/tmp.sm

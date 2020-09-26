@@ -23,6 +23,7 @@ fun eval (c@[s, w], stmt) {
     Write(e) -> [s, writeWorld(evalExpr(s, e), w)] |
     Assn(x, e) -> [s <- [x, evalExpr(s, e)], w]
     esac
+}
 
 -- Evaluates a program with a given input and returns an output
 public fun evalStmt (input, stmt) {
