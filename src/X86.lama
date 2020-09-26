@@ -272,6 +272,20 @@ fun suffix (op) {
   esac
 }
 
+
+fun isCompareOperation(op)
+{
+  case op of
+    "<"  -> 1
+  | "<=" -> 1
+  | "==" -> 1
+  | "!=" -> 1
+  | ">=" -> 1
+  | ">"  -> 1
+  | _    -> 0
+  esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -288,6 +302,31 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST(n) -> 
+			case env.allocate of
+			  [s, env] -> [env, code <+ Mov (L(n), s)]
+			esac
+		| LD(x) ->
+			case env.addGlobal(x).allocate of
+			  [s, env] -> [env, code <+> move (env.loc(x), s) ]
+			esac
+		| ST(x) ->
+			case env.addGlobal(x).pop of
+			  [s, env] -> [env, code <+> move (s, env.loc(x))]
+			esac
+		| BINOP(op) ->
+			case env.pop2 of
+			  [s1, s2, env] ->
+				case env.allocate of
+				  [s, env] ->
+					case [op, isCompareOperation(op)] of
+					  ["/", 0] -> [env, code <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(eax, s)]
+					| ["%", 0] -> [env, code <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(edx, s)]
+					| [ _ , 1] -> [env, code <+ Binop("cmp", s1, s2) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+					| [ _ , 0] -> [env, code <+ Binop(op, s1, s2) <+> move(s2, s)]
+					esac
+				esac
+			esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
