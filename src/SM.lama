@@ -8,8 +8,39 @@ import Util;
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (configuration, commands) {
+  case commands of
+    {} -> return configuration
+  | command:commands -> return eval (eval1 (configuration, command), commands)
+  esac
+}
+
+fun eval1 (configuration, command) {
+  local stack = configuration[0];
+  local state = configuration[1];
+  local world = configuration[2];
+  case command of
+    Binop (op) ->
+      case stack of value2:value1:stack2 ->
+        local value = evalBinop (op, value1, value2);
+        return [value:stack2, state, world]
+      esac
+  | Const (value) -> return [value:stack, state, world]
+  | Read ->
+      case readWorld (world) of
+        [value, world2] -> return [value:stack, state, world2]
+      esac
+  | Write ->
+      case stack of value:stack2 ->
+        local world2 = writeWorld (value, world);
+        return [stack2, state, world2]
+      esac
+  | Load (var) -> [state (var) : stack, state, world]
+  | Store (var) ->
+    case stack of value:stack2 ->
+      [stack2, state <- [var, value], world]
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -21,12 +52,21 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+    Var (var) -> singleton (Load (var))
+  | Const (value) -> singleton (Const (value))
+  | Binop (op, expr1, expr2) -> compileExpr (expr1) +++ compileExpr (expr2) +++ singleton (Binop (op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of
+    Seq (stmt1, stmt2) -> compileSM (stmt1) +++ compileSM (stmt2)
+  | Read (var) -> {Read, Store (var)}
+  | Write (expr) -> compileExpr (expr) +++ singleton (Write)
+  | Assn (var, expr) -> compileExpr (expr) +++ singleton (Store (var))
+  esac
 }
