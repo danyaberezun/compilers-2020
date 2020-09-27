@@ -27,7 +27,19 @@ public fun showSM (prg) {
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+  case insns of
+    {} -> c
+  | i : is -> case c of [stack, state, w] -> 
+        case i of 
+          CONST (n) -> [n : stack, state, w]
+        | BINOP (op) -> case stack of lhs : rhs : t ->  [evalOp (op, lhs, rhs) : t, state, w] esac
+        | LD (x) -> [state (x) : stack, state, w]
+        | ST (x) -> case stack of h : t -> [t, state <- [x, h], w] esac
+        | READ -> case readWorld(w) of [h, w1] -> [h : stack, state, w1] esac
+        | WRITE -> case stack of h : t -> [t, state, writeWorld (h, w)] esac
+        esac.eval(is)
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -39,12 +51,24 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of 
+    Var (x) -> LD (x)
+  | Const (n) -> CONST (n)
+  | Binop(op, lhs, rhs) -> {compileExpr(rhs), compileExpr(lhs), BINOP (op)}
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  fun compileImpl(stmt) {
+      case stmt of
+        Read (x) -> {READ, ST (x)}
+      | Write (e) -> {compileExpr (e), WRITE}
+      | Assn (x, e) -> {compileExpr (e), ST (x)}
+      | Seq (s1, s2) -> {compileImpl (s1), compileImpl (s2)}
+      esac
+  }
+  flatten (compileImpl (stmt))
 }
