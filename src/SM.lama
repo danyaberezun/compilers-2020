@@ -27,7 +27,44 @@ public fun showSM (prg) {
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+  -- example of upcoming instructions:
+  -- {READ, ST ("x"), READ, ST ("y"), LD ("x"), LD ("y"), BINOP ("*"), CONST (3), BINOP ("*"), ST ("z"), LD ("z"), WRITE}
+
+  fun applyOp(op, v1, v2) {
+      case op of
+              "*"  -> v1 * v2
+            | "+"  -> v1 + v2
+            | "-"  -> v1 - v2
+            | "/"  -> v1 / v2
+            | "%"  -> v1 % v2
+            | "==" -> v1 == v2
+            | "!=" -> v1 != v2
+            | "<"  -> v1 < v2
+            | "<=" -> v1 <= v2
+            | ">"  -> v1 > v2
+            | ">=" -> v1 >= v2
+            | "&&" -> v1 && v2
+            | "!!" -> v1 !! v2
+      esac
+  }
+
+  fun evalInstruction(c, instruction) {
+    -- printf ("SM instruction to eval: ""%s""\n", instruction.string);
+    case instruction of
+        READ -> local res = readWorld(c[2]); -- pair (value * world)
+              [res[0]:c[0], c[1], res[1]]
+      | WRITE -> case c[0] of v:vs -> [vs, c[1], writeWorld(v, c[2])] esac
+      | LD (name@_) -> [(c[1](name)):c[0], c[1], c[2]]
+      | ST (name@_) -> case c[0] of v:vs -> [vs, c[1] <- [name, v], c[2]] esac
+      | BINOP (op@_) -> case c[0] of v2:v1:vs -> [applyOp(op, v1, v2):vs, c[1], c[2]] esac
+      | CONST (val@_) -> [val:c[0], c[1], c[2]]
+    esac
+  }
+
+  case insns of
+      instruction:continuation -> eval(evalInstruction(c, instruction), continuation)
+    | _ -> c
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -39,12 +76,31 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+      Var (name@_) -> singleton(LD (name))
+    | Const (val@_) -> singleton(CONST (val))
+    | Binop (op@_, expr1@_, expr2@_) -> compileExpr(expr1) +++ compileExpr(expr2) +++ singleton(BINOP (op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+
+  -- Compiles a single statement from sequential composition
+  fun complieSMSingleStmt (stmt) {
+    -- printf ("Statement to compile to SM: ""%s""\n", stmt.string);
+    case stmt of
+        Read (name@_) -> {READ, ST (name)}
+      | Write (expr@_) -> compileExpr(expr) +++ singleton(WRITE)
+      | Assn (name@_, expr@_) -> compileExpr(expr) +++ singleton(ST (name))
+    esac
+  }
+
+  -- printf ("Compile statement of stack machine: ""%s""\n", stmt.string);
+  case stmt of
+      Seq (next_stmt@_, continuation@_) -> complieSMSingleStmt(next_stmt) +++ compileSM(continuation)
+    | next_stmt@_ -> complieSMSingleStmt(next_stmt)
+  esac
 }
