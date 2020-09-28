@@ -46,10 +46,10 @@ fun evalStep (c, insns) {
     case insns[0] of
       READ           -> local reader = readWorld(c[2]); [singleton(reader[0]) +++ c[0], c[1], reader[1]]
       |  WRITE       -> [c[0][1], c[1], writeWorld(c[0][0], c[2])]
-      |  BINOP(s1) -> [singleton(computeExpr(s1,c[0][1][0],c[0][0])) +++ c[0][1][1], c[1], c[2]]
-      |  CONST(s1) -> [singleton(s1) +++ c[0], c[1], c[2]]
-      |  LD(s1)    -> [singleton(c[1](s1)) +++ c[0], c[1], c[2]]
-      |  ST(s1)    -> [c[0][1], c[1] <- [s1, c[0][0]], c[2]]
+      |  BINOP(s1)   -> [singleton(computeExpr(s1,c[0][1][0],c[0][0])) +++ c[0][1][1], c[1], c[2]]
+      |  CONST(n)    -> [singleton(n) +++ c[0], c[1], c[2]]
+      |  LD(x)       -> [singleton(c[1](x)) +++ c[0], c[1], c[2]]
+      |  ST(x)       -> [c[0][1], c[1] <- [x, c[0][0]], c[2]]
     esac
 }
 
