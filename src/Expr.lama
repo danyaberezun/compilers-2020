@@ -3,9 +3,36 @@
 import List;
 import State;
 
+fun binop(op, l, r){
+	case op of
+
+		  "+"  -> (l + r)
+		| "-"  -> (l - r)
+		| "*"  -> (l * r)
+		| "/"  -> (l / r)
+		| "%"  -> (l % r)
+		| "==" -> (l == r)
+		| "!=" -> (l != r)
+		| ">"  -> (l > r)
+		| ">=" -> (l >= r)
+		| "<"  -> (l < r)
+		| "<=" -> (l <= r)
+		| "&&" -> (l && r)
+		| "!!" -> (l !! r)
+
+	esac
+
+}
+
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
 public fun evalExpr (st, expr) {
-  failure ("evalExpr not implemented\n")
+  case expr of
+
+  	  Var 	(x) 		-> st(x)
+  	| Const (n) 		-> n
+  	| Binop (op, l, r)  -> binop(op, evalExpr(st, l), evalExpr(st, r))
+
+  esac
 }
