@@ -64,11 +64,18 @@ public fun program () {
   PROGRAM_BODY
 }
 
+fun state (x) {
+  Read (x)
+}
+
+
 local input = reverse (fix (fun (f) {fun (acc) {case readLine () of #unboxed -> acc | arg -> f (stringInt (arg) : acc) esac}}) ({}));
 
 iter (fun (x) {printf ("%d\n", x)},
       case sysargs[1] of
-        "-i" -> evalStmt (input, program ())
-      | "-s" -> evalSM (input, compileSM (program ()))
+--        "-i" -> evalStmt (input, program ())
+--      | "-s" -> evalSM (input, compileSM (program ()))
+	  "-i" -> evalExpr (input, program ())
+	| _ -> failure ("Invalid compiler flag\n")
       esac
      )
