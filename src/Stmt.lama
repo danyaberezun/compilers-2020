@@ -30,6 +30,7 @@ fun eval (c, stmt) {
                          [c[0] <- [name, res[0]], res[1]]
       | Write (expr@_) -> [c[0], writeWorld(evalExpr(c[0], expr), c[1])]
       | Assn (name@_, expr@_) -> [c[0] <- [name, evalExpr(c[0], expr)], c[1]]
+      | Skip -> c
     esac
   }
 

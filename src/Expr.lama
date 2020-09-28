@@ -35,5 +35,4 @@ public fun evalExpr (st, expr) {
   esac;
   -- printf ("Expression ""%s"" evaluated to ""%s""\n", expr.string, evaluated.string);
   evaluated
-  --failure ("evalExpr not implemented\n")
 }
