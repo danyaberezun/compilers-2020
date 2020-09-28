@@ -31,21 +31,21 @@ fun eval (c, insns) {
     local nconf;
     nconf := case c of [stack, state, world] ->
       case x of 
-          Binop(op) ->
+          BINOP(op) ->
             case stack of (a:b:rest) ->
                 [(calc(op, b, a):rest), state, world]
             esac
-          | Const(n) -> [(n:stack), state, world]
+          | CONST(n) -> [(n:stack), state, world]
           | ST(x) -> [(state(x):stack), state, world]
           | LD(x) -> 
             case stack of (t:rest) -> 
                [rest, state<-[x, t], world] 
             esac
           
-          | Read -> case readWorld(world) of [n, nworld] -> 
+          | READ -> case readWorld(world) of [n, nworld] -> 
                 [(n:stack), state, nworld]
             esac
-          | Write ->
+          | WRITE ->
             case stack of (t:rest) -> {
               local nworld;
               nworld := writeWorld(t, world);
@@ -70,13 +70,13 @@ public fun evalSM (input, insns) {
 -- of stack machine instructions
 fun compileExpr (expr) {
   case expr of
-   Const(n) -> singleton(Const(n))
+   Const(n) -> singleton(CONST(n))
   | Var(x) -> singleton(ST(x))
   | Binop(op, lefto, righto) -> {
     local leftr, rightr;
     leftr := compileExpr(lefto);
     rightr := compileExpr(righto);
-    leftr +++ rightr +++ singleton(Binop(op))
+    leftr +++ rightr +++ singleton(BINOP(op))
   }
   esac
 }
@@ -86,8 +86,8 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
   case stmt of 
-    Read(x) -> {Read, LD(x)}
-    | Write(expr) -> compileExpr(expr) +++ singleton(Write)
+    Read(x) -> {READ, LD(x)}
+    | Write(expr) -> compileExpr(expr) +++ singleton(WRITE)
     | Assn(x, expr) -> compileExpr(expr) +++ singleton(LD(x))
     | Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2)
     | Skip -> {}

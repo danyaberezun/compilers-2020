@@ -5,6 +5,7 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
+import Util;
 
 -- Assembler language interface
 -- The registers: 
@@ -287,6 +288,32 @@ fun compile (env, code) {
         | WRITE ->
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
+            esac
+        | CONST(n) -> 
+            case env.allocate of
+               [s, env] -> [env, code <+> move(L(n), s)]
+            esac
+        | ST(x) ->
+            case env.addGlobal(x).allocate of
+               [s, env] -> [env, code <+> move(env.loc(x), s)]
+            esac
+        | LD(x) ->
+            case env.addGlobal(x).pop of 
+                [s, env] -> [env, code <+> move(s, env.loc(x))]
+            esac
+        | BINOP(op) ->
+            case env.pop2 of
+                [a, b, env] -> case env.allocate of [n, newEnv] ->
+                    if ({"==", ">", "<", "!=", ">=", "<="}.contains(op)) then
+                        [newEnv, code <+ Binop("cmp", a, b) <+ Set(suffix(op), "%al") <+> move(eax, n)]
+                    elif (eq(op, "/")) then
+                        [newEnv, code <+> move(b, eax) <+ Cltd <+ IDiv(a) <+> move(eax, n)]
+                    elif (eq(op, "%")) then
+                        [newEnv, code <+> move(b, eax) <+ Cltd <+ IDiv(a) <+> move(edx, n)]
+                    else
+                        [newEnv, code <+ Binop(op, a, b) <+> move(b, n)]
+                    fi
+                 esac
             esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
