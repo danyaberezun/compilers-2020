@@ -58,7 +58,7 @@ fun insnString (insn) {
     | "&&"  -> "andl"
     | "!!"  -> "orl" 
     | "^"   -> "xorl"
-    | "cmp" -> "cmpl"
+    | _ -> "cmpl"
     esac
   }
 
@@ -269,6 +269,7 @@ fun suffix (op) {
   | "!=" -> "ne"
   | ">=" -> "ge"
   | ">"  -> "g"
+  | _ -> None
   esac
 }
 
@@ -288,8 +289,34 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST (n) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move (L(n), s)]
+            esac
+        | LD (x) -> 
+            case env.allocate of
+              [s, env] -> [env, code <+> move (env.loc(x), s)]
+            esac
+        | ST (x) -> 
+            case env.addGlobal(x).pop of
+              [s, env] -> [env, code <+> move (s, env.loc(x))]
+            esac
+        | BINOP (op) -> 
+            case env.pop2 of 
+              [x, y, env] -> case env.allocate of
+                [s, env]-> case op of
+                    "/" -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+> move (eax, s)]
+                  | "%" -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+> move (edx, s)]
+                  | o -> [env, code <+> case suffix(op) of
+                        None -> move (x, eax) <+ Binop (o, y, eax) <+> move (eax, s) 
+                      | suff -> move (y, eax) <+ Binop (o, eax, x) <+ Set (suff, "%al") <+> move (eax, s)
+                    esac
+                    ]
+                esac
+              esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
+      esac
       }, [env, emptyBuffer ()], code)
   }
 
