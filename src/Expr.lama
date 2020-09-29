@@ -26,6 +26,6 @@ public fun evalExpr (st, expr) {
   --failure ("evalExpr not implemented\n")
   case expr of Var (x) -> st(x)
   			| Const(n) -> n
-  			| Binop(op, left, right) -> getOperationFromStr(op) (evalExpr (st, l), evalExpr (st, r))
+  			| Binop(op, left, right) -> getOperationFromStr(op) (evalExpr (st, left), evalExpr (st, right))
   	esac
 }
