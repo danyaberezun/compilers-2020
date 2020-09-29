@@ -5,6 +5,10 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
+<<<<<<< HEAD
+=======
+import Manifest;
+>>>>>>> 6baedb2ae7b99696dc4948e1d941b6e9d4230aaa
 
 -- Assembler language interface
 -- The registers: 
@@ -58,7 +62,11 @@ fun insnString (insn) {
     | "&&"  -> "andl"
     | "!!"  -> "orl" 
     | "^"   -> "xorl"
+<<<<<<< HEAD
     | _ -> "cmpl"
+=======
+    | "cmp" -> "cmpl"
+>>>>>>> 6baedb2ae7b99696dc4948e1d941b6e9d4230aaa
     esac
   }
 
@@ -130,7 +138,11 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
+<<<<<<< HEAD
   -- popped items and an updated environment
+=======
+  -- popped items and an undated environment
+>>>>>>> 6baedb2ae7b99696dc4948e1d941b6e9d4230aaa
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -287,7 +299,7 @@ fun compile (env, code) {
           READ ->
             case env.allocate of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac
+            esac             
         | WRITE ->
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
@@ -337,21 +349,28 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
--- A top-level codegeneration function. Takes a stack machine program
--- and returns x86 listing as a string
-public fun compileX86 (code) {
+public fun compileX86 (args, code) {
   case compile (initEnv (), code) of
     [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
+       local asmFile = args.getBaseName ++ ".s",
+             runtime = case getEnv ("LAMA_RUNTIME") of
+                         #unboxed -> "../runtime/"
+                       | path     -> path
+                       esac ++ "/runtime.o";
+       
+       fwrite (asmFile,
+               map (insnString, 
+                    getBuffer $
+                      singletonBuffer (Meta ("\t.global\tmain\n")) <+>
+                      dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
+                      codeSection (
+                        singletonBuffer (Meta ("main:\n")) <+>
+                        prologue (getStackSize (env)) <+>
+                        code <+>
+                        epilogue ()
+                      )
+                    ).stringcat);
+                    
+       system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }

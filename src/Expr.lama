@@ -30,6 +30,13 @@ public fun apply(op, x, y) {
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
+--
+-- An expression is represented by a data structure of the following shape:
+--
+-- expr = Var   (string)             |
+--        Const (int)                |
+--        Binop (string, expr, expr)
+
 public fun evalExpr (st, expr) {
     -- printf("Expr: %s : %s\n", expr.string, st.string);
     case expr of
