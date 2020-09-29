@@ -7,9 +7,9 @@ public fun deepFlatten (l) {
 
   fun append (x) {
     local new = x : {};
-    
+
     curr [0][1] := new;
-    curr [0] := new    
+    curr [0] := new
   }
 
   fun traverse (l) {
@@ -19,8 +19,8 @@ public fun deepFlatten (l) {
     | _     -> append (l)
     esac
   }
-  
+
   traverse (l);
-  
+
   res [1]
 }
