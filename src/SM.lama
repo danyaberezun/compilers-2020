@@ -12,15 +12,15 @@ fun eval (c, insns) {
   --failure ("SM eval not implemented\n")
   case insns of
   	{}	-> c
-  	| ins : _insns -> case c of [stack, state, world] ->
+  	| ins : insns_ -> case c of [stack, state, world] ->
   		eval (case ins of
   			CONST (n)	-> [n : stack, state, world]
   			| BINOP (op)-> case stack of a : b : rest -> [getOperationFromStr(op) (a,b) : rest, state, world] esac
   			| LD (x)	-> [state(x) : stack, state, world]
   			| ST (x)	-> case stack of a:rest -> [ rest, state <- [ x, a ], world ] esac
-  			| READ		-> case readWorld (world) of [ a, _world ] -> [ a: stack, state, _world] esac
+  			| READ		-> case readWorld (world) of [ a, world_ ] -> [ a: stack, state, world_ ] esac
   			| WRITE		-> case stack of a : rest -> [ rest, state, writeWorld (a, world)] esac
-  			esac, _insns)
+  			esac, insns_)
   		esac
   	esac
 }
@@ -46,7 +46,7 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
   --failure ("compileSM not implemented\n")
-  deeepFlatten(
+  deepFlatten(
     case stmt of Read  (x)    -> { READ           , ST        (x) }
                | Write (a)    -> { compileExpr (a), WRITE         }
                | Assn  (x, a) -> { compileExpr (a), ST        (x) }

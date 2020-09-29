@@ -10,7 +10,7 @@ import World;
 fun eval (c, stmt) {
   --failure ("Stmt eval not implemented\n")
   case stmt of
-  	Read(s)			-> local r = readWorld(c[1]); [c[0] -< [s, r[0]], r[1]]
+  	Read(s)			-> local r = readWorld(c[1]); [c[0] <- [s, r[0]], r[1]]
   	| Write(s)		-> [c[0], writeWorld(evalExpr(c[0],s), c[1])]
   	| Assn(s1,s2)	-> [c[0] <- [s1, evalExpr(c[0], s2)], c[1]]
   	| Seq(s1,s2)	-> eval(eval(c,s1),s2)

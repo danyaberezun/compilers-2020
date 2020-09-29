@@ -3,7 +3,7 @@
 import List;
 import State;
 
-fun getOperationFromStr(str) {
+public fun getOperationFromStr(str) {
 	case str of "+" -> infix +
 			| "-" -> infix -
 			| "*" -> infix *
