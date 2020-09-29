@@ -9,7 +9,25 @@ import Util;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+  case c of
+    [s, st, world@[input, output]] -> case insns of
+       {} -> c
+       | Binop (op) : irest -> case s of 
+          rhs : lhs : rest -> eval ([evalBinop (op, lhs, rhs) : rest, st, world], irest) 
+        esac
+       | Const (n) : irest -> eval ([n : s, st, world], irest)
+       | Read : irest -> case input of 
+          lhs : it -> eval ([lhs : s, st, [it, output]], irest) 
+        esac
+       | Write : irest -> case s of 
+          var : rest -> eval ([rest, st, [input, var : output]], irest) 
+        esac
+       | LD (var) : irest -> eval ([st (var) : s, st, world], irest)
+       | ST (var) : irest -> case s of 
+          var2 : rest -> eval ([s, (st <- [var, var2]), world], irest) 
+        esac
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -21,12 +39,21 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+     Const (numb)        -> singleton(Const (numb))
+   | Var (var)          -> singleton(LD (var))
+   | Binop (op, lhs, rhs) -> compileExpr(lhs) +++ compileExpr(rhs) +++ singleton(Binop (op))
+   esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of
+     Assn (var, expr) -> compileExpr(expr) +++ singleton(ST (var))
+   | Read (var) -> {Read, ST (var)}
+   | Write (expr) -> compileExpr(expr) +++ singleton(Write)
+   | Seq (s1, s2) -> compileSM(s1) +++ compileSM(s2)
+   esac
 }
