@@ -4,6 +4,10 @@
 *.run
 regression/test???
 regression/*.log
+regression/*/*.log
+regression/*/generated?????
 regression/tmp.i
 regression/tmp.s
 regression/tmp.sm
+src/lama-impl
+regression/core
