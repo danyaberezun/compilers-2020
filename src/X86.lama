@@ -320,10 +320,12 @@ fun compile (env, code) {
 				case env.allocate of
 				  [s, env] ->
 					case [op, isCompareOperation(op)] of
-					  ["/", 0] -> [env, code <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(eax, s)]
-					| ["%", 0] -> [env, code <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(edx, s)]
-					| [ _ , 1] -> [env, code <+ Binop("cmp", s1, s2) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
-					| [ _ , 0] -> [env, code <+ Binop(op, s1, s2) <+> move(s2, s)]
+					  ["/", 0]  -> [env, code <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(eax, s)]
+					| ["%", 0]  -> [env, code <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(edx, s)]
+					| ["&&", 0] -> [env, code <+ Binop("cmp", s1, L(0)) <+ Set(suffix("!="), "%al") <+ Mov(eax, s1) <+ Binop("cmp", s2, L(0)) <+ Set(suffix("!="), "%al") <+ Mov(eax, s2) <+ Binop(op, s1, s2) <+> move(s2, s)]
+					| ["!!", 0] -> [env, code <+ Binop("cmp", s1, L(0)) <+ Set(suffix("!="), "%al") <+ Mov(eax, s1) <+ Binop("cmp", s2, L(0)) <+ Set(suffix("!="), "%al") <+ Mov(eax, s2) <+ Binop(op, s1, s2) <+> move(s2, s)]
+					| [ _ , 1]  -> [env, code <+ Binop("cmp", s1, s2) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+					| [ _ , 0]  -> [env, code <+ Binop(op, s1, s2) <+> move(s2, s)]
 					esac
 				esac
 			esac
