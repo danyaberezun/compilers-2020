@@ -4,29 +4,72 @@ import List;
 import World;
 import State;
 import Expr;
-import Util;
+import Buffer;
+import Fun;
+
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
+-- conf@[st, env, wrld]
+
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+  local st;
+  local env;
+  local world;
+  st := c[0];
+  end := c[1];
+  world := c[2];
+  case insns of 
+      {} -> conf
+  | x:xs -> {
+
+      configuration := 
+        case x of 
+          BINOP (op) -> return case st of y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, world] esac
+        | READ       -> return case readWorld (world) of [z, world] -> [z:st, env, world] esac
+        | WRITE      -> return case st of z:st -> [st, env, writeWorld (z, world)] esac
+        | ST (x)     -> return case st of z:st -> [st, env <- [x, z], world] esac
+        | LD (x)     -> return [env(x):st, env, world]
+        | CONST (c)  -> return [c:st, env, world]
+        esac;
+
+      eval (configuration, xs)
+    }
+  esac
 }
 
+
 -- Runs a stack machine for a given input and a given program, returns an output
-public fun evalSM (input, insns) {
+public fun evalSM (input, insns) 
+{
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
+
 -- of stack machine instructions
-fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+fun compileExpr (expr) 
+{
+  case expr of
+    Var (x)          -> return singleton(LD(x))
+  | Const (n)        -> return singleton(CONST(n))
+  | Binop (op, l, r) -> return compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
-public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+
+public fun compileSM (stmt) 
+{
+  case stmt of
+    Assn (x, expr)    -> return compileExpr(expr) +++  singleton(ST(x))
+  | Seq (st1, st2)     -> return compileSM(st1) +++ compileSM(st2)
+  | Skip               -> return {}
+  | Read (x)           -> return singleton(READ) +++ singleton(ST(x))
+  | Write (expr)       -> return compileExpr(expr) +++ singleton(WRITE)
+  esac
 }
+
