@@ -1,6 +1,5 @@
 — Expression evaluator
 
-import List;
 import State;
 
 
