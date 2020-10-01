@@ -12,11 +12,12 @@ import Fun;
 
 fun eval (c, insns) {
 	local st;
-	st := c[0];
 	local env;
-	env := c[1];
 	local wrld;
+	st := c[0];
+	env := c[1];
 	wrld := c[2];
+	
 	case insns of
 		  {} -> c
 		| x:xs -> {
@@ -31,10 +32,9 @@ fun eval (c, insns) {
         		| CONST(c) -> [c:st, env, wrld]
         		| READ -> case readWorld (wrld) of [z, wrld] -> [z:st, env, wrld] esac
         		| WRITE      -> case st of z:st -> [st, env, writeWorld (z, wrld)] esac
-        esac;
-
-      eval (conf, xs)
-    }
+        	esac;
+		eval (conf, xs)
+    		}
   esac
 }
 
