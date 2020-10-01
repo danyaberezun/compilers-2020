@@ -1,9 +1,13 @@
+-- Stack machine.
+
 import List;
 import World;
 import State;
 import Expr;
 import Util;
 
+-- Stack machine interpreter. Takes an SM-configuration and a program,
+-- returns a final configuration
 fun eval (c, insns) {
     return foldl(fun ([stack, s, w], instr) {
         case [instr, stack] of
@@ -20,10 +24,14 @@ fun eval (c, insns) {
     }, c, insns)
 }
 
+-- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
+-- Compiles an expression into a stack machine code.
+-- Takes an expression, returns a list (of, possibly, lists)
+-- of stack machine instructions
 fun compileExpr (expr) {
     case expr of
          Binop(op, l, r) -> {compileExpr(r), compileExpr(l), BINOP(op)} |
@@ -32,6 +40,9 @@ fun compileExpr (expr) {
     esac
 }
 
+-- Compiles a statement into a stack machine code.
+-- Takes a statement, returns a list of stack machine
+-- instructions.
 public fun compileSM (stmt) {
     case stmt of
     	Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2) |
