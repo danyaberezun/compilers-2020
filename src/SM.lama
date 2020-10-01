@@ -1,0 +1,42 @@
+import List;
+import World;
+import State;
+import Expr;
+import Util;
+
+fun eval (c, insns) {
+    return foldl(fun ([stack, s, w], instr) {
+        case [instr, stack] of
+        	[Ld(x), _] -> [singleton(s(x)) +++ stack, s, w] |
+		[Binop(op), arg2:arg1:other] -> [singleton(apply(op, arg1, arg2)) +++ other, s, w] |
+        	[St(x), arg:other] -> [other, s <- [x, arg], w] |
+        	[Read, _] -> fun (stack, s, [n, w]) {
+            		[singleton(n) +++ stack, s, w]
+        	} (stack, s, readWorld(w)) |
+        	
+        	[Const(x), _] -> [singleton(x) +++ stack, s, w] |
+		[Write, arg:other] -> [other, s, writeWorld(arg, w)]
+        esac
+    }, c, insns)
+}
+
+public fun evalSM (input, insns) {
+  eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
+}
+
+fun compileExpr (expr) {
+    case expr of
+         Binop(op, l, r) -> {compileExpr(r), compileExpr(l), BINOP(op)} |
+         Var(x) -> LD(x) |
+         Const(n) -> CONST(n)
+    esac
+}
+
+public fun compileSM (stmt) {
+    case stmt of
+    	Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2) |
+    	Read(x) -> {Read, St(x)} |
+    Write(e) -> compileExpr(e) +++ singleton(Write) |
+    Assn(x, e) -> compileExpr(e) +++ singleton(St(x))
+    esac
+}

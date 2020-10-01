@@ -1,0 +1,16 @@
+import State;
+import Expr;
+import World;
+
+fun eval (c@[s, w], stmt) {
+    case stmt of
+    	Assn(x, e) -> [s <- [x, evalExpr(s, e)], w] |
+	Write(e) -> [s, writeWorld(evalExpr(s, e), w)] |
+	Seq(stmt1, stmt2) -> eval(eval(c, stmt1), stmt2) |
+    	Read(x) -> fun (s, x, [n, w]) { [s <- [x, n], w] } (s, x, readWorld(w)) 
+    esac
+}
+
+public fun evalStmt (input, stmt) {
+  eval ([emptyState, createWorld (input)], stmt).snd.getOutput
+}

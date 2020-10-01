@@ -1,0 +1,27 @@
+import List;
+import State;
+
+
+public fun evalExpr (strin, expr) {
+  case expr of
+    Binop(op, l, r) -> (
+      case op of
+        "+"  -> infix + |
+        "-"  -> infix - |
+        "*"  -> infix * |
+        "/"  -> infix / |
+        "<=" -> infix <= |
+        ">=" -> infix >= |
+	">"  -> infix > |
+	"%"  -> infix % |
+        "==" -> infix == |
+        "!=" -> infix != |
+        "<"  -> infix < |
+        "&&" -> infix && |
+        "!!" -> infix !!
+      esac 
+    )(evalExpr(strin, l), evalExpr(strin, r)) |
+    Var(x) -> strin(x) |
+    Const(n) -> n
+  esac
+}
