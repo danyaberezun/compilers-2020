@@ -12,25 +12,28 @@ import Fun;
 -- returns a final configuration
 -- conf@[st, env, wrld]
 
-fun eval (c, insns) {
+fun eval (configuration , insns) {
   local st;
   local env;
-  local world;
-  st := c[0];
-  end := c[1];
-  world := c[2];
+  local wrld;
+  st := configuration [0];
+  env := configuration [1];
+  wrld := configuration [2];
+  
   case insns of 
-      {} -> conf
+      {} -> configuration
   | x:xs -> {
 
       configuration := 
         case x of 
-          BINOP (op) -> return case st of y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, world] esac
-        | READ       -> return case readWorld (world) of [z, world] -> [z:st, env, world] esac
-        | WRITE      -> return case st of z:st -> [st, env, writeWorld (z, world)] esac
-        | ST (x)     -> return case st of z:st -> [st, env <- [x, z], world] esac
-        | LD (x)     -> return [env(x):st, env, world]
-        | CONST (c)  -> return [c:st, env, world]
+          BINOP (op) -> case st of 
+                          y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, wrld]
+                        esac
+        |  READ      -> case readWorld (wrld) of [z, wrld] -> [z:st, env, wrld] esac
+        | WRITE      -> case st of z:st -> [st, env, writeWorld (z, wrld)] esac
+        |    ST (x)  -> case st of z:st -> [st, env <- [x, z], wrld] esac
+        |    LD (x)  -> [env(x):st, env, wrld]
+        | CONST (n)  -> [n:st, env, wrld]
         esac;
 
       eval (configuration, xs)
