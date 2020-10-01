@@ -65,16 +65,20 @@ fun program () {
   PROGRAM_BODY
 }
 
-case sysargs of
-  [_] -> printf ("%s\n", compileX86 (compileSM (program ())))
-| _   ->
-  local input =
-    reverse (fix (fun (f) {fun (acc) {case readLine () of HASH unboxed -> acc | arg -> f (stringInt (arg) : acc) esac}}) ({}));
-  
-  iter (fun (x) {printf ("%d\n", x)},
-        case sysargs[1] of
-          "-i" -> evalStmt (input, program ())
-        | "-s" -> evalSM (input, compileSM (program ()))
-        esac
-       )
-esac
+
+fun state (x) {
+  Read (x)
+}
+
+
+local input = reverse (fix (fun (f) {fun (acc) {case readLine () of #unboxed -> acc | arg -> f (stringInt (arg) : acc) esac}}) ({}));
+
+iter (fun (x) {printf ("%d\n", x)},
+      case sysargs[1] of
+--        "-i" -> evalStmt (input, program ())
+--      | "-s" -> evalSM (input, compileSM (program ()))
+	  "-i" -> evalExpr (input, program ())
+	| _ -> failure ("Invalid compiler flag\n")
+      esac
+     )
+

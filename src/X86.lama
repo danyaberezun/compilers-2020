@@ -5,6 +5,8 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
+import Manifest;
+
 
 -- Assembler language interface
 -- The registers: 
@@ -130,7 +132,7 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-  -- popped items and an undated environment
+  -- popped items and an updated environment
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -286,6 +288,7 @@ fun isCompareOperation(op)
   esac
 }
 
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -337,21 +340,32 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
--- A top-level codegeneration function. Takes a stack machine program
--- and returns x86 listing as a string
-public fun compileX86 (code) {
+
+-- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
+-- compiles the program into machine code, and compiles the machine code into an executable
+public fun compileX86 (args, code) {
   case compile (initEnv (), code) of
     [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
+       local asmFile = args.getBaseName ++ ".s",
+             runtime = case getEnv ("LAMA_RUNTIME") of
+                         #unboxed -> "../runtime/"
+                       | path     -> path
+                       esac ++ "/runtime.o";
+       
+       fwrite (asmFile,
+               map (insnString, 
+                    getBuffer $
+                      singletonBuffer (Meta ("\t.global\tmain\n")) <+>
+                      dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
+                      codeSection (
+                        singletonBuffer (Meta ("main:\n")) <+>
+                        prologue (getStackSize (env)) <+>
+                        code <+>
+                        epilogue ()
+                      )
+                    ).stringcat);
+                    
+       system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
+
   esac
 }

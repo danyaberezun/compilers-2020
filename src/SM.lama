@@ -42,6 +42,7 @@ public fun binopCalc (op, a, b) {
 		esac
 }
 
+
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c, insns) {
