@@ -1,4 +1,4 @@
-— Expression evaluator
+-- Expression evaluator
 
 import State;
 
