@@ -8,24 +8,27 @@ import Expr;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 
-fun eval (c, instructions) {
-   case instructions of 
-       {} -> c
-   | instr:left -> {
+fun eval (c@[st, env, wrld], instructions) {
+  case instructions of 
+      {} -> c
+  | instr:left -> {
 
-       conf := case instr of 
-           BINOP (op) -> case c[0] of y:x:c[0] -> [(evalExpr (c[1], Binop (op, Const (x), Const (y)))):c[0], c[1], c[2]] esac
-         |  READ      -> case readWorld (c[2]) of [z, c[2]] -> [z:c[0], c[1], c[2]] esac
-         | WRITE      -> case c[0] of z:c[0] -> [c[0], c[1], writeWorld (z, c[2])] esac
-         |    ST (x)  -> case c[0] of z:c[0] -> [c[0], c[1] <- [x, z], c[2]] esac
-         |    LD (x)  -> [c[1](x):c[0], c[1], c[2]]
-         | CONST (x)  -> [x:c[0], c[1], c[2]]
-         esac;
+      c := 
+        case instr of 
+          BINOP (op) -> case st of 
+                          y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, wrld]
+                        esac
+        |  READ      -> case readWorld (wrld) of [z, wrld] -> [z:st, env, wrld] esac
+        | WRITE      -> case st of z:st -> [st, env, writeWorld (z, wrld)] esac
+        |    ST (x)  -> case st of z:st -> [st, env <- [x, z], wrld] esac
+        |    LD (x)  -> [env(x):st, env, wrld]
+        | CONST (c)  -> [c:st, env, wrld]
+        esac;
 
-       eval (c, left)
-     }
-   esac
- }
+      eval (c, left)
+    }
+  esac
+}
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
