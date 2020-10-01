@@ -1,11 +1,33 @@
--- Expression evaluator
+— Expression evaluator
 
 import List;
 import State;
 
 
--- The evaluator itself: takes a state and an expression,
--- returns integer value
-public fun evalExpr (st, expr) {
-  failure ("evalExpr not implemented\n")
+fun evalOp(op, l, r){
+	case op of
+		  "+" -> return l + r
+		| "-" -> return l - r
+		| "*" -> return l * r
+		| "/" -> return l / r
+		| "%" -> return l % r
+		| ">" -> return l > r
+		| "<" -> return l < r
+		| "==" -> return l == r
+		| "!=" -> return l != r
+		| "<=" -> return l <= r
+		| ">=" -> return l >= r
+		| "&&" -> return l && r
+		| "!!" -> return l !! r
+	esac
+}
+
+— The evaluator itself: takes a state and an expression,
+— returns integer value
+public fun evalExpr (st, expr){
+	case expr of
+  		  Var (a) -> return st(a)
+		| Const (n) -> return n
+		| Binop (op, l, r) -> return evalOp(op, expr(st, l), expr(st, r))
+	esac
 }
