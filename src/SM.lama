@@ -11,9 +11,12 @@ import Fun;
 -- returns a final configuration
 
 fun eval (c, insns) {
-	local st := c[0];
-	local env := c[1];
-	local wrld := c[2];
+	local st;
+	st := c[0];
+	local env;
+	env := c[1];
+	local wrld;
+	wrld := c[2];
 	case insns of
 		  {} -> c
 		| x:xs -> {

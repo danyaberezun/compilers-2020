@@ -20,8 +20,9 @@ fun eval (c, stmt) {
 	case stmt of
 		  Seq (s1, s2) -> return eval(eval(c, s1), s2)
 		| Skip -> c;
-		| Read (x)     -> local a := readWorld(c[1]); 
-						return [c[0] <- [x, a[0]], a[1]]
+		| Read (x)     -> local a;
+				 a := readWorld(c[1]);
+				 return [c[0] <- [x, a[0]], a[1]]
 		| Write (expr)    -> return [c[0], writeWorld(evalExpr(c[0], expr), c[1])]
 		| Assn (string, expr) -> return evalExpr(c[0] <- [x, evalExpr(c[0], expr)], c[1])
 	esac
