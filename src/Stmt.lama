@@ -23,8 +23,8 @@ fun eval (c, stmt) {
 		| Read (x) -> local a;
 				a := readWorld(c[1]);
 				 return [c[0] <- [x, a[0]], a[1]]
-		| Write (expr)    -> return [c[0], writeWorld(evalExpr(c[0], expr), c[1])]
-		| Assn (string, expr) -> return evalExpr(c[0] <- [x, evalExpr(c[0], expr)], c[1])
+		| Write(expr) -> return [c[0], writeWorld(evalExpr(c[0], expr), c[1])]
+		| Assn (string, expr) -> return evalExpr(c[0] <- [string, evalExpr(c[0], expr)], c[1])
 	esac
 }
 

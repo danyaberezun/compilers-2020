@@ -22,7 +22,7 @@ fun eval (c, insns) {
 		  {} -> c
 		| x:xs -> {
 
-      		conf := 
+      		c := 
         	case x of 
           		BINOP (op) -> case st of 
           			y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, wrld]
@@ -33,7 +33,7 @@ fun eval (c, insns) {
         		| READ -> case readWorld (wrld) of [z, wrld] -> [z:st, env, wrld] esac
         		| WRITE      -> case st of z:st -> [st, env, writeWorld (z, wrld)] esac
         	esac;
-		eval (conf, xs)
+		eval (c, xs)
     		}
   esac
 }
