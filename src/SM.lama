@@ -4,50 +4,74 @@ import List;
 import World;
 import State;
 import Expr;
-import Util;
+import Buffer;
+import Fun;
+
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-    return foldl(fun ([stack, s, w], instr) {
-        case [instr, stack] of
-        	[Ld(x), _] -> [singleton(s(x)) +++ stack, s, w] |
-		[Binop(op), arg2:arg1:other] -> [singleton(apply(op, arg1, arg2)) +++ other, s, w] |
-        	[St(x), arg:other] -> [other, s <- [x, arg], w] |
-        	[Read, _] -> fun (stack, s, [n, w]) {
-            		[singleton(n) +++ stack, s, w]
-        	} (stack, s, readWorld(w)) |
-        	
-        	[Const(x), _] -> [singleton(x) +++ stack, s, w] |
-		[Write, arg:other] -> [other, s, writeWorld(arg, w)]
-        esac
-    }, c, insns)
+-- conf@[st, env, wrld]
+
+fun eval (configuration , insns) {
+  local st;
+  local env;
+  local wrld;
+  st := configuration [0];
+  env := configuration [1];
+  wrld := configuration [2];
+  
+  case insns of 
+      {} -> configuration
+  | x:xs -> {
+
+      configuration := 
+        case x of 
+          BINOP (op) -> case st of 
+                          y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, wrld]
+                        esac
+        	| ST (x) -> case st of z:st -> [st, env <- [x, z], wrld] esac
+        	| LD (x) -> [env(x):st, env, wrld]
+        	| CONST (n) -> [n:st, env, wrld]
+		| READ -> case readWorld (wrld) of [z, wrld] -> [z:st, env, wrld] esac
+      		| WRITE -> case st of z:st -> [st, env, writeWorld (z, wrld)] esac
+        esac;
+
+      eval (configuration, xs)
+    }
+  esac
 }
 
+
 -- Runs a stack machine for a given input and a given program, returns an output
-public fun evalSM (input, insns) {
+public fun evalSM (input, insns) 
+{
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
+
 -- of stack machine instructions
-fun compileExpr (expr) {
-    case expr of
-         Binop(op, l, r) -> {compileExpr(r), compileExpr(l), BINOP(op)} |
-         Var(x) -> LD(x) |
-         Const(n) -> CONST(n)
-    esac
+fun compileExpr (expr) 
+{
+  case expr of
+    Var (x) -> return singleton(LD(x))
+  | Const (n) -> return singleton(CONST(n))
+  | Binop (op, l, r) -> return compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
-public fun compileSM (stmt) {
-    case stmt of
-    	Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2) |
-    	Read(x) -> {Read, St(x)} |
-    Write(e) -> compileExpr(e) +++ singleton(Write) |
-    Assn(x, e) -> compileExpr(e) +++ singleton(St(x))
-    esac
+
+public fun compileSM (stmt) 
+{
+  case stmt of
+    Assn (x, expr)-> return compileExpr(expr) +++  singleton(ST(x))
+	| Read (x)-> return singleton(READ) +++ singleton(ST(x))
+  	| Write (expr)-> return compileExpr(expr) +++ singleton(WRITE)
+  	| Seq (st1, st2)-> return compileSM(st1) +++ compileSM(st2)
+  	| Skip -> return {} 
+  esac
 }

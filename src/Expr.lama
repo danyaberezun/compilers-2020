@@ -3,33 +3,42 @@
 import List;
 import State;
 
+
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
+--
+-- An expression is represented by a data structure of the following shape:
+--
+-- expr = Var   (string)             |
+--        Const (int)                |
+--        Binop (string, expr, expr)
 
-public fun apply(params, x, y) {
-    case params of
-    	"+" -> x + y |
-    	"-" -> x - y |
-    	"==" -> x == y |
-    	"!=" -> x != y |
-    	"<" -> x < y |
-    	">" -> x > y |
-   	 "<=" -> x <= y |
-    	">=" -> x >= y |
-    	"*" -> x * y |
-    	"/" -> x / y |
-   	 "%" -> x % y |
-    	"&&" -> x && y |
-   	 "!!" -> x !! y
-    esac
+
+fun evalOp(op, l, r)
+{
+case op of
+	"+" -> return l + r
+	| "-" -> return l - r
+	| "*" -> return l * r
+	| "/" -> return l / r
+	| "%" -> return l % r
+	| "&&" -> return l && r
+	| "!!" -> return l !! r
+	| ">" -> return l > r
+	| "<" -> return l < r
+	| "==" -> return l == r
+	| "!=" -> return l != r
+	| "<=" -> return l <= r
+	| ">=" -> return l >= r
+esac
 }
 
-
-public fun evalExpr (st, expr) {
-    -- printf("Expr: %s : %s\n", expr.string, st.string);
-    case expr of
-    Binop(op, e1, e2) -> apply(op, evalExpr(st, e1), evalExpr(st, e2)) |
-    Var(x) -> st(x) |
-    Const(x) -> x
-    esac
+public fun evalExpr (st, expr)
+{
+case expr of
+  	Var (x) -> return st(x)
+	| Const (n) -> return n
+	| Binop (op, l, r) -> return evalOp(op, evalExpr(st, l), evalExpr(st, r))
+esac
 }
+
