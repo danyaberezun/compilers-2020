@@ -51,7 +51,7 @@ public fun compileSM (stmt) {
            Skip -> {} 
           | Assn(x, expr) -> {compileExpr(expr),singleton(ST(x))} 
           | Read(x) -> {singleton(READ), singleton(ST(x)} 
-          | Write(eexpr) -> {compileExpr(expr), singleton(WRITE)}
+          | Write(expr) -> {compileExpr(expr), singleton(WRITE)}
           | Seq(s1, s2) -> {compileSM(s1), compileSM(s2)}
   esac
 }
