@@ -8,31 +8,22 @@ import Expr;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-fun eval (c, insns) {
+fun eval (c@[stack, state, world], insns) {
+
   case insns of
-    {}     -> c
-  | ins : new_insns -> case c of 
-                         [ stack, state, world] -> eval( case ins of
-        CONST (n)  -> [ n : stack, state, world ]
-      | BINOP (op) -> case stack of 
-            x : y : rest -> [ binop_operations (op) (x, y) : rest, state, world ] 
-         esac
-      | READ       -> 
-          case readWorld (world) of 
-               [ a, world_ ] -> [ a : stack, state, world_ ]
-          esac
-      | WRITE      -> case stack of ( x : rest) -> {
-               local nworld;
-               nworld := writeWorld(x,world);
-               [rest,state,nworld]
-          } 
-          esac
-      | LD    (x)  -> [ state (x) : stack, state, world ]
-      | ST    (x)  -> case stack of 
-           a : rest -> [ rest, state <- [ x, a ], world ] 
-         esac
-      esac, new_insns)
-    esac
+    BINOP (op) : p -> case stack of a : b : rest -> eval([ binop_operations (op) (a, b) : rest, state, world ],p) esac
+
+  | CONST (n)  : p -> eval( [n : stack, state, wrold], p )
+
+  | READ       : p -> case readWorld (world) of [ a, world_ ] ->eval([ a : stack, state, world_ ],p) esac
+
+  | WRITE      : p ->case stack of a : rest ->eval([ rest, state, writeWorld (a, world) ],p) esac
+
+  | LD    (x)  : p -> eval( [state(x) : stack, state, world], p)
+
+  | ST    (x)  : p -> case stack of a : rest ->eval([ rest, state <- [ x, a ], world ],p) esac
+
+  | {} -> c
   esac
 }
 
@@ -47,7 +38,7 @@ public fun evalSM (input, insns) {
 fun compileExpr (expr) {
    case expr of
      Var(x) -> singleton (LD (x)) 
-    |Const(n) -> CONST(n)
+    |Const(n) -> singleton (expr)
     |Binop(op, l, r) -> compileExpr(r) +++ compileExpr(l) +++ singleton(BINOP(op)) 
   esac
 }
