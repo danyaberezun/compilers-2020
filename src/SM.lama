@@ -12,7 +12,7 @@ fun eval (c, insns) {
   case c of
     [stack, state, world@[input, output]] -> case insns of
         {} -> c
-      | Binop (b) : p -> case stack of x : y : ss -> eval ([binopParser (b, y, x) : ss, state, world], p) esac
+      | Binop (b) : p -> case stack of x : y : ss -> eval ([binop_operations (b, y, x) : ss, state, world], p) esac
       | Const (n) : p -> eval ([n : stack, state, world], p)
       | Read      : p -> case input of x : it -> eval ([x : stack, state, [it, output]], p) esac
       | Write     : p -> case stack of x : ss -> eval ([ss, state, [input, x : output]], p) esac
