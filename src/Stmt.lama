@@ -22,7 +22,7 @@ fun eval (c, stmt) {
             case readWorld (world) of 
                    [ a, new_world ] -> [ state <- [x, a], new_world] 
          esac
-      | Write (expr) -> [state, writeWorld( evalExpr (state, expr)  , world]
+      | Write (expr) -> [state, writeWorld( evalExpr (state, expr)  , world)]
       | Assn (x, e)  -> [(state <- [x, evalExpr (state, e)]), world]
       | Seq (s1, s2) -> eval (eval (c, s1), s2)
       | Skip(s1)     -> c
