@@ -30,7 +30,7 @@ fun compileExpr (expr) {
    case expr of
      Var(x) -> singleton (LD (x)) 
     |Const(n) -> singleton (expr)
-    |Binop(op, l, r) -> compileExpr(r) +++ compileExpr(l) +++ singleton(Binop(op)) 
+    |Binop(op, l, r) -> compileExpr(l) +++ compileExpr(r) +++ singleton(Binop(op)) 
   esac
 }
 
