@@ -18,9 +18,9 @@ fun eval (c, insns) {
             x : y : rest -> [ binop_operations (op) (x, y) : rest, state, world ] 
          esac
       | READ       -> 
-          local tmp;
-          tmp := readWorld(world);
-          [tmp[0]:stack, state, tmp[1]] 
+          case readWorld (world) of 
+               [ a, world_ ] -> [ a : stack, state, world_ ]
+          esac
       | WRITE      -> case stack of ( x : rest) -> {
                local nworld;
                nworld := writeWorld(x,world);
@@ -48,7 +48,7 @@ fun compileExpr (expr) {
    case expr of
      Var(x) -> singleton (LD (x)) 
     |Const(n) -> CONST(n)
-    |Binop(op, l, r) -> compileExpr(r) +++ compileExpr(l) +++ singleton({"BINOP",op}) 
+    |Binop(op, l, r) -> compileExpr(r) +++ compileExpr(l) +++ singleton(BINOP(op)) 
   esac
 }
 
@@ -57,10 +57,10 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
   case stmt of
-            Skip -> {} 
-          | Assn(x, expr) -> {compileExpr(expr),singleton({"ST",x}} 
-          | Read(x) -> {singleton("READ"), singleton({"ST", x}} 
-          | Write(eexpr) -> {compileExpr(expr), singleton("WRITE")}
+           Skip -> {} 
+          | Assn(x, expr) -> {compileExpr(expr),singleton(ST(x))} 
+          | Read(x) -> {singleton(READ), singleton(ST(x)} 
+          | Write(eexpr) -> {compileExpr(expr), singleton(WRITE)}
           | Seq(s1, s2) -> {compileSM(s1), compileSM(s2)}
   esac
 }
