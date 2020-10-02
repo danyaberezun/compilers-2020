@@ -15,19 +15,14 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
-fun eval (c, stmt) {
-  case c of [state, world] ->
-    case stmt of
-      | Read (x)     -> 
-            case readWorld (world) of 
-                   [ a, new_world ] -> [ state <- [x, a], new_world] 
-         esac
-      | Write (expr) -> [state, writeWorld( evalExpr (state, expr)  , world)]
-      | Assn (x, e)  -> [(state <- [x, evalExpr (state, e)]), world]
-      | Seq (s1, s2) -> eval (eval (c, s1), s2)
-      | Skip(s1)     -> c
-      esac
-    esac 
+fun eval (c@[state, world], stmt) {
+  case stmt of
+     Skip          -> c
+  |  Read (x)      -> case readWorld (world) of [v, world] -> [state <- [x, v], world] esac
+  | Write (expr)      -> [state, writeWorld(evalExpr(state, expr), world)]
+  |  Assn (x, expr)   -> [state <- [x, evalExpr(state, expr)], world]
+  |   Seq (s1, s2) -> eval (eval (c, s1), s2)
+  esac
 }
 
 -- Evaluates a program with a given input and returns an output
