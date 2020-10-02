@@ -36,10 +36,11 @@ fun compileExpr (expr) {
 
 public fun compileSM (stmt) {
   case stmt of
-           Skip -> {} 
-          |  Assn (x, expr) -> compileExpr (expr) +++ singleton (ST (x)) 
+            Assn (x, expr) -> compileExpr (expr) +++ singleton (ST (x))
+          | Seq (s1, s2)   -> compileSM (s1) +++ compileSM (s2) esac
+          | Skip -> {} 
           | Read (x)       -> {Read, ST (x)} 
           | Write (expr)   -> compileExpr (expr) +++ singleton (Write)
-          | Seq (s1, s2)   -> compileSM (s1) +++ compileSM (s2)
+          
   esac
 }
