@@ -1,4 +1,4 @@
-	SHELL := /bin/bash
+SHELL := /bin/bash
 
 FILES=$(wildcard *.lama)
 ALL=$(sort $(FILES:.lama=.o))
