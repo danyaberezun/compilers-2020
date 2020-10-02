@@ -60,7 +60,27 @@ fun fromLabel (env, lab) {
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+  foldl (evalInstruction, c, insns)
+}
+
+
+fun evalInstruction ([stack, state, world], instruction) {
+  case instruction of
+    CONST (val)  -> [val:stack, state, world]
+  | LD (name)    -> [state(name):stack, state, world]
+  | ST (name)    -> case stack of
+                      x:stackTail -> [stackTail, state <- [name, x], world]
+                    esac
+  | BINOP (op)   -> case stack of
+                      x:y:stackTail -> [evalOp (op, y, x):stackTail, state, world]
+                    esac
+  | READ         -> case readWorld (world) of
+                     [value, newWorld] -> [value:stack, state, newWorld]
+                    esac
+  | WRITE        -> case stack of
+                     value:stackTail -> [stackTail, state, writeWorld (value, world)]
+                    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -99,8 +119,25 @@ fun genLabels (env, n) {
 }
 
 -- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list of stack machine
+-- Takes an expression, returns a list (of, possibly, lists)
+-- of stack machine instructions
+fun compileExpr (expr) {
+  case expr of
+    Const (val)             -> singleton (CONST (val))
+  | Var (name)              -> singleton (LD (name))
+  | Binop (op, left, right) -> compileExpr (left) +++ compileExpr (right) +++ singleton (BINOP (op))
+  esac
+}
+
+-- Compiles a statement into a stack machine code.
+-- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of
+    Assn (name, expr)   -> compileExpr (expr) +++ singleton (ST (name))
+  | Seq  (stmt1, stmt2) -> compileSM (stmt1) +++ compileSM (stmt2)
+  | Skip                -> {}
+  | Read (name)         -> {READ, ST (name)}
+  | Write (expr)        -> compileExpr (expr) +++ singleton (WRITE)
+  esac
 }
