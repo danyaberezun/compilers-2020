@@ -5,10 +5,10 @@ import World;
 
 fun eval (c@[state, world], stmt) {
   case stmt of
-     Skip          -> c
-  |  Read (x)      -> case readWorld (world) of [v, world] -> [state <- [x, v], world] esac
+     Assn (x, expr)   -> [state <- [x, evalExpr(state, expr)], world]
   |   Seq (s1, s2) -> eval (eval (c, s1), s2)
-  |  Assn (x, expr)   -> [state <- [x, evalExpr(state, expr)], world]
+  |  Skip          -> c
+  |  Read (x)      -> case readWorld (world) of [v, world] -> [state <- [x, v], world] esac
   | Write (expr)      -> [state, writeWorld(evalExpr(state, expr), world)]
   esac
 }
