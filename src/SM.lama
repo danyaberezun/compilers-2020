@@ -9,7 +9,31 @@ import Expr;
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+  case insns of
+    {}     -> c
+  | ins : new_insns -> case c of 
+                         [ stack, state, world] -> eval( case ins of
+        CONST (n)  -> [ n : stack, state, world ]
+      | BINOP (op) -> case stack of 
+            x : y : rest -> [ binop_operations (op) (x, y) : rest, state, world ] 
+         esac
+      | READ       -> 
+          local tmp;
+          tmp := readWorld(world);
+          [tmp[0]:stack, state, tmp[1]] 
+      | WRITE      -> case stack of ( x : rest) -> {
+               local nworld;
+               nworld := writeWorld(x,world);
+               [rest,state,nworld]
+          } 
+          esac
+      | LD    (x)  -> [ state (x) : stack, state, world ]
+      | ST    (x)  -> case stack of 
+           a : rest -> [ rest, state <- [ x, a ], world ] 
+         esac
+      esac, new_insns)
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -21,12 +45,22 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+   case expr of
+     Var(x) -> singleton (LD (x)) 
+    |Const(n) -> CONST(n)
+    |Binop(op, l, r) -> compileExpr(r) +++ compileExpr(l) +++ singleton({"BINOP",op}) 
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of
+            Skip -> {} 
+          | Assn(x, expr) -> {compileExpr(expr),singleton({"ST",x}} 
+          | Read(x) -> {singleton("READ"), singleton({"ST", x}} 
+          | Write(eexpr) -> {compileExpr(expr), singleton("WRITE")}
+          | Seq(s1, s2) -> {compileSM(s1), compileSM(s2)}
+  esac
 }
