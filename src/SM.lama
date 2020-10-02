@@ -8,23 +8,19 @@ import Expr;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-fun eval (c@[stack, state, world], insns) {
-
-  case insns of
-    BINOP (op) : p -> case stack of a : b : rest -> eval([ binop_operations (op) (a, b) : rest, state, world ],p) esac
-
-  | CONST (n)  : p -> eval( [n : stack, state, wrold], p )
-
-  | READ       : p -> case readWorld (world) of [ a, world_ ] ->eval([ a : stack, state, world_ ],p) esac
-
-  | WRITE      : p ->case stack of a : rest ->eval([ rest, state, writeWorld (a, world) ],p) esac
-
-  | LD    (x)  : p -> eval( [state(x) : stack, state, world], p)
-
-  | ST    (x)  : p -> case stack of a : rest ->eval([ rest, state <- [ x, a ], world ],p) esac
-
-  | {} -> c
+fun eval (c, insns) {
+  case c of
+    [stack, state, world@[input, output]] -> case insns of
+        {} -> c
+      | Binop (b) : p -> case stack of x : y : ss -> eval ([binopParser (b, y, x) : ss, state, world], p) esac
+      | Const (n) : p -> eval ([n : stack, state, world], p)
+      | Read      : p -> case input of x : it -> eval ([x : stack, state, [it, output]], p) esac
+      | Write     : p -> case stack of x : ss -> eval ([ss, state, [input, x : output]], p) esac
+      | LD    (x) : p -> eval ([state (x) : stack, state, world], p)
+      | ST    (x) : p -> case stack of y : ss -> eval ([stack, (state <- [x, y]), world], p) esac
+    esac
   esac
+
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
