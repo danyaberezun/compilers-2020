@@ -3,7 +3,7 @@
 import List;
 import State;
 
-fun binop(op, l, r){
+public fun binop(op, l, r){
 	case op of
 
 		  "+"  -> (l + r)
