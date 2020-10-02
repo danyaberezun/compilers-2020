@@ -37,7 +37,7 @@ fun compileExpr (expr) {
 public fun compileSM (stmt) {
   case stmt of
             Assn (x, expr) -> compileExpr (expr) +++ singleton (ST (x))
-          | Seq (s1, s2)   -> compileSM (s1) +++ compileSM (s2) esac
+          | Seq (s1, s2)   -> compileSM (s1) +++ compileSM (s2) 
           | Skip -> {} 
           | Read (x)       -> {Read, ST (x)} 
           | Write (expr)   -> compileExpr (expr) +++ singleton (Write)
