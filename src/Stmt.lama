@@ -5,12 +5,12 @@ import List;
 
 
 fun eval (c, stmt) {
-   case c of [state, [input, output]] ->
+   case c of [state, [input_, output_]] ->
     case stmt of
         Skip         -> c
-      | Read (x)     -> case input of z : it -> [state <- [x, z], [it, output]] esac
-      | Write (expr) -> [state, [input, evalExpr (state, expr)  : output]]
-      | Assn (x, e)  -> [(state <- [x, evalExpr (st, e)]), [input, output]]
+      | Read (x)     -> case input_ of z : it -> [state <- [x, z], [it, output_]] esac
+      | Write (expr) -> [state, [input_, evalExpr (state, expr)  : output_]]
+      | Assn (x, e)  -> [(state <- [x, evalExpr (state, e)]), [input_, output_]]
       | Seq (s1, s2) -> eval (eval (c, s1), s2)
       esac
     esac 
