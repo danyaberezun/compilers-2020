@@ -1,16 +1,19 @@
 import State;
 import Expr;
 import World;
+import List;
 
 
-fun eval (c@[state, world], stmt) {
-  case stmt of
-     Assn (x, expr)   -> [state <- [x, evalExpr(state, expr)], world]
-  |   Seq (s1, s2) -> eval (eval (c, s1), s2)
-  |  Skip          -> c
-  |  Read (x)      -> case readWorld (world) of [v, world] -> [state <- [x, v], world] esac
-  | Write (expr)      -> [state, writeWorld(evalExpr(state, expr), world)]
-  esac
+fun eval (c, stmt) {
+   case c of [state, [input, output]] ->
+    case stmt of
+        Skip         -> c
+      | Read (x)     -> case input of z : it -> [state <- [x, z], [it, output]] esac
+      | Write (expr) -> [state, [input, evalExpr (state, expr)  : output]]
+      | Assn (x, e)  -> [(state <- [x, evalExpr (st, e)]), [input, output]]
+      | Seq (s1, s2) -> eval (eval (c, s1), s2)
+      esac
+    esac 
 }
 
 -- Evaluates a program with a given input and returns an output
