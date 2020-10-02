@@ -26,6 +26,9 @@ fun getBinop(str) {
 }
 
 
+=======
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
+
 fun eval (c, insns) {
 
   case insns of
