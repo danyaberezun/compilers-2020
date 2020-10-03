@@ -13,12 +13,14 @@ import Expr;
 fun eval (c, insns) {
 	case c of [stack, st, w@[i, o]] -> case insns of
 		  {} -> c
-		| READ       : other -> case i of el : ni -> eval ([el : stack, st, [ni, o]], other) 
-		| WRITE      : other -> case stack el : nstack -> eval ([nstack, st, [i, el : o]], other)
-		| BINOP (op) : other -> case stack x : y : nstack -> eval ([evalBinop (op, x, y) : nstack, st, w], other) 
-		| LD (x)     : other -> eval ([st(x) : stack, st, w], other)
-		| ST (x)     : other -> case stack of el : nstack -> eval ([nstack, (st <-[x,el]), w], other)
+		| READ       : other -> case i of el : ni -> eval ([el : stack, st, [ni, o]], other) esac
+		| WRITE      : other -> case stack el : nstack -> eval ([nstack, st, [i, el : o]], other) esac
+		| BINOP (op) : other -> case stack x : y : nstack -> eval ([evalBinop (op, x, y) : nstack, st, w], other) esac
+		| LD (x)     : other -> eval ([st(x) : stack, st, w], other) 
+		| ST (x)     : other -> case stack of el : nstack -> eval ([nstack, (st <-[x,el]), w], other) esac
 		| CONST (n)  : other -> eval ([n : stack, st, w], other)
+		esac
+	esac
 }
 
 
@@ -37,6 +39,7 @@ fun compileExpr (expr) {
 		Const (n)                -> singleton (expr)
 		Var (x)                  -> singleton (LD (x))
 		Binop (op, expr1, expr2) -> compileExpr (expr1) +++ compileExpr (expr2) +++ singleton(BINOP (op))
+	esac
 }
 
 -- Compiles a statement into a stack machine code.
@@ -49,4 +52,5 @@ public fun compileSM (stmt) {
 		Read (x)       -> singleton (READ) +++ singleton (ST (x))
 		Write (expr)   -> compileExpr (expr) +++ singleton (WRITE)
 		Seq (s1, s2)   -> compileSM (s1) +++ sompileSM (s2)
+	esac
 }

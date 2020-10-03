@@ -18,6 +18,7 @@ case op of
 	| "%"  -> (x%y)
 	| "&&" -> (x&&y)
 	| "!!" -> (x!!y)
+esac
 }
 
 
@@ -27,5 +28,5 @@ case expr of
 	  Var(x)                  -> st (x)
 	| Const(n)                -> n
 	| Binop(op, expr1, expr2) -> evalBinop (op,evalExpr (expr1), evalExpr (expr2))
-		  
+esac	  
 }
