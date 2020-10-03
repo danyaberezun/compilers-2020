@@ -14,8 +14,8 @@ fun eval (c, insns) {
 	case c of [stack, st, w@[i, o]] -> case insns of
 		  {} -> c
 		| READ       : other -> case i of el : ni -> eval ([el : stack, st, [ni, o]], other) esac
-		| WRITE      : other -> case stack el : nstack -> eval ([nstack, st, [i, el : o]], other) esac
-		| BINOP (op) : other -> case stack x : y : nstack -> eval ([evalBinop (op, x, y) : nstack, st, w], other) esac
+		| WRITE      : other -> case stack of el : nstack -> eval ([nstack, st, [i, el : o]], other) esac
+		| BINOP (op) : other -> case stack of x : y : nstack -> eval ([evalBinop (op, x, y) : nstack, st, w], other) esac
 		| LD (x)     : other -> eval ([st(x) : stack, st, w], other) 
 		| ST (x)     : other -> case stack of el : nstack -> eval ([nstack, (st <-[x,el]), w], other) esac
 		| CONST (n)  : other -> eval ([n : stack, st, w], other)
