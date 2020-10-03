@@ -22,7 +22,7 @@ fun eval (c, stmt) {
         		| Seq   (s1, s2)   -> eval (eval(c, s1), s2)     
         		| Skip             -> c                  
         		| Read  (x)        -> case i of el : ni -> [(st <- [x, el]), [i, o]]   
-        		| Write (expr)     -> [st, [i, evalExpr (st, expr)]]       
+        		| Write (expr)     -> [st, [i, evalExpr (st, expr) : o]]       
         	esac
         esac 
 }
