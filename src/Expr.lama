@@ -4,6 +4,24 @@ import List;
 import State;
 
 
+public fun binopOp(op, l, r){
+   case op of
+        "+" -> l + r
+        |"*" -> l * r
+        |"-" -> l - r
+        |"/" -> l / r
+        |"%" -> l % r
+        |"==" -> l == r
+        |"!=" -> l != r
+        |"<" -> l < r
+        |"<=" -> l <= r
+        |">" -> l > r
+        |">=" -> l >= r
+        |"&&" -> l && r
+        |"!!" -> l !! r
+   esac
+}
+
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
 public fun evalExpr (st, expr) {
@@ -11,21 +29,6 @@ public fun evalExpr (st, expr) {
   case expr of
      Var(x) -> st(x)
     |Const(n) -> n
-    |Binop(op, l, r) -> (
-     case op of
-        "+" -> l+r
-        |"*" -> l*r
-        |"-" -> l-r
-        |"/" -> l/r
-        |"%" -> l%r
-        |"==" -> l==r
-        |"!=" -> l!=r
-        |"<" -> l<r
-        |"<=" -> l<=r
-        |">" -> l>r
-        |">=" -> l>=r
-        |"&&" -> l&&r
-        |"!!" -> l!!r
-     esac)
+    |Binop(op, l, r) -> binopOp (op, evalExpr (st,l), evalExpr (st, r))
   esac 
 }
