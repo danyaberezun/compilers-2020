@@ -9,13 +9,15 @@ import World;
 -- Returns a final configuration (if any)
 fun eval (c, stmt) {
  -- failure ("Stmt eval not implemented\n")
-  case stmt of
-      Seq(s1,s2) -> eval(eval(c,s1), s2)
-     |Read(x) -> case i of z : it -> [st <-[x,z], [it,o]] esac
-     |Write(expr) -> [st, [i, evalExpr(st, expr) : o]]
-     |Assn(x,e) -> [st <- [x, evalExpr(st, e)], [i,o]]
-     |Skip -> c
-  esac
+  case c of [st, [i,o]] ->
+    case stmt of
+        Seq(s1,s2) -> eval(eval(c,s1), s2)
+       |Read(x) -> case i of z : it -> [st <-[x,z], [it,o]] esac
+       |Write(expr) -> [st, [i, evalExpr(st, expr) : o]]
+       |Assn(x,e) -> [(st <- [x, evalExpr(st, e)]), [i,o]]
+       |Skip -> c
+     esac
+  esac 
 }
 
 -- Evaluates a program with a given input and returns an output
