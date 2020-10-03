@@ -8,11 +8,22 @@ import Expr;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
+
+
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+	case c of [stack, st, w@[i, o]] -> case insns of
+		  {} -> c
+		| READ       : other -> case i of el : ni -> eval ([el : stack, st, [ni, o]], other) 
+		| WRITE      : other -> case stack el : nstack -> eval ([nstack, st, [i, el : o]], other)
+		| BINOP (op) : other -> case stack x : y : nstack -> eval ([evalBinop (op, x, y) : nstack, st, w], other) 
+		| LD (x)     : other -> eval ([st(x) : stack, st, w], other)
+		| ST (x)     : other -> case stack of el : nstack -> eval ([nstack, (st <-[x,el]), w], other)
+		| CONST (n)  : other -> eval ([n : stack, st, w], other)
 }
 
+
 -- Runs a stack machine for a given input and a given program, returns an output
+
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
@@ -20,13 +31,22 @@ public fun evalSM (input, insns) {
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
+
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+	case expr of
+		Const (n)                -> singleton (expr)
+		Var (x)                  -> singleton (LD (x))
+		Binop (op, expr1, expr2) -> compileExpr (expr1) +++ compileExpr (expr2) +++ singleton(BINOP (op))
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
+
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+	case stmt of
+		Assn (x, expr) -> compileExpr (expr) +++ singleton (ST (x)) 
+		Read (x)       -> singleton (READ) +++ singleton (ST (x))
+		Write (expr)   -> compileExpr (expr) +++ singleton (WRITE)
+		Seq (s1, s2)   -> compileSM (s1) +++ sompileSM (s2)
 }
