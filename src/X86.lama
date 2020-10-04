@@ -317,13 +317,13 @@ fun compile (env, code) {
                       "/"  -> [env, code <+ Mov (s1, eax) <+ Cltd <+ IDiv (s2) <+ Mov (eax, s)]
                     | "%"  -> [env, code <+ Mov (s1, eax) <+ Cltd <+ IDiv (s2) <+ Mov (edx, s)]
                     | "&&" -> [env, code <+ 
-                      Mov (s1, edx) <+ Binop ("imull", s2, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+                      Mov (s1, edx) <+ Binop ("*", s2, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
                     | "!!" -> [env, code <+
-                      Mov (s1, edx) <+ Binop ("orl", s2, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+                      Mov (s1, edx) <+ Binop ("!!", s2, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
                     | op ->
                         case op_type (op) of
                           1 -> [env, code <+ Mov (s1, eax) <+ Binop (op, s2, eax) <+ Mov (eax, s)]
-                        | 0 -> [env, code <+ Mov (s2, edx) <+ Binop ("cmp", edx, s1) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
+                        | 0 -> [env, code <+ Mov (s2, edx) <+ Binop ("cmp", edx, s1) <+ Mov (L (0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
                         esac
                     esac 
                 esac
@@ -337,19 +337,28 @@ fun compile (env, code) {
 
 -- A top-level codegeneration function. Takes a stack machine program
 -- and returns x86 listing as a string
-public fun compileX86 (code) {
+public fun compileX86 (args, code) {
   case compile (initEnv (), code) of
     [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
+       local asmFile = args.getBaseName ++ ".s",
+             runtime = case getEnv ("LAMA_RUNTIME") of
+                         #unboxed -> "../runtime/"
+                       | path     -> path
+                       esac ++ "/runtime.o";
+       
+       fwrite (asmFile,
+               map (insnString, 
+                    getBuffer $
+                      singletonBuffer (Meta ("\t.global\tmain\n")) <+>
+                      dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
+                      codeSection (
+                        singletonBuffer (Meta ("main:\n")) <+>
+                        prologue (getStackSize (env)) <+>
+                        code <+>
+                        epilogue ()
+                      )
+                    ).stringcat);
+                    
+       system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }

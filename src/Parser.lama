@@ -4,8 +4,7 @@ import Ostap;
 import Lexer;
 import List;
 import Fun;
-import SM;
-import X86;
+
 -- A parser of "something" in brackets; l, r are left and right
 -- brackets as strings, p --- a parser of "something"
 fun inbr (l, p, r) {
@@ -34,13 +33,4 @@ local stmt = memo $ eta syntax (
 
 -- Public top-level parser
 public parse = stmt;
-
-(*fun test (str) {
-    parseString (parse |> bypass (end), str)
-}
-
-printf ("%s\n", (
-  case 
-    test ("read (x);\nread (y);\nz := x * y * 3;\nwrite (z)") of
-     Succ (pr) -> compileX86 (compileSM (pr)) esac).string)*)
              
