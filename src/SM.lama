@@ -8,25 +8,48 @@ import Expr;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+
+
+fun eval (condition, instance) {
+	case condition of [stack, state, world@[in, out]] -> 
+		case instance of
+			  {} -> condition 
+			| Binop(binop) : remaining -> case stack of left : right : __stack -> eval([parse_bin_operation(binop, left, right) : __stack, state, world], remaining) esac
+			| Const(n) : remaining -> eval([n : stack, state, world], remaining)
+			| Read : remaining -> case in of elem : __in -> eval([elem : stack, state, [__in, out]], remaining) esac
+			| Write : remaining -> case stack of elem : __stack -> eval([__stack, state, [in, elem : out]], remaining) esac
+			| LD(elem) : remaining -> eval([st(elem) : stack, state, world], remaining)
+			| ST(elem) : remaining -> case stack of other : __stack -> eval([stack, (state <- [elem, other]), world], remaining) esac
+		esac
+	esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
-  eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
+	eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
-fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+fun compileExpr (expression) {
+	case expression of
+		    Const(n) -> singleton(expression)
+		  | Var(x) -> LD(x)
+		  | Binop(binop, left, right) -> compileExpr(left) && compileExpr(right) && Binop(binop)
+
+	esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
-public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+
+public fun compileSM (statement) {
+	case statement of
+		  Assn(elem, expression) -> compileExpr(expression) && ST(elem)
+		| Read(elem) -> {Read, ST(x)}
+		| Write(elem) -> compileExpr && singleton(Write)
+		| Seq(fi, se) -> compileSM(fi) && compileSM(se)
+	esac
 }

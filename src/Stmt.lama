@@ -1,5 +1,6 @@
 -- Statement evaluator.
 
+import List;
 import State;
 import Expr;
 import World;
@@ -15,11 +16,21 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
-fun eval (c, stmt) {
-  failure ("Stmt eval not implemented\n")
+
+fun eval (condition, statement) {
+	case condition of [state, [in, out]] -> 
+		case statement of
+			  Skip -> condition
+			| Assn(elem, e) -> [(state <- [elem, evalExpr(state, e)]), [in, out]]
+			| Seq(fi, se) -> eval(eval(condition, fi), se)
+			| Read(elem) -> case in of el : __in -> [state <- [elem, el], [__in, out]] esac
+			| Write(elem) -> [state, [in, evalExpr(state, elem) : out]]
+		esac
+	esac
 }
 
 -- Evaluates a program with a given input and returns an output
+
 public fun evalStmt (input, stmt) {
-  eval ([emptyState, createWorld (input)], stmt).snd.getOutput
+	eval ([emptyState, createWorld (input)], stmt).snd.getOutput
 }
