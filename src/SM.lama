@@ -14,12 +14,12 @@ fun eval (condition, instance) {
 	case condition of [stack, state, world@[in, out]] -> 
 		case instance of
 			  {} -> condition 
-			| Binop(binop) : remaining -> case stack of left : right : __stack -> eval([parse_bin_operation(binop, left, right) : __stack, state, world], remaining) esac
+			| Binop (binop) : remaining -> case stack of left : right : stack__ -> eval([parse_bin_operation(binop, left, right) : stack__,state,world], remaining) esac
 			| Const(n) : remaining -> eval([n : stack, state, world], remaining)
-			| Read : remaining -> case in of elem : __in -> eval([elem : stack, state, [__in, out]], remaining) esac
-			| Write : remaining -> case stack of elem : __stack -> eval([__stack, state, [in, elem : out]], remaining) esac
+			| Read : remaining -> case in of elem : in__ -> eval([elem : stack, state, [in__, out]], remaining) esac
+			| Write : remaining -> case stack of elem : stack__ -> eval([stack__, state, [in, elem : out]], remaining) esac
 			| LD(elem) : remaining -> eval([st(elem) : stack, state, world], remaining)
-			| ST(elem) : remaining -> case stack of other : __stack -> eval([stack, (state <- [elem, other]), world], remaining) esac
+			| ST(elem) : remaining -> case stack of other : stack__ -> eval([stack, (state <- [elem, other]), world], remaining) esac
 		esac
 	esac
 }
@@ -35,9 +35,8 @@ public fun evalSM (input, insns) {
 fun compileExpr (expression) {
 	case expression of
 		    Const(n) -> singleton(expression)
-		  | Var(x) -> LD(x)
-		  | Binop(binop, left, right) -> compileExpr(left) && compileExpr(right) && Binop(binop)
-
+		  | Var(x) -> singleton(LD(x))
+		  | Binop(binop, left, right) -> compileExpr(left) +++ compileExpr(right) +++ Binop(binop)
 	esac
 }
 
@@ -47,9 +46,9 @@ fun compileExpr (expression) {
 
 public fun compileSM (statement) {
 	case statement of
-		  Assn(elem, expression) -> compileExpr(expression) && ST(elem)
-		| Read(elem) -> {Read, ST(x)}
-		| Write(elem) -> compileExpr && singleton(Write)
-		| Seq(fi, se) -> compileSM(fi) && compileSM(se)
+		  Assn(elem, expression) -> [compileExpr(expression), ST(elem)]
+		| Read(elem) -> [READ, ST(x)]
+		| Write(elem) -> [compileExpr(elem), WRITE]
+		| Seq(fi, se) -> compileSM(fi) +++ compileSM(se)
 	esac
 }

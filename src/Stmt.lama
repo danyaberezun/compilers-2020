@@ -23,7 +23,7 @@ fun eval (condition, statement) {
 			  Skip -> condition
 			| Assn(elem, e) -> [(state <- [elem, evalExpr(state, e)]), [in, out]]
 			| Seq(fi, se) -> eval(eval(condition, fi), se)
-			| Read(elem) -> case in of el : __in -> [state <- [elem, el], [__in, out]] esac
+			| Read(elem) -> case in of el : in__ -> [state <- [elem, el], [in__, out]] esac
 			| Write(elem) -> [state, [in, evalExpr(state, elem) : out]]
 		esac
 	esac
