@@ -46,19 +46,3 @@ public fun varargDbg(m, args) {
 	  fclose(pnt)
 	fi
 }
-
-public fun calculate(op, x, y) {
-  case op of
-    "*"  -> x * y
-  | "+"  -> x + y
-  | "-"  -> x - y
-  | "/"  -> x / y
-  | "%"  -> x % y
-  | "<"  -> x < y
-  | "<=" -> x <= y
-  | "==" -> x == y
-  | "!=" -> x != y
-  | ">"  -> x > y
-  | ">=" -> x >= y
-  esac
-}

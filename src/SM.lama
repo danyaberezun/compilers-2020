@@ -56,8 +56,7 @@ fun eval (c, insns) {
 			| _ -> failure("Not enough arguments in stack for write!")
 			esac
   	| {} -> c
-  	| _ ->
-		  failure("Can't match insns... %s", insns)
+  	| _ -> failure("Can't match insns... %s", insns)
   	esac
 	esac
 }
