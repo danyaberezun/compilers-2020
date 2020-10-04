@@ -4,25 +4,25 @@ import List;
 import World;
 import State;
 import Expr;
-import Util;
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c@[stack, map, world@[input, output]], insns) {
 case insns of
 	{} -> c
 	 | insns : rest_prog -> case insns of
 					BINOP (op) -> case stack of 
 								second : first : stack -> eval ([evalOp (op, first, second) : stack, map, world], rest_prog)
-							      esac
+						      esac
 					| CONST (n) -> eval ([n : stack, map, world], rest_prog)
 					| WRITE -> case stack of
 								first : stack -> eval ([stack, map, writeWorld (first, world)], rest_prog)
-							   esac
+						   esac
 					| READ -> eval ([fst (readWorld (world)) : stack, map, snd (readWorld (world))], rest_prog)
 					| ST (x) -> case stack of
 								first : stack -> eval ([stack, map <- [x, first], world], rest_prog)
-							    esac
+						    esac
 					| LD (x) -> eval ([map (x) : stack, map, world], rest_prog)
 				esac
 esac

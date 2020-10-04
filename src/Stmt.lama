@@ -7,6 +7,14 @@ import World;
 -- Evaluates a statement "stmt" in a configuration "c".
 -- A configuration is a pair of a state "s" and a world "w".
 -- Returns a final configuration (if any)
+--
+-- A statement is represented by a data structure of the following shape:
+--
+-- stmt = Assn   (string, expr)     |
+--        Seq    (stmt, stmt)       |
+--        Skip                      |
+--        Read   (string)           |
+--        Write  (expr)             |
 fun eval (c@[map, world@[input, output]], stmt) {
 case stmt of 
 	Assn (x, e) -> [map <- [x, evalExpr (map, e)], world]
