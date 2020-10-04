@@ -21,8 +21,8 @@ fun eval (c, stmt) {
 			  Assn  (x , expr) -> [(st <- [x, evalExpr (st, expr)]), [i, o]]  
         		| Seq   (s1, s2)   -> eval (eval(c, s1), s2)     
         		| Skip             -> c                  
-        		| Read  (x)        -> case i of el : ni -> [(st <- [x, el]), [i, o]]   
-        		| Write (expr)     -> [st, [i, evalExpr (st, expr)]]       
+        		| Read  (x)        -> case i of el : ni -> [(st <- [x, el]), [i, o]] esac  
+        		| Write (expr)     -> [st, [i, evalExpr (st, expr) : o]]       
         	esac
         esac 
 }
