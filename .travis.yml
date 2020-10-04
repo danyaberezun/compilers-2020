@@ -1,0 +1,8 @@
+language: c
+services:
+  - docker
+before_install:
+    - docker pull berezun/cw-2020
+    - docker run -d -it --name cw-2020 -v $(pwd):/usr/share/compiler-2020 berezun/cw-2020
+script:
+     docker exec -it cw-2020 sh test.sh
