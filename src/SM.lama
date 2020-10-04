@@ -11,16 +11,17 @@ import Expr;
 
 
 fun eval (c, insns) {
-	case c of [stack, st, w@[i, o]] -> case insns of
-		  {} -> c
-		| READ       : other -> case i of el : ni -> eval ([el : stack, st, [ni, o]], other) esac
-		| WRITE      : other -> case stack of el : nstack -> eval ([nstack, st, [i, el : o]], other) esac
-		| BINOP (op) : other -> case stack of x : y : nstack -> eval ([evalBinop (op, x, y) : nstack, st, w], other) esac
-		| LD (x)     : other -> eval ([st(x) : stack, st, w], other) 
-		| ST (x)     : other -> case stack of el : nstack -> eval ([nstack, (st <-[x,el]), w], other) esac
-		| CONST (n)  : other -> eval ([n : stack, st, w], other)
-		esac
-	esac
+  case c of
+    [s, st, w@[i, o]] -> case insns of
+        {} -> c
+      | Binop (b) : p -> case s of x : y : ss -> eval ([evalBinop (b, y, x) : ss, st, w], p) esac
+      | Const (n) : p -> eval ([n : s, st, w], p)
+      | Read      : p -> case i of x : it -> eval ([x : s, st, [it, o]], p) esac
+      | Write     : p -> case s of x : ss -> eval ([ss, st, [i, x : o]], p) esac
+      | LD    (x) : p -> eval ([st (x) : s, st, w], p)
+      | ST    (x) : p -> case s of y : ss -> eval ([s, (st <- [x, y]), w], p) esac
+    esac
+  esac
 }
 
 
@@ -38,7 +39,7 @@ fun compileExpr (expr) {
 	case expr of
 		 Const (n)                -> singleton (expr)
 		|Var (x)                  -> singleton (LD (x))
-		|Binop (op, expr1, expr2) -> compileExpr (expr1) +++ compileExpr (expr2) +++ singleton(BINOP (op))
+		|Binop (op, expr1, expr2) -> compileExpr (expr1) +++ compileExpr (expr2) +++ singleton(Binop (op))
 	esac
 }
 
@@ -49,8 +50,8 @@ fun compileExpr (expr) {
 public fun compileSM (stmt) {
 	case stmt of
 		  Assn (x, expr) -> compileExpr (expr) +++ singleton (ST (x)) 
-		| Read (x)       -> {READ, ST (x)}
-		| Write (expr)   -> compileExpr (expr) +++ singleton (WRITE)
+		| Read (x)       -> {Read, ST (x)}
+		| Write (expr)   -> compileExpr (expr) +++ singleton (Write)
 		| Seq (s1, s2)   -> compileSM (s1) +++ compileSM(s2)
 		| Skip           -> {}
 	esac
