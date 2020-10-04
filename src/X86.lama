@@ -5,10 +5,7 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
-<<<<<<< HEAD
-=======
 import Manifest;
->>>>>>> babaf409bb0b9c1c103275694320d1e1b5acabb6
 
 -- Assembler language interface
 -- The registers: 
@@ -134,11 +131,7 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-<<<<<<< HEAD
   -- popped items and an undated environment
-=======
-  -- popped items and an updated environment
->>>>>>> babaf409bb0b9c1c103275694320d1e1b5acabb6
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -280,7 +273,6 @@ fun suffix (op) {
   esac
 }
 
-<<<<<<< HEAD
 fun op_type (op) {
   case op of
       "+" -> 1 | "-" -> 1 | "*" -> 1
@@ -288,8 +280,6 @@ fun op_type (op) {
   esac
 }
 
-=======
->>>>>>> babaf409bb0b9c1c103275694320d1e1b5acabb6
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -306,7 +296,6 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-<<<<<<< HEAD
         | CONST (x) ->
             case env.allocate of
               [s, env] -> [env, code <+ Mov (L (x), s)]
@@ -339,9 +328,6 @@ fun compile (env, code) {
                     esac 
                 esac
             esac
-=======
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
->>>>>>> babaf409bb0b9c1c103275694320d1e1b5acabb6
         esac
       }, [env, emptyBuffer ()], code)
   }
@@ -349,7 +335,6 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
-<<<<<<< HEAD
 -- A top-level codegeneration function. Takes a stack machine program
 -- and returns x86 listing as a string
 public fun compileX86 (code) {
@@ -368,32 +353,3 @@ public fun compileX86 (code) {
            ).stringcat
   esac
 }
-=======
--- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
--- compiles the program into machine code, and compiles the machine code into an executable
-public fun compileX86 (args, code) {
-  case compile (initEnv (), code) of
-    [env, code] ->
-       local asmFile = args.getBaseName ++ ".s",
-             runtime = case getEnv ("LAMA_RUNTIME") of
-                         #unboxed -> "../runtime/"
-                       | path     -> path
-                       esac ++ "/runtime.o";
-       
-       fwrite (asmFile,
-               map (insnString, 
-                    getBuffer $
-                      singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-                      dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-                      codeSection (
-                        singletonBuffer (Meta ("main:\n")) <+>
-                        prologue (getStackSize (env)) <+>
-                        code <+>
-                        epilogue ()
-                      )
-                    ).stringcat);
-                    
-       system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
-  esac
-}
->>>>>>> babaf409bb0b9c1c103275694320d1e1b5acabb6
