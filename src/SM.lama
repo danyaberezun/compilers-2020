@@ -31,13 +31,13 @@ fun eval (c, insns) {
   case c of
     [stack, state, world] -> 
   	case insns of
-  	  Read:tail ->
+  	  READ:tail ->
         case readWorld(world) of
           [a, newWorld] -> eval([a:stack, state, newWorld], tail)
         esac
 		| LD(x):tail -> eval([state(x):stack, state, world], tail)
-		| Const(c):tail -> eval([c:stack, state, world], tail)
-		| Binop(op):tail ->
+		| CONST(c):tail -> eval([c:stack, state, world], tail)
+		| BINOP(op):tail ->
 			case stack of
 			  y:x:stack_tail ->
 					local res = calculate(op, x, y);
@@ -50,13 +50,13 @@ fun eval (c, insns) {
 			esac
 		| Var(x):tail ->
 		  eval([state(x):stack, state, world], tail)
-		| Write:tail ->
+		| WRITE:tail ->
 		  case stack of
 			  val:stack_tail -> eval([stack_tail, state, writeWorld(val, world)], tail)
 			| _ -> failure("Not enough arguments in stack for write!")
 			esac
   	| {} -> c
-  	| _ -> failure("Can't match insns... %s", insns)
+  	| _ -> failure("Can't match insns... %s", insns.string)
   	esac
 	esac
 }
@@ -68,9 +68,9 @@ public fun evalSM (input, insns) {
 
 fun cexpr (expr) {
   case expr of
-    Binop (op, a, b) -> cexpr(a) +++ cexpr(b) +++ (Binop(op):{})
+    Binop (op, a, b) -> cexpr(a) +++ cexpr(b) +++ (BINOP(op):{})
     | Var(x) -> LD(x):{}
-    | Const(c) -> Const(c):{}
+    | Const(c) -> CONST(c):{}
   esac
 }
 
@@ -94,8 +94,8 @@ public fun compileSM (stmt) {
 -- Returns list from one instruction
 public fun toInstr (head) {
   case head of
-    Read(x) -> Read:ST(x):{}
+    Read(x) -> READ:ST(x):{}
     | Assn (z, expr) -> compileExpr(expr) +++ (ST(z):{})
-    | Write (expr) -> compileExpr(expr) +++ (Write:{})
+    | Write (expr) -> compileExpr(expr) +++ (WRITE:{})
   esac
 }
