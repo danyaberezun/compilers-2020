@@ -60,7 +60,7 @@ fun cexpr (expr) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  cexpr(expr);
+  cexpr(expr)
 }
 
 -- Compiles a statement into a stack machine code.
