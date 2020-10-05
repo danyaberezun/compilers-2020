@@ -12,7 +12,7 @@ fun eval (c@[stack, state, world], insns) {
 
   case insns of
     {} -> c
-    BINOP (op)   : remainingInsns -> case stack of
+    | BINOP (op)   : remainingInsns -> case stack of
     					l : r : remainingStack -> eval([evalOp(op, l, r) : remainingStack, state, world], remainingInsns)
     				      esac
     | CONST (n)  : remainingInsns -> eval([n : stack, state, world], remainingInsns)
