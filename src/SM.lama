@@ -8,8 +8,23 @@ import Expr;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (c@[stack, state, world], insns) {
+
+  case insns of
+    {} -> c
+    BINOP (op)   : remainingInsns -> case stack of
+    					l : r : remainingStack -> eval([evalOp(op, l, r) : remainingStack, state, world], remainingInsns)
+    				      esac
+    | CONST (n)  : remainingInsns -> eval([n : stack, state, world], remainingInsns)
+    | READ       : remainingInsns -> eval([readWorld(world)[0] : stack, state, readWorld(world)[1]], remainingInsns)
+    | WRITE      : remainingInsns -> case stack of
+    					digit : remainingStack -> eval([remainingStack, state, writeWorld(digit, world)], remainingInsns)
+    				      esac
+    | LD    (x)  : remainingInsns -> eval([state(x) : stack, state, rorld], remainingInsns)
+    | ST    (x)  : remainingInsns -> case stack of
+    					digit : stack -> eval([stack, state <- [x, digit], world], remainingInsns) 
+    				      esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -21,12 +36,22 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+    Var (str)         -> singleton(LD(str))
+  | Const (int)       -> singleton(CONST(int))
+  | Binop (op, l, r)  -> compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of
+    Skip -> {}
+    | Assn(s, expr) -> compileExpr(expr) +++ singleton(ST(s))
+    | Seq (stmt1, stmt2) -> compileSM (stmt1) +++ compileSM (stmt2)
+    | Read (s) -> singleton(READ) +++ singleton(ST(s))
+    | Write (expr) -> compileExpr(expr) +++ singleton(WRITE)
+  esac
 }
