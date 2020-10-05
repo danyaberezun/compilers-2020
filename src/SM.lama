@@ -20,7 +20,7 @@ fun eval (c@[stack, state, world], insns) {
     | WRITE      : remainingInsns -> case stack of
     					digit : remainingStack -> eval([remainingStack, state, writeWorld(digit, world)], remainingInsns)
     				      esac
-    | LD    (x)  : remainingInsns -> eval([state(x) : stack, state, rorld], remainingInsns)
+    | LD    (x)  : remainingInsns -> eval([state(x) : stack, state, world], remainingInsns)
     | ST    (x)  : remainingInsns -> case stack of
     					digit : stack -> eval([stack, state <- [x, digit], world], remainingInsns) 
     				      esac
