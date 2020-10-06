@@ -273,15 +273,17 @@ fun suffix (op) {
   esac
 }
 
-fun isCmp (op) {
+fun opType (op) {
     case op of
-      "<"  -> 1
+      "&&" -> 0
+      |"!!" -> 0
+      |"<"  -> 1
       | "<=" -> 1
       | "==" -> 1
       | "!=" -> 1
       | ">=" -> 1
       | ">"  -> 1
-      | _ -> 0
+      | _ -> 2
     esac
 }
 
@@ -318,11 +320,19 @@ fun compile (env, code) {
                 [x, y, env] ->
                     case env.allocate of 
                         [s, env] -> 
-                            case [op, isCmp (op)] of
-                                [_, 1] -> [env, code <+ Mov(y, eax) <+ Binop("cmp", eax, x) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
-                                | ["/", 0] ->  [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, s)]
-                                | ["%", 0] -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, s)]
-                                | [_, 0] -> [env, code <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s)]
+                            case [op, opType (op)] of
+                                [_, 0] -> [env, code<+ Mov (L (0), eax)
+                                     <+ Mov (L (0), edx)
+                                     <+ Binop ("cmp", L (0), x) 
+                                     <+ Set ("ne", "%al")
+                                     <+ Binop ("cmp", L (0), y)
+                                     <+ Set ("ne", "%dl")
+                                     <+ Binop (op, eax, edx)
+                                     <+ Mov (edx, s)]
+                                | [_, 1] -> [env, code <+ Mov (L (0), eax)  <+ Mov(y, edx) <+ Binop("cmp", edx, x) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                                | ["/", 2] ->  [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, s)]
+                                | ["%", 2] -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, s)]
+                                | [_, 2] -> [env, code <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s)]
                             esac
                     esac
             esac
