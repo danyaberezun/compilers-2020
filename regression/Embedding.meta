@@ -61,7 +61,7 @@ infixr >> before ::= (s1, s2) {
 
 -- Returns embedded program (thus, the file has to be recompiled as the
 -- program changes)
-fun program () {
+public fun program () {
   PROGRAM_BODY
 }
 
