@@ -34,5 +34,5 @@ public fun evalExpr(st, expr){
           Var(x) -> st(x)
         | Const(n) -> n
         | Binop(op, e1, e2) -> operation(op, evalExpr(st, e1), evalExpr(st, e2))
-    esaс
+    esac
 }
