@@ -5,6 +5,7 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
+import Manifest;
 
 -- Assembler language interface
 -- The registers: 
@@ -130,7 +131,7 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-  -- popped items and an undated environment
+  -- popped items and an updated environment
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -302,20 +303,29 @@ fun compile (env, code) {
             esac
         | BINOP (op) ->
             case env.pop2 of
-              [y, x, env] -> case op of
-                  "*"  -> [env.allocate[1], code <+ Binop ("*", y, x)]
-                | "+"  -> [env.allocate[1], code <+ Binop ("+", y, x)]
-                | "-"  -> [env.allocate[1], code <+ Binop ("-", y, x)]
-                | "&&" -> [env.allocate[1], code <+ Binop ("&&", y, x)]
-                | "!!" -> [env.allocate[1], code <+ Binop ("!!", y, x)]
-                | "/"  -> [env.allocate[1], code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, x)]
-                | "%"  -> [env.allocate[1], code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, x)]
-                | "<"    -> [env.allocate[1], code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-                | "<="    -> [env.allocate[1], code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-                | "=="    -> [env.allocate[1], code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-                | "!="    -> [env.allocate[1], code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-                | ">="    -> [env.allocate[1], code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-                | ">"    -> [env.allocate[1], code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
+              [y, x, env] -> case env.allocate of
+                [s, env] ->
+                    case op of
+                        "*"  -> [env, code <+ Mov(x, eax) <+ Binop ("*", y, eax) <+ Mov(eax, s)]
+                        | "+"  -> [env, code <+ Mov(x, eax) <+ Binop ("+", y, eax) <+ Mov(eax, s)]
+                        | "-"  -> [env, code <+ Mov(x, eax) <+ Binop ("-", y, eax) <+ Mov(eax, s)]
+                        | "&&" -> [env, code <+ Mov(L(0), eax) <+ Mov(L(0), edx)
+                                             <+ Binop("cmp", L(0), y) <+ Set(suffix("!="), "%al")
+                                             <+ Binop("cmp", L(0), x) <+ Set(suffix("!="), "%dl")
+                                             <+ Binop(op, eax, edx) <+ Mov(edx, s)]
+                        | "!!" -> [env, code <+ Mov(L(0), eax) <+ Mov(L(0), edx)
+                                             <+ Binop("cmp", L(0), y) <+ Set(suffix("!="), "%al")
+                                             <+ Binop("cmp", L(0), x) <+ Set(suffix("!="), "%dl")
+                                             <+ Binop(op, eax, edx) <+ Mov(edx, s)]
+                        | "/"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, s)]
+                        | "%"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, s)]
+                        | _    -> [env, code <+ Mov(L(0), eax) <+ Mov(x, edx) <+ Binop("cmp", y, edx) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                        --| "<="    -> [env, code <+ Mov(L(0), eax) <+ Mov(x, edx) <+ Binop("cmp", y, edx) <+ Set(suffix(op), --"%al") <+ Mov(eax, s)]
+      --                  | "=="    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+    --                    | "!="    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+     --                   | ">="    -> [env, code <+ Mov(L(0), eax) <+ Mov(x, edx) <+ Binop("cmp", y, edx) <+ Set(suffix(op), --"%al") <+ Mov(eax, s)]
+   --                     | ">"    -> [env, code <+ Mov(L(0), eax) <+ Mov(x, edx) <+ Binop("cmp", y, edx) <+ Set(suffix(op), --"%al") <+ Mov(eax, s)]
+                esac
               esac
             esac
         esac
@@ -325,21 +335,30 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
--- A top-level codegeneration function. Takes a stack machine program
--- and returns x86 listing as a string
-public fun compileX86 (code) {
+-- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
+-- compiles the program into machine code, and compiles the machine code into an executable
+public fun compileX86 (args, code) {
   case compile (initEnv (), code) of
     [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
+       local asmFile = args.getBaseName ++ ".s",
+             runtime = case getEnv ("LAMA_RUNTIME") of
+                         #unboxed -> "../runtime/"
+                       | path     -> path
+                       esac ++ "/runtime.o";
+       
+       fwrite (asmFile,
+               map (insnString, 
+                    getBuffer $
+                      singletonBuffer (Meta ("\t.global\tmain\n")) <+>
+                      dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
+                      codeSection (
+                        singletonBuffer (Meta ("main:\n")) <+>
+                        prologue (getStackSize (env)) <+>
+                        code <+>
+                        epilogue ()
+                      )
+                    ).stringcat);
+                    
+       system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }

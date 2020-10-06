@@ -27,7 +27,7 @@ public fun evalExpr (st, expr) {
     |  "<"  -> (evalExpr(st, s2) < evalExpr(st, s3))
     |  "<=" -> (evalExpr(st, s2) <= evalExpr(st, s3))
     |  ">"  -> (evalExpr(st, s2) > evalExpr(st, s3))
-    |  ">=" -> (evalExpr(st, s2) == evalExpr(st, s3))
+    |  ">=" -> (evalExpr(st, s2) >= evalExpr(st, s3))
     |  "&&" -> (evalExpr(st, s2) && evalExpr(st, s3))
     |  "!!" -> (evalExpr(st, s2) !! evalExpr(st, s3))
     esac
