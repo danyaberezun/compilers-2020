@@ -7,7 +7,10 @@ import Buffer;
 import Fun;
 import Manifest;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/A04-control-flow-int
 -- Assembler language interface
 -- The registers: 
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
@@ -132,7 +135,11 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
+<<<<<<< HEAD
   -- popped items and an updated environment
+=======
+  -- popped items and an undated environment
+>>>>>>> upstream/A04-control-flow-int
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -274,6 +281,7 @@ fun suffix (op) {
   esac
 }
 
+<<<<<<< HEAD
 
 
 
@@ -298,6 +306,8 @@ fun operationType(op)
 }
 
 
+=======
+>>>>>>> upstream/A04-control-flow-int
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -314,6 +324,7 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+<<<<<<< HEAD
         | CONST(n) -> 
 			case env.allocate of
 			  [s, env] -> [env, code <+ Mov (L(n), s)]
@@ -348,12 +359,20 @@ fun compile (env, code) {
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
+=======
+        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        esac
+      }, [env, {}], code)
+>>>>>>> upstream/A04-control-flow-int
   }
 
   compile (env, code) 
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/A04-control-flow-int
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
@@ -376,9 +395,15 @@ public fun compileX86 (args, code) {
                         code <+>
                         epilogue ()
                       )
+<<<<<<< HEAD
                     ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
 
+=======
+                   ).stringcat);
+                    
+       system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
+>>>>>>> upstream/A04-control-flow-int
   esac
 }
