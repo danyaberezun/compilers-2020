@@ -39,7 +39,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
 									[s("/") , binop ],
 									[s("%") , binop ]
 								}] 
-						}, primary)(id);
+						}, primary);
 
 --local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
 local stmt = memo $ eta syntax( 
