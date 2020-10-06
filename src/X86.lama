@@ -64,7 +64,7 @@ fun insnString (insn) {
     | "&&"  -> "andl"
     | "!!"  -> "orl" 
     | "^"   -> "xorl"
-    | "cmp" -> "cmpl"
+    | _ -> "cmpl"
     esac
   }
 
@@ -479,6 +479,9 @@ fun suffix (op) {
   | "!=" -> "ne"
   | ">=" -> "ge"
   | ">"  -> "g"
+  | "&&" -> Kek ("*")
+  | "!!" -> Kek ("!!")
+  | _ -> None
   esac
 }
 
@@ -498,28 +501,83 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST (n) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move (L(n), s)]
+            esac
+        | DROP ->
+            case env.pop of
+              [_, env] -> [env, code]
+            esac
+        | LD (x) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move (env.loc(x), s)]
+            esac
+        | LDA (x) ->
+            case env.allocate of
+                [s, env] -> [env, code <+ Lea (env.loc(x), eax) <+ Mov(eax, s)]
+            esac
+        | ST (x) ->
+            case env.pop of
+              [s, env] -> [env, code <+> move (s, env.loc(x))]
+            esac
+        | STI ->
+            case env.pop of [s, env] ->
+              local x = env.peek;
+              [env, code <+> move(s, I (0, x)) <+ Mov (s, x)]
+            esac
+        | LABEL(l) -> [if env.isBarrier then env.retrieveStack(l) else env fi, code <+ Label(l)]
+		    | JMP (l) -> [setBarrier(setStack(env, l)), code <+ Jmp(l)]
+        | CJMP (e, l) -> case env.pop of [s, env] -> [env.setStack(l), code <+ Mov (L(0), eax) <+ Binop("cmp", eax, s) <+ CJmp(e, l)] esac
+        | BINOP (op) ->
+            case env.pop2 of
+              [y, x, env] -> case env.allocate of
+                [s, env]-> case op of
+                    "/" -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+> move (eax, s)]
+                  | "%" -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+> move (edx, s)]
+                  | o -> [env, code <+> case suffix(op) of
+                        None -> move (x, eax) <+ Binop (o, y, eax) <+> move (eax, s)
+                      | Kek (oprt) -> move (x, edx) <+ Binop (oprt, y, edx) <+ Binop ("cmp", L(0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") <+> move (eax, s)
+                      | suff -> move (y, edx) <+ Binop (o, edx, x) <+ Mov (L (0), eax) <+ Set (suff, "%al") <+> move (eax, s)
+                    esac
+                    ]
+                esac
+              esac
+          esac
         (* Assignment *)
-        
-         -- Some guidelines for generating function calls:
-         --
-         -- 1. generate instructions to save live registers on the X86 stack (use
-         --    env.liveRegisters (number of arguments);
-         -- 2. generate instructions to move actual parameters from the symbolic
-         --    stack to the hardware one;
-         -- 3. generate the call itself;
-         -- 4. discard the actual parameters from the stack;
-         -- 5. restore saved live registers.
-         --
-         -- Some guidelines for generating functions:
-         --
-         -- 1. generate proper prologue for BEGIN instruction (use "prologue" helper); use
-         --    env.enterFunction to create a proper environment;
-         -- 2. generate epilogue for END instruction.
-               
+        | GLOBAL(x) -> [addGlobal(env, x), code]  
+        | CALL (f, na) -> case call(env, f, na) of [env, callCode] -> [env, code <+> callCode] esac
+        | BEGIN (name, _, nl) -> [enterFunction(env, name, nl), code <+> prologue(name)]
+        | END -> case epilogue(env) of [env, ep] -> [env, code <+> ep] esac
+        | CALL(fLabel, nArgs) -> case call(env, fLabel, nArgs) of [env, fcode] -> [env, code <+> fcode] esac
+        | STRING (s)  -> case env.addString (s) of
+            [env, name] -> case allocate (env) of
+              [y, env] -> case call (env, "Bstring", 1) of
+                [env, is] -> [env, code <+> move (M ("$" ++ name), y) <+> is]
+              esac
+            esac
+          esac
+        | ARRAY (n) -> case call (env, "Barray", n) of
+            [env, is] -> [env, code <+> is]
+          esac
+        | STA -> case call (env, "Bsta", 2) of
+            [env, is] -> [env, code <+> is]
+          esac
+        | ELEM -> case call (env, "Belem", 2) of
+            [env, is] -> [env, code <+> is]
+          esac
+        | BUILTIN (f, n) -> case compare(f, "read") == 0 !! (compare(f, "write") == 0) of 
+            true -> case call (env, "L" ++ f, n) of
+              [env, is] -> [env, code <+> is]
+            esac | 
+            _ -> case call (env, "B" ++ f, n) of
+              [env, is] -> [env, code <+> is]
+            esac 
+          esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
-        esac
-      }, [env, emptyBuffer ()], code)
+      esac
+      }, [env, {}], code)
   }
 
   compile (env, code) 
