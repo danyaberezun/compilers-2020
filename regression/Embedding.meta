@@ -6,6 +6,7 @@ import World;
 import Stmt;
 import State;
 import SM;
+import X86;
 
 -- Embeds expression operands: strings are 
 -- embedded into identifiers, integer constants --- into
@@ -60,9 +61,10 @@ infixr >> before ::= (s1, s2) {
 
 -- Returns embedded program (thus, the file has to be recompiled as the
 -- program changes)
-public fun program () {
+fun program () {
   PROGRAM_BODY
 }
+
 
 fun state (x) {
   Read (x)
@@ -79,3 +81,4 @@ iter (fun (x) {printf ("%d\n", x)},
 	| _ -> failure ("Invalid compiler flag\n")
       esac
      )
+
