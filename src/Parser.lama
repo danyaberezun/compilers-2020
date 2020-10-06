@@ -1,4 +1,4 @@
--- Parser 
+-- Parser
 
 import Ostap;
 import Lexer;
@@ -18,8 +18,8 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
       exp = memo $ eta (failure ("expression parsing not implemented\n"));
 
 local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
-   
+
 
 -- Public top-level parser
 public parse = stmt;
-             
+
