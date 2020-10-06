@@ -85,7 +85,7 @@ fun addNames (state, names) {
 fun addFunction (state, name, args, body) {
   state.addName (name, Fun (args, body))
 }
-                                        
+
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values
 fun evalList (c, exprs) {
@@ -100,11 +100,88 @@ fun evalList (c, exprs) {
   esac
 }
 
-(* Assignment *)
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+fun eval (c@[st, w], expr) {
+  fun addDefs(s, defs) {
+    fun lambda(s, def) {
+      case def of
+        Local (xs) -> addNames(s, xs)|
+        Fun (name, args, body) -> addFunction(s, name, args, body)
+      esac
+    }
+    foldl(lambda, enterScope(s), defs)
+  }
+  fun addArgsToState(s, argNames, args) {
+    fun lambda(s, [name, val]) {
+      addName(s, name, val)
+    }
+    foldl(lambda, enterFunction(s), zip(argNames, args))
+  }
+
+  case expr of
+    Binop(op, l, r) -> case evalList(c, {l, r}) of 
+      [c1, {lv, rv}] -> [c1, evalOp(op, lv, rv)] 
+    esac |
+    Var(x) -> [c, lookup(st, x)] |
+    Ref (x) -> [c, Ref (x)] |
+    Ignore (x) -> case eval (c, x) of 
+      [c, _] -> [c, Bot] 
+    esac |
+    Const(n) -> [c, n] |
+    Skip -> [c, Bot] |
+    Assn (x, val) -> case evalList(c, {x, val}) of 
+      [[st1, w1], {Ref (xx), vval}] -> [[st1 <- [xx, vval], w1], vval] |
+      [c, {ElemRef (w, i), v}] -> 
+        w[i] := v; 
+        [c, v]
+    esac |
+    Seq (s, t) -> eval(eval(c, s)[0], t) |
+    If (expr, trst, flst) ->
+      case eval(c, expr) of
+        [c, true] -> eval(c, trst) |
+        [c, false] -> eval(c, flst)
+      esac |
+    wh@While(cond, body) -> case eval(c, cond) of
+      [c, true] -> case eval(c, body) of [c, _] -> eval(c, wh) esac |
+      [c, false] -> [c, Bot]
+    esac |
+    r@Repeat(body, cond) ->  case evalList(c, {body, cond}) of
+      [c, _:true:_] -> [c, Bot] |
+      [c, _:false:_] -> eval(c, r)
+    esac |
+    Scope (defs, expr) -> case addDefs(st, defs) of
+      st -> case eval([st, w], expr) of
+        [[st, w], val] -> [[leaveScope(st), w], val]
+      esac
+    esac |
+    Call (name, args) -> case lookup(st, name) of
+      Fun (argNames, body) -> case evalList(c, args) of 
+        [[st1, w1], args] -> case body of
+            External -> case evalBuiltin (name, args, w1) of [a, w1] -> [[st1, w1], a] esac |
+            _ -> case addArgsToState(st1, argNames, args) of 
+                st2 -> case eval([st2, w1], body) of 
+                  [[st3, w1], val] -> [[leaveFunction(st1, getGlobal(st3)), w1], val]
+                esac
+          esac
+        esac
+      esac
+    esac |
+    String (str) -> [c, str] |
+    Array (lst) -> case evalList(c, lst) of
+      [c, eLst] -> [c, listArray(eLst)]
+    esac |
+    Elem  (l, i) -> case evalList(c, {l, i}) of
+      [c, {lst, idx}] -> [c, lst[idx]]
+    esac |
+    ElemRef (l, i) -> case evalList(c, {l, i}) of
+      [c, {lst, idx}] -> [c, ElemRef (lst, idx)]
+    esac |
+    Builtin (name, args) -> case evalList(c, args) of
+      [[s, w], eArgs] -> case evalBuiltin(name, eArgs, w) of 
+        [v, w] -> [[s, w], v]
+      esac
+    esac
+  esac
 }
-(* End *)
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
