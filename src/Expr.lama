@@ -33,6 +33,8 @@ public fun evalExpr (st, expr) {
 				| ">"  -> (evalExpr(st, s1) >  evalExpr(st, s2))
 				| "&&" -> (evalExpr(st, s1) && evalExpr(st, s2))
 				| "!!" -> (evalExpr(st, s1) !! evalExpr(st, s2))
+				| _    -> failure("Operation %s not found.\n", op)
+		| _ -> failure("Expression %s not found.", expr)
 		esac
 	esac
 }

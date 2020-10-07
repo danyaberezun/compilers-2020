@@ -23,6 +23,7 @@ fun eval (c, stmt) {
 		| Read (v)     -> local a = readWorld(c[1]); [c[0] <- [v, a[0]], a[1]]
 		| Write (s)    -> [c[0], writeWorld(evalExpr(c[0], s), c[1])]
 		| Assn (v, s)  -> [c[0] <- [v, evalExpr(c[0], s)], c[1]]
+		| _            -> printf("Statement %s not found.\n", stmt)
 	esac
 }
 
