@@ -5,7 +5,6 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
-import Util;
 import Manifest;
 
 -- Assembler language interface
@@ -132,11 +131,7 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-<<<<<<< HEAD
-  -- popped items and an undated environment
-=======
   -- popped items and an updated environment
->>>>>>> A03-straight-line-parser
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -278,6 +273,20 @@ fun suffix (op) {
   esac
 }
 
+public fun eq(a, b) {
+  if (compare(a, b) == 0) then 1 else 0 fi
+}
+
+
+public fun contains(l, a) {
+    case l of (x:xs) -> 
+        if (eq(x, a)) then true
+        else contains(xs, a)
+        fi
+      | {} -> false
+    esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -294,7 +303,6 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-<<<<<<< HEAD
         | CONST(n) -> 
             case env.allocate of
                [s, env] -> [env, code <+> move(L(n), s)]
@@ -311,18 +319,23 @@ fun compile (env, code) {
             case env.pop2 of
                 [a, b, env] -> case env.allocate of [n, newEnv] ->
                     if ({"==", ">", "<", "!=", ">=", "<="}.contains(op)) then
-                        [newEnv, code <+ Binop("cmp", a, b) <+ Set(suffix(op), "%al") <+> move(eax, n)]
+                        [newEnv, code <+> move(b, eax) <+ Binop("cmp", a, eax) <+> move(L(0), eax) <+ Set(suffix(op), "%al") <+> move(eax, n)]
                     elif (eq(op, "/")) then
                         [newEnv, code <+> move(b, eax) <+ Cltd <+ IDiv(a) <+> move(eax, n)]
                     elif (eq(op, "%")) then
                         [newEnv, code <+> move(b, eax) <+ Cltd <+ IDiv(a) <+> move(edx, n)]
+                    elif (eq(op, "!!")) then 
+                        [newEnv, code <+> move(b, eax) <+ Binop(op, a, eax) <+> move(L(0), edx) <+ Binop("cmp", eax, edx) <+> move(L(0), eax) <+ Set("ne", "%al") <+> move(eax, n) ]
+                    elif (eq(op, "&&")) then
+                        [newEnv, 
+                        code <+> move(L(0), eax) <+> move(L(0), edx) <+ Binop("cmp", a, eax)
+                          <+ Set("ne", "%al") <+ Binop("cmp", b, edx) <+ Set("ne", "%dl") <+ Binop(op, eax, edx) <+> move(edx, n)
+                        ]
                     else
-                        [newEnv, code <+ Binop(op, a, b) <+> move(b, n)]
+                        [newEnv, code <+> move(b, eax) <+ Binop(op, a, eax) <+> move(eax, n)]
                     fi
                  esac
             esac
-=======
->>>>>>> A03-straight-line-parser
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
@@ -331,24 +344,6 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
-<<<<<<< HEAD
--- A top-level codegeneration function. Takes a stack machine program
--- and returns x86 listing as a string
-public fun compileX86 (code) {
-  case compile (initEnv (), code) of
-    [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
-=======
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
@@ -374,6 +369,5 @@ public fun compileX86 (args, code) {
                     ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
->>>>>>> A03-straight-line-parser
   esac
 }

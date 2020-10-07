@@ -24,17 +24,3 @@ public fun deepFlatten (l) {
   
   res [1]
 }
-
-public fun eq(a, b) {
-  if (compare(a, b) == 0) then 1 else 0 fi
-}
-
-
-public fun contains(l, a) {
-    case l of (x:xs) -> 
-        if (eq(x, a)) then true
-        else contains(xs, a)
-        fi
-      | {} -> false
-    esac
-}
