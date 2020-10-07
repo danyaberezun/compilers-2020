@@ -16,7 +16,7 @@ fun eval (c, insns) {
             x : i -> eval([x: s, st, [i, out]], p)
         esac
         |Write: p-> case s of
-            x : ss -> eval([ss, st, [in, x : ou]], p)
+            x : ss -> eval([ss, st, [in, x : out]], p)
         esac
         |Binop(binop): p -> case s of
             r : l : ss -> eval([binOp(binop, l, r): ss, st, w], p)
