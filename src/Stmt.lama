@@ -6,30 +6,30 @@ import World;
 
 -- Evaluates a statement "stmt" in a configuration "c".
 -- A configuration is a pair of a state "s" and a world "w".
--- Returns a final configuration (if any)
+-- Returns a final configuration  (if any)
 --
--- A statement is represented by a data structure of the following shape:
+-- A statement is represented by a data structure of the following shape :
 --
--- stmt = Assn   (string, expr)     |
---        Seq    (stmt, stmt)       |
+-- stmt = Assn    (string, expr)      |
+--        Seq     (stmt, stmt)        |
 --        Skip                      |
---        Read   (string)           |
---        Write  (expr)             |
-fun eval (c, stmt) {
+--        Read    (string)            |
+--        Write   (expr)              |
+fun eval  (c, stmt)  {
     case c of
         [st, [in, out]] -> case stmt of
-            Assn(x, expr) -> [st <- [x, evalExpr(st, expr)], [in, out]]
-            |Seq(s1, s2) -> eval(eval(c, s1), s2)
+            Assn (x, expr)  -> [st <- [x, evalExpr (st, expr) ], [in, out]]
+            |Seq (s1, s2)  -> eval (eval (c, s1) , s2)
             |Skip -> c
-            |Read(x) -> case in of
-                y : i -> [st <- [x, y], [i, out]]
+            |Read (x)  -> case in of
+                y  :  i -> [st <- [x, y], [i, out]]
             esac
-            |Write(expr) -> [st, [in, evalExpr(st, expr)], [in, out]]
+            |Write (expr)  -> [st, [in, evalExpr (st, expr) ], [in, out]]
         esac
 esac
 }
 
 -- Evaluates a program with a given input and returns an output
-public fun evalStmt (input, stmt) {
-  eval ([emptyState, createWorld (input)], stmt).snd.getOutput
+public fun evalStmt  (input, stmt)  {
+  eval  ([emptyState, createWorld  (input) ], stmt) .snd.getOutput
 }
