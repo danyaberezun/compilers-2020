@@ -6,6 +6,31 @@ import State;
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
+
+public fun evalOp(op, l, r) {
+    case op of
+      "+" -> l + r 
+    | "-" -> l - r 
+    | "*" -> l * r 
+    | "/" -> l / r 
+    | "%" -> l % r
+    | "==" -> l == r 
+    | "!=" -> l != r 
+    | "<" -> l < r 
+    | ">" -> l > r 
+    | "<=" -> l <= r 
+    | ">=" -> l >= r 
+    | "&&" -> l && r 
+    | "!!" -> l !! r
+    esac
+}
+
 public fun evalExpr (st, expr) {
-  failure ("evalExpr not implemented\n")
+	case expr of
+		var (x)	-> st(x)
+		| Binop (op, l, r) -> binop(op, evalExpr(st, l), evalExpr(st, r))
+		| const (n)	-> n
+		
+	
+	esac
 }
