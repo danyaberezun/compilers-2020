@@ -12,7 +12,7 @@ fun eval (c, insns) {
     case c of
       [s, st, w@[in, out]] -> case insns of
         {} -> c
-        |Read: p -> case input of
+        |Read: p -> case in of
             x : i -> eval([x: s, st, [i, out]], p)
         esac
         |Write: p-> case s of
