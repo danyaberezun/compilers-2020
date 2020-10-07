@@ -337,10 +337,10 @@ fun compile (env, code) {
                     elif op.oneOf ({"&&", "!!"}) then
                       [env, code
                         <+ Mov (L (0), eax)
-                        <+ Binop ("cmp", l, L (0))
+                        <+ Binop ("cmp", L (0), l)
                         <+ Set ("nz", "%al")
                         <+ Mov (L (0), edx)
-                        <+ Binop ("cmp", r, L (0))
+                        <+ Binop ("cmp", L (0), r)
                         <+ Set ("nz", "%dl")
                         <+ Binop (op, edx, eax)
                         <+ Mov (eax, s)
