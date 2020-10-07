@@ -13,7 +13,7 @@ Expr.o: State.o
 
 Stmt.o: State.o Expr.o World.o
 
-SM.o: State.o World.o Util.o Expr.o
+SM.o: State.o World.o Expr.o
 
 X86.o: SM.o Manifest.o
 
