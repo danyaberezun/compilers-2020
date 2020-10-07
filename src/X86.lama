@@ -60,6 +60,7 @@ fun insnString (insn) {
     | "!!"  -> "orl" 
     | "^"   -> "xorl"
     | "cmp" -> "cmpl"
+    | _     -> op
     esac
   }
 
@@ -273,6 +274,23 @@ fun suffix (op) {
   esac
 }
 
+fun opType (op) {
+	case op of
+		  "*"  -> "sh"
+		| "+"  -> "sh"
+		| "-"  -> "sh"
+		| "<"  -> "cm"
+		| "<=" -> "cm"
+		| ">"  -> "cm"
+		| ">=" -> "cm"
+		| "==" -> "cm"
+		| "!=" -> "cm"
+		| "!!" -> "bi"
+		| "&&" -> "bi"
+		| _    -> op
+	esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -306,24 +324,19 @@ fun compile (env, code) {
 				[x, y, env] ->
 					case env.allocate of
 						[s, env] ->
-							case op of
-								  "*"  -> [env, code <+ Binop(op, x, y)]
-								| "+"  -> [env, code <+ Binop(op, x, y)]
-								| "-"  -> [env, code <+ Binop(op, x, y)]
-								| "&&" -> [env, code <+ Binop(op, x, y)]
-								| "!!" -> [env, code <+ Binop(op, x, y)]
+							case opType(op) of
+								  "sh" -> [env, code <+ Mov(y, eax) <+ Binop(op, x, eax) <+ Mov(eax, s)]
 								| "%"  -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
 								| "/"  -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
-								| "<"  -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
-								| "<=" -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
-								| "==" -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
-								| "!=" -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
-								| ">=" -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
-								| ">"  -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+								| "cm" -> [env, code <+ Mov(L(0), eax) <+ Mov(y, edx) <+ Binop("cmp", x, edx)
+													 <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+								| "bi" -> [env, code <+ Mov(L(0), edx) <+ Mov(L(0), eax) <+ Binop("cmp", L(0), x) <+ Set(suffix("!="), "%dl")
+													 <+ Binop("cmp", L(0), y) <+ Set(suffix("!="), "%al") <+ Binop(op, edx, eax) <+ Mov(eax, s)]
+								| _    -> failure("Operation %s not found.\n", op)
 							esac
 					esac
 			esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        | _ -> failure ("Codegeneration for instruction %s is not yet implemented.\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
   }
