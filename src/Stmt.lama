@@ -23,7 +23,6 @@ case stmt of
     | Write(expr) -> [st, [i, evalExpr(st, expr) : o]]
     | Seq(s1, s2) -> eval(eval(c, s1), s2)
     | Assn(x, expr) -> [(st <- [x, evalExpr(st, expr)]), [i,o]]
-    | -> failure ("Stmt eval not implemented\n")
 esac
 }
 

@@ -18,7 +18,6 @@ fun eval (c@[stack, st, w@[i,o]], insns) {
    | BINOP(op) : s -> eval([evalOp(op, stack[1][0], stack[0]) : stack[1][1], st, w], s)
    | LD(x)     : s -> eval([st(x) : stack, st, w], s)
    | ST(x)     : s -> eval([stack[1], st <-[x, stack[0]], w], s)
-   | -> failure ("SM eval not implemented\n")
    esac
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
@@ -34,7 +33,6 @@ case expr of
     Var(k) -> singleton(LD(k))
    | Const(n) -> singleton(CONST(n))
    | Binop(op, x, y) -> compileExpr(x) +++ compileExpr(y) +++ singleton(BINOP(op))
-   | -> failure ("compileExpr not implemented\n")
 esac
 }
 
@@ -48,6 +46,5 @@ case stmt of
    | Write(expr) -> compileExpr(expr) +++ singleton(WRITE)
    | Seq(s1, s2) -> compileSM(s1) +++ compileSM(s2)
    | Skip -> {}
-   | -> failure ("compileSM not implemented\n")
 esac
 }
