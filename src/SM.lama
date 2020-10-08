@@ -4,7 +4,6 @@ import List;
 import World;
 import State;
 import Expr;
-import Util;
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
@@ -21,8 +20,6 @@ fun eval (c@[stack, st, w@[i,o]], insns) {
    | ST(x)     : s -> eval([stack[1], st <-[x, stack[0]], w], s)
    | -> failure ("SM eval not implemented\n")
    esac
-}
-
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
