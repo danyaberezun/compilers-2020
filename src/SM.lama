@@ -13,10 +13,10 @@ fun eval (c, insns) {
   case c of
     [s, st, w@[i, o]] -> case insns of
         {} -> c
-      | Binop (b) : p -> case s of x : y : ss -> eval ([binopOp (b, y, x) : ss, st, w], p) esac
-      | Const (n) : p -> eval ([n : s, st, w], p)
-      | Read      : p -> case i of x : it -> eval ([x : s, st, [it, o]], p) esac
-      | Write     : p -> case s of x : ss -> eval ([ss, st, [i, x : o]], p) esac
+      | BINOP (b) : p -> case s of x : y : ss -> eval ([binopParser (b, y, x) : ss, st, w], p) esac
+      | CONST (n) : p -> eval ([n : s, st, w], p)
+      | READ      : p -> case i of x : it -> eval ([x : s, st, [it, o]], p) esac
+      | WRITE     : p -> case s of x : ss -> eval ([ss, st, [i, x : o]], p) esac
       | LD    (x) : p -> eval ([st (x) : s, st, w], p)
       | ST    (x) : p -> case s of y : ss -> eval ([s, (st <- [x, y]), w], p) esac
     esac
@@ -34,8 +34,8 @@ public fun evalSM (input, insns) {
 fun compileExpr (expr) {
   case expr of 
     Var   (x)         -> singleton (LD (x))
-  | Const (n)         -> singleton (expr)
-  | Binop (b, e1, e2) -> compileExpr (e1) +++ compileExpr (e2) +++ singleton (Binop (b))
+  | Const (n)         -> singleton (CONST (n))
+  | Binop (b, e1, e2) -> compileExpr (e1) +++ compileExpr (e2) +++ singleton (BINOP (b))
   esac
 }
 
@@ -45,8 +45,8 @@ fun compileExpr (expr) {
 public fun compileSM (stmt) {
   case stmt of
     Assn (x, expr) -> compileExpr (expr) +++ singleton (ST (x))
-  | Read (x)       -> {Read, ST (x)}
-  | Write (expr)   -> compileExpr (expr) +++ singleton (Write)
+  | Read (x)       -> {READ, ST (x)}
+  | Write (expr)   -> compileExpr (expr) +++ singleton (WRITE)
   | Seq (s1, s2)   -> compileSM (s1) +++ compileSM (s2)
   esac
 }
