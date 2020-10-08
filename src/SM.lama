@@ -16,14 +16,14 @@ fun eval (configuration, insns) {
       | READ      	: tail -> case i of 
 							x : it     -> eval ([x : stack, st, [it, o]], tail) -- 
 						   esac
-      | WRITE     	: tail -> case s of 
+      | WRITE     	: tail -> case stack of 
 							x : ss     -> eval ([ss, st, [i, x : o]], tail)
 						   esac
-      | BINOP (str) : tail -> case s of 
+      | BINOP (str) : tail -> case stack of 
 							x : y : ss -> eval ([binopTranslate (str, y, x) : ss, st, world], tail) 
 						   esac
       | LD    (x) 	: tail -> eval ([st (x) : stack, st, world], tail)
-      | ST    (x) 	: tail -> case s of 
+      | ST    (x) 	: tail -> case stack of 
 							y : ss -> eval ([stack, (st <- [x, y]), world], tail) 
 						   esac
       | CONST (n) 	: tail -> eval ([n : stack, st, world], tail)
