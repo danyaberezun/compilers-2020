@@ -32,9 +32,9 @@ esac
 
 public fun evalExpr (st, expr) {
 case expr of
-  Var (x) -> st (x)
+  Var (x) -> st(x)
 | Const (x) -> x
-| Binop (op, x, y) -> evalOp(op, evalExpr (st, x), evalExpr (st, y))
+| Binop (op, v1, v2) -> evalOp(op, evalExpr(st, v1), evalExpr(st, v2))
 | -> failure ("evalExpr not implemented\n")
 esac
 }
