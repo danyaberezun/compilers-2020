@@ -263,7 +263,7 @@ LinitExpr_epilogue:
 
 LevalExpr:
 
-# BEGIN ("LevalExpr", 2, 3, [], ["statement"; "expression"], [{ blab="L4"; elab="L5"; names=[]; subs=[{ blab="L7"; elab="L8"; names=[]; subs=[{ blab="L29"; elab="L30"; names=[("operation", 2); ("left", 1); ("right", 0)]; subs=[{ blab="L31"; elab="L32"; names=[]; subs=[]; }]; }; { blab="L23"; elab="L24"; names=[("x", 0)]; subs=[{ blab="L25"; elab="L26"; names=[]; subs=[]; }]; }; { blab="L14"; elab="L15"; names=[("x", 0)]; subs=[{ blab="L16"; elab="L17"; names=[]; subs=[]; }]; }]; }]; }]) / 
+# BEGIN ("LevalExpr", 2, 3, [], ["statement"; "expression"], [{ blab="L4"; elab="L5"; names=[]; subs=[{ blab="L7"; elab="L8"; names=[]; subs=[{ blab="L29"; elab="L30"; names=[("op", 2); ("left", 1); ("right", 0)]; subs=[{ blab="L31"; elab="L32"; names=[]; subs=[]; }]; }; { blab="L23"; elab="L24"; names=[("x", 0)]; subs=[{ blab="L25"; elab="L26"; names=[]; subs=[]; }]; }; { blab="L14"; elab="L15"; names=[("x", 0)]; subs=[{ blab="L16"; elab="L17"; names=[]; subs=[]; }]; }]; }]; }]) / 
 
 	.type evalExpr, @function
 
@@ -273,7 +273,7 @@ LevalExpr:
 
 	.stabs "expression:p1",160,0,0,12
 
-	.stabs "operation:1",128,0,0,-12
+	.stabs "op:1",128,0,0,-12
 
 	.stabs "left:1",128,0,0,-8
 

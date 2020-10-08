@@ -14,11 +14,11 @@ fun eval (condition, instance) {
 	case condition of [stack, state, world@[in, out]] -> 
 		case instance of
 			  {} -> condition 
-			| Binop (binop) : remaining -> case stack of left : right : stack__ -> eval([parse_bin_operation(binop, left, right) : stack__,state,world], remaining) esac
+			| Binop (binop) : remaining -> case stack of right : left : stack__ -> eval([parse_bin_operation(binop, left, right) : stack__,state,world], remaining) esac
 			| Const(n) : remaining -> eval([n : stack, state, world], remaining)
 			| Read : remaining -> case in of elem : in__ -> eval([elem : stack, state, [in__, out]], remaining) esac
 			| Write : remaining -> case stack of elem : stack__ -> eval([stack__, state, [in, elem : out]], remaining) esac
-			| LD(elem) : remaining -> eval([st(elem) : stack, state, world], remaining)
+			| LD(elem) : remaining -> eval([state (elem) : stack, state, world], remaining)
 			| ST(elem) : remaining -> case stack of other : stack__ -> eval([stack, (state <- [elem, other]), world], remaining) esac
 		esac
 	esac
@@ -36,7 +36,7 @@ fun compileExpr (expression) {
 	case expression of
 		    Const(n) -> singleton(expression)
 		  | Var(x) -> singleton(LD(x))
-		  | Binop(binop, left, right) -> compileExpr(left) +++ compileExpr(right) +++ Binop(binop)
+		  | Binop(bop, left, right) -> compileExpr(left) +++ compileExpr(right) +++ singleton(Binop(bop))
 	esac
 }
 
@@ -46,9 +46,10 @@ fun compileExpr (expression) {
 
 public fun compileSM (statement) {
 	case statement of
-		  Assn(elem, expression) -> [compileExpr(expression), ST(elem)]
-		| Read(elem) -> [READ, ST(x)]
-		| Write(elem) -> [compileExpr(elem), WRITE]
-		| Seq(fi, se) -> compileSM(fi) +++ compileSM(se)
+		  Skip -> {}
+		| Assn(elem, expression) -> compileExpr(expression) +++ singleton(ST(elem))
+		| Read(elem) -> singleton(Read) +++ singleton(ST(elem))
+		| Write(elem) -> compileExpr(elem) +++ singleton(Write)
+		| Seq(s1, s2) -> compileSM(s1) +++ compileSM(s2)
 	esac
 }

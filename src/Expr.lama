@@ -35,7 +35,7 @@ public fun parse_bin_operation(operation, left, right) {
 public fun evalExpr(statement, expression) {
 	case expression of
 		  Var(x) -> statement(x)
-		| Const(x) -> (x)
-		| Binop(operation, left, right) -> parse_bin_operation(operation, evalExpr(statement, left), evalExpr(statement, right))
+		| Const(x) -> x
+		| Binop(op, left, right) -> parse_bin_operation(op, evalExpr(statement, left), evalExpr(statement, right))
 	esac
 }
