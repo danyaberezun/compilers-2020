@@ -16,6 +16,12 @@ import List;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
+<<<<<<< HEAD
+=======
+--        if     (expr, stmt, stmt) |
+--        While  (expr, stmt)       |
+--        Repeat (stmt, expr)
+>>>>>>> bba45f2cb58d52f0140084f2fbe80b4f92284754
 
 fun eval (c, stmt) {
   case c of [st, [i, o]] ->

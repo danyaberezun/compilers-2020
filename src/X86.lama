@@ -7,6 +7,7 @@ import Buffer;
 import Fun;
 import Manifest;
 
+
 -- Assembler language interface
 -- The registers: 
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
