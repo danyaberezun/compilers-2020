@@ -16,6 +16,8 @@ import World;
 --        Read   (string)           |
 --        Write  (expr)             |
 fun eval (c, stmt) {
+	case stmt of
+	
           Assn(x, e)  -> 	[c[0] <- [x, evalExpr(c[0], e)], c[1]]
 		
 		| Write(x)    -> 	[c[0], writeWorld(evalExpr(c[0], x), c[1])]
@@ -24,6 +26,7 @@ fun eval (c, stmt) {
 							[c[0] <- [x, res[0]], res[1]]
 		
 		| Seq(s1, s2) -> 	eval(eval(c, s1), s2)
+	esac
 
 }
 
