@@ -20,8 +20,9 @@ fun eval (c@[stack, st, w@[i,o]], insns) {
    | ST(x)     : s -> eval([stack[1], st <-[x, stack[0]], w], s)
    esac
 -- Runs a stack machine for a given input and a given program, returns an output
+
 public fun evalSM (input, insns) {
-  eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
+  eval([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
 -- Compiles an expression into a stack machine code.
