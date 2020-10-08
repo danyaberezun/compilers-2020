@@ -3,7 +3,7 @@
 import List;
 import State;
 
-public fun oper(op, l, r){
+public fun OperB(op, l, r){
 	case op of
 		  "+" -> l + r
 		| "-" -> l - r
@@ -25,6 +25,6 @@ public fun evalExpr(st, expr){
 	case expr of
           Var(x) -> st(x)
         | Const(n) -> n
-        | Binop(op, e1, e2) -> oper(op, evalExpr(st, e1), evalExpr(st, e2))
+        | Binop(op, e1, e2) -> OperB(op, evalExpr(st, e1), evalExpr(st, e2))
     esac
 }
