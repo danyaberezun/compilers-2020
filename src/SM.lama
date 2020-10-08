@@ -8,6 +8,7 @@ import Util;
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c@[stack, st, w@[i,o]], insns) {
  case insns of
     {} -> c
