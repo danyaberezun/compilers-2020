@@ -4,7 +4,7 @@ import List;
 import World;
 import State;
 import Expr;
-import Util
+import Util;
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
