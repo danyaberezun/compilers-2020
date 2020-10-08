@@ -51,7 +51,10 @@ fun opndString (opnd) {
 --   Cltd                       -- see instruction set reference           
 --   Set   (string, string)     -- sets a value from flags; the first operand is the   
 --                                 suffix, which determines the value being set, the
---                                 the second --- (sub)register name 
+--                                 the second --- (sub)register name
+--   Jmp   (string)             -- unconditional jump to a label
+--   CJmp  (string, string)     -- conditional jump to a label
+--   Label (string)             -- a label
 --   Push  (opnd)               -- pushes the operand on the hardware stack
 --   Pop   (opnd)               -- pops from the hardware stack to the operand
 --   Call  (string)             -- calls a function by its name 
@@ -84,6 +87,9 @@ fun insnString (insn) {
   | Pop   (s)          -> sprintf ("\tpopl\t%s\n", opndString (s))
   | Ret                -> "\tret\n"
   | Call  (p)          -> sprintf ("\tcall\t%s\n", p)
+  | Label (l)          -> sprintf ("%s:\n", l)
+  | Jmp   (l)          -> sprintf ("\tjmp\t%s\n", l)
+  | CJmp  (c, l)       -> sprintf ("\tj%s\t%s\n", c, l)
   | Meta  (m)          -> m
   esac
 }
@@ -93,8 +99,10 @@ fun insnString (insn) {
 --    a symbolic stack
 --    a maximal stack depth reached so far
 --    a set of global variable names
+--    a list of unused places in hardware stack and registers
+--    aditional attributes of operands 
 
-fun makeEnv (stack, stackSlots, globals, unusedLockals) {
+fun makeEnv (stack, stackSlots, globals, unusedLockals, attributes) {
 
   -- Returns an internal name for a global variable
   fun globalName (name) {
@@ -110,17 +118,19 @@ fun makeEnv (stack, stackSlots, globals, unusedLockals) {
   -- returns a pair: a location for allocated item and
   -- an updated environment
   fun allocate () {
+    -- printf("ALLOCATE\n");
     if unusedLockals.size then
       case unusedLockals of x:tl ->
-        return [x, makeEnv(x : stack, stackSlots, globals, tl)]
+        return [x, makeEnv(x : stack, stackSlots, globals, tl, attributes)]
       esac
     fi;
-    [S (stackSlots), makeEnv (S (stackSlots) : stack, stackSlots + 1, globals, unusedLockals)]
+    [S (stackSlots), makeEnv (S (stackSlots) : stack, stackSlots + 1, globals, unusedLockals, attributes)]
   }
 
   -- Pushes an item on the symbolic state; returns an updated envirtonment
   fun push (y) {
-    makeEnv (y : stack, stackSlots, globals, remove(fun (x) {compare(x, y) == 0}, unusedLockals))
+    -- printf("PUSH\n");
+    makeEnv (y : stack, stackSlots, globals, remove(fun (x) {compare(x, y) == 0}, unusedLockals), attributes)
   }
 
   -- Adds local variable to list of unused; return updated list
@@ -133,23 +143,25 @@ fun makeEnv (stack, stackSlots, globals, unusedLockals) {
   -- Pops one item from the symbolic stack; returns a pair: a popped
   -- item and an updated environment
   fun pop () {
+    -- printf("POP\n");
     case stack of
-      x : stack -> [x, makeEnv (stack, stackSlots, globals, dealloc(unusedLockals, x))]
+      x : stack -> [x, makeEnv (stack, stackSlots, globals, dealloc(unusedLockals, x), attributes)]
     esac
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
   -- popped items and an updated environment
   fun pop2 () {
+    -- printf("POP2\n");
     case stack of
       x : y : stack ->
-        [x, y, makeEnv (stack, stackSlots, globals, dealloc(dealloc(unusedLockals, x), y))]
+        [x, y, makeEnv (stack, stackSlots, globals, dealloc(dealloc(unusedLockals, x), y), attributes)]
     esac
   }
 
   -- Adds a global variable; returns an updated environment
   fun addGlobal (name) {
-    makeEnv (stack, stackSlots, addSet (globals, globalName (name)), unusedLockals)
+    makeEnv (stack, stackSlots, addSet (globals, globalName (name)), unusedLockals, attributes)
   }
 
   -- References a global variable
@@ -166,7 +178,83 @@ fun makeEnv (stack, stackSlots, globals, unusedLockals) {
   fun getStackSize () {
     stackSlots
   }
-  [envString, allocate, push, pop, pop2, addGlobal, loc, getGlobals, getStackSize]
+
+  -- Gets an attribute of the operand
+  fun getAttribute (op, att) {
+    case findMap(attributes, op) of
+      Some (mp) -> findMap(mp, att) |
+      None -> None
+    esac
+  }
+
+  -- Sets an attribute of the operand
+  fun setAttribute(op, att, val) {
+    -- printf("setAttribute\n");
+    makeEnv(stack, stackSlots, globals, unusedLockals, attributes.addMap(op, addMap(
+      case findMap(attributes, op) of
+        Some(mp) -> mp |
+        None -> emptyMap(compare)
+      esac, att, val)))
+  }
+
+  -- Drops all attributes of the operand
+  fun dropAttributes(op) {
+    -- printf("dropAttributes\n");
+    makeEnv(stack, stackSlots, globals, unusedLockals, removeMap(attributes, op))
+  }
+
+  -- Copys all attributes from the operand to another
+  fun copyAttributes(from, to) {
+    -- printf("copyAttributes\n");
+    if compare(from, to) == 0 then
+      makeEnv(stack, stackSlots, globals, unusedLockals, attributes)
+    else
+      makeEnv(stack, stackSlots, globals, unusedLockals,
+        case removeMap(attributes, to) of
+          mp -> case findMap(mp, from) of
+            Some (v) -> addMap(mp, to, v) |
+            None -> mp
+          esac
+        esac
+      )
+    fi
+  }
+
+  -- Checks if operand has attribute
+  fun hasAttribute (op, att) {
+    case findMap(attributes, op) of
+      Some (mp) -> case mp.findMap(att) of Some(_) -> true | _ -> false esac |
+      None -> false
+    esac
+  }
+
+  -- Removes an attribute of the operand
+  fun removeAttribute(op, att, val) {
+    -- printf("removeAttribute\n");
+    makeEnv(stack, stackSlots, globals, unusedLockals, addMap(attributes, op, removeMap(
+      case findMap(attributes, op) of
+        Some(mp) -> mp |
+        None -> emptyMap(compare)
+      esac, att)))
+  }
+  -- printf("att = %s\n", attributes.string);
+  [
+    envString,
+    allocate,
+    push,
+    pop,
+    pop2,
+    addGlobal,
+    loc,
+    getGlobals,
+    getStackSize,
+    getAttribute, 
+    setAttribute,
+    dropAttributes,
+    copyAttributes,
+    hasAttribute,
+    removeAttribute
+  ]
 }
 
 -- Exported accessors
@@ -206,9 +294,33 @@ fun getStackSize (env) {
   env [8] ()
 }
 
+fun getAttribute (env, op, att) {
+  env [9] (op, att)
+}
+
+fun setAttribute (env, op, att, val) {
+  env [10] (op, att, val)
+}
+
+fun dropAttributes (env, op) {
+  env [11] (op)
+}
+
+fun copyAttributes (env, from, to) {
+  env [12] (from, to)
+}
+
+fun hasAttribute (env, op, att) {
+  env [13] (op, att)
+}
+
+fun removeAttribute (env, op, att) {
+  env [14] (op, att)
+}
+
 -- Creates an initial environment
 fun initEnv () {
-  makeEnv ({}, 0, emptySet (compare), {R (0), R (1), R(2), R(3)})
+  makeEnv ({}, 0, emptySet (compare), {R (0), R (1), R(2), R(3)}, emptyMap(compare))
 }
 
 -- Codegeneration helper functions
@@ -356,6 +468,15 @@ fun leastByte(x) {
   esac
 }
 
+-- Checks if value is 0 or 1
+fun isBool(val) {
+  case val of
+    0 -> true |
+    1 -> true |
+    _ -> false
+  esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -363,10 +484,11 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+        -- printf("%s\n", i.string);
         case i of
           READ ->
             case allocate(env) of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
+              [s, env] -> [env.dropAttributes(s), code <+ Call ("Lread") <+ Mov (eax, s)]
             esac             
         | WRITE ->
             case pop(env) of
@@ -374,14 +496,20 @@ fun compile (env, code) {
             esac
         | ST (x) ->
             case pop(addGlobal(env, x)) of
-              [s, env] -> [env, code <+> move(s, env.loc(x))]
+              [s, env] -> [copyAttributes(env, s, loc(env, x)), code <+> move(s, loc(env, x))]
             esac
         | LD (x) ->
             case addGlobal(env, x) of
               env -> [push(env, loc(env, x)), code]
             esac
         | CONST (x) ->
-            [push(env, L (x)), code]
+            [setAttribute(push(
+              if isBool(x) then
+                setAttribute(env, L (x), "Bool", true)
+              else
+                env
+              fi
+            , L (x)), L (x), "CompileTimeValue", x), code]
         | BINOP (op) ->
             case 
               case pop2(env) of
@@ -394,31 +522,82 @@ fun compile (env, code) {
               esac
             of
               [op2, op1, env] ->
-                if constOpnd(op1) && constOpnd(op2) then 
-                  [push(env, L (apply(op, op1[0], op2[0]))), code]
+                if
+                  hasAttribute(env, op1, "CompileTimeValue") &&
+                  hasAttribute(env, op2, "CompileTimeValue")
+                then
+                  case apply(
+                    op,
+                    getAttribute(env, op1, "CompileTimeValue")[0],
+                    getAttribute(env, op2, "CompileTimeValue")[0]
+                  ) of
+                    val -> [push(setAttribute(
+                        if isBool(val) then
+                          setAttribute(env, L (val), "Bool", true)
+                        else
+                          env
+                        fi
+                      , L (val), "CompileTimeValue", val), L (val)), code]
+                  esac
                 elif compare(op, "/") == 0 !! compare(op, "%") == 0 then
                   case allocate(env) of
-                    [s, env] -> [env, code <+
+                    [s, env] -> [dropAttributes(env, s), code <+
                       Mov(op1, eax) <+ Cltd <+>
                       listBuffer(if constOpnd(op2) then singleton(Mov(op2, s)) else {} fi) <+
                       IDiv(if constOpnd(op2) then s else op2 fi) <+
                       if compare(op, "/") == 0 then Mov(eax, s) else Mov(edx, s) fi
                     ]
                   esac
-                elif compare(op, "&&") == 0 !! compare(op, "!!") == 0 then -- TODO: optimize test for boolean values
+                elif compare(op, "&&") == 0 !! compare(op, "!!") == 0 then
                   case allocate(env) of
-                    [s, env] -> [env, code <+>
-                      if regOpnd(op1) then singletonBuffer(Binop("test", op1, op1))
-                      else listBuffer({Mov(op1, eax), Binop("test", eax, eax)}) fi
-                      <+ Set("nz", "%dl") <+>
-                      if regOpnd(op2) then singletonBuffer(Binop("test", op2, op2))
-                      else listBuffer({Mov(op2, eax), Binop("test", eax, eax)}) fi
-                      <+ Set("nz", "%al") <+ Mov(eax, s) <+ Binop(op, edx, s) <+ Binop("&&", L (1), s)
-                    ]
+                    [s, env] -> case
+                      if compare(s, op1) == 0 then
+                        [op2, op1, s, env]
+                      else
+                        [op1, op2, s, env]
+                      fi of
+                      [op1, op2, s, env] -> [setAttribute(dropAttributes(env, s), s, "Bool", true), code <+>
+                        if hasAttribute(env, op1, "Bool") then
+                          if memOpnd(op1) && memOpnd(s) then
+                            singletonBuffer(Mov(op1, edx))
+                          else
+                            emptyBuffer()
+                          fi
+                        else
+                          if regOpnd(op1) then singletonBuffer(Binop("test", op1, op1))
+                          else listBuffer({Mov(op1, eax), Binop("test", eax, eax)}) fi
+                          <+ Set("nz", "%dl")
+                        fi
+                        <+>
+                        if hasAttribute(env, op2, "Bool") then
+                          move(op2, s)
+                        else
+                          if regOpnd(op2) then singletonBuffer(Binop("test", op2, op2))
+                          else listBuffer({Mov(op2, eax), Binop("test", eax, eax)}) fi
+                          <+ Set("nz", "%al") <+ Mov(eax, s)
+                        fi
+                        <+ Binop(op,
+                          if memOpnd(op1) && memOpnd(s) !! hasAttribute(env, op1, "Bool") != true then
+                            edx
+                          else
+                            op1
+                          fi, s)
+                        <+>
+                          if
+                            compare(op, "&&") == 0 &&
+                            (hasAttribute(env, op1, "Bool") !! hasAttribute(env, op2, "Bool")) !!
+                            (hasAttribute(env, op1, "Bool") && hasAttribute(env, op2, "Bool"))
+                          then
+                            emptyBuffer()
+                          else
+                            singletonBuffer(Binop("&&", L (1), s))
+                          fi
+                      ]
+                    esac
                   esac
                 elif compare(suffix(op), None) != 0 then
                   case allocate(env) of
-                    [s, env] -> [env, code <+>
+                    [s, env] -> [setAttribute(dropAttributes(env, s), s, "Bool", true), code <+>
                       if constOpnd(op1) then
                         singletonBuffer(Binop("cmp", op1, op2))
                       elif memOpnd(op1) && memOpnd(op2) then 
@@ -442,7 +621,7 @@ fun compile (env, code) {
                       [edx, allocate(env)]
                     fi
                   of
-                    [tmp, [s, env]] -> [env, code <+> move(op1, tmp) <+>
+                    [tmp, [s, env]] -> [dropAttributes(env, s), code <+> move(op1, tmp) <+>
                       if constOpnd(op2) then
                         listBuffer({Mov (op2, eax), Binop (op, eax, tmp)})
                       else
@@ -452,7 +631,7 @@ fun compile (env, code) {
                   esac
                 else -- TODO: maybe optimize
                   case if localOpnd(op1) then [op1, push(push(env, op2), op1)] else allocate(push(env, op2)) fi of
-                    [s, env] -> [case pop2(env) of [x, op2, env] -> push(env, x) esac, code <+>
+                    [s, env] -> [dropAttributes(case pop2(env) of [x, op2, env] -> push(env, x) esac, s), code <+>
                       move(op1, s) <+>
                       if memOpnd(op2) && memOpnd(s) then
                         listBuffer({Mov(op2, eax), Binop(op, eax, s)})
@@ -463,6 +642,29 @@ fun compile (env, code) {
                   esac
                 fi
             esac
+        | LABEL (l) -> [foldl( -- TODO: maybe optimize 
+          fun (env, str) {
+            dropAttributes(env, M (str))
+          }, env, getGlobals(env)), code <+ Label(l)]
+        | JMP (l) -> [env, code <+ Jmp(l)]
+        | CJMP (suf, l) -> case pop(env) of -- TODO: maybe optimize
+          [s, env] -> [env, code <+>
+              if hasAttribute(env, s, "CompileTimeValue") then
+                if getAttribute(env, s, "CompileTimeValue")[0] == 0 && compare(suf, "z") == 0 !!
+                   getAttribute(env, s, "CompileTimeValue")[0] != 0 && compare(suf, "nz") == 0 then
+                  singletonBuffer(Jmp (l))
+                else
+                  emptyBuffer()
+                fi
+              else
+                if regOpnd(s) then
+                  singletonBuffer(Binop("test", s, s))
+                else
+                  listBuffer({Mov(s, eax), Binop("test", eax, eax)})
+                fi <+ CJmp(suf, l)
+              fi
+            ]
+        esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
@@ -471,6 +673,8 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
+-- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
+-- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
   case compile (initEnv (), code) of
     [env, code] ->
