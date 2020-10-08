@@ -10,7 +10,7 @@ fun eval(c, insns){
 		[s, st, w@[in, out]] -> case insns of
 									 {} -> c
 									|Binop(bin): p -> case s of 
-														  r : l : ss -> eval([OperB(bin, l, r): ss, st, w], p) 
+														  r : l : ss -> eval([operB(bin, l, r): ss, st, w], p) 
 													  esac
 									|Const(n): p-> eval([n : s, st, w], p)
 									|Read: p -> case in of 
