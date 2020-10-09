@@ -1,17 +1,28 @@
 -- Expression evaluator
-
 import List;
 import State;
 
-
--- The evaluator itself: takes a state and an expression,
--- returns integer value
---
--- An expression is represented by a data structure of the following shape:
---
--- expr = Var   (string)             |
---        Const (int)                |
---        Binop (string, expr, expr)
-public fun evalExpr (st, expr) {
-  failure ("evalExpr not implemented\n")
+public fun operB(op, l, r){
+	case op of
+		  "+" -> l + r
+		| "-" -> l - r
+		| "*" -> l * r
+		| "/" -> l / r
+		| "%" -> l % r
+		| ">" -> l > r
+		| "<" -> l < r
+		| "==" -> l == r
+		| "!=" -> l != r
+		| "<=" -> l <= r
+		| ">=" -> l >= r
+		| "&&" -> l && r
+		| "!!" -> l !! r
+	esac
+}
+public fun evalExpr(st, expr){
+	case expr of
+          Var(x) -> st(x)
+        | Const(n) -> n
+        | Binop(op, e1, e2) -> operB(op, evalExpr(st, e1), evalExpr(st, e2))
+    esac
 }
