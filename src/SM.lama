@@ -5,11 +5,17 @@ import World;
 import State;
 import Expr;
 
--- Stack machine interpreter. Takes an SM-configuration and a program,
--- returns a final configuration
--- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (c@[st, state, w], insns) {
+  case insns of
+	    BINOP (op) : p -> eval( [evalOp(op, st[1][0], st[0]) : st[1][1], state, w], p )
+	  | CONST (n)  : p -> eval( [n : st, state, w], p )
+	  | READ       : p -> local new_w = readWorld(w);
+		              eval( [new_w[0] : st, state, new_w[1]], p )
+	  | WRITE      : p -> eval( [st[1], state, writeWorld(st[0], w)], p )
+	  | LD    (x)  : p -> eval( [state(x) : st, state, w], p )
+	  | ST    (x)  : p -> eval( [st[1], state <- [x, st[0]], w], p )
+	  | {} -> c
+	  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -21,12 +27,22 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+    Var (str)         -> singleton( LD(str) )
+  | Const (int)       -> singleton( CONST(int) )
+  | Binop (op, l, r)  -> compileExpr(l) +++ compileExpr(r) +++ singleton( BINOP(op) )
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of
+	    Assn (val, expr)      -> compileExpr(expr) +++ singleton( ST(val) )
+	  | Seq (stmt1, stmt2)  -> compileSM(stmt1) +++ compileSM(stmt2)
+	  | Skip                -> {}
+	  | Read (val)            -> { READ, ST(val) }
+	  | Write (expr)        -> compileExpr(expr) +++ singleton( WRITE )
+	  esac
 }
