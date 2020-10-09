@@ -336,7 +336,7 @@ fun ofCategory(op) {
   | "==" -> Comp
   | "!=" -> Comp
   | "&&" -> Logic
-  | "||" -> Logic
+  | "!!" -> Logic
   esac
 }
 
@@ -360,7 +360,14 @@ fun generateCompCode(code, op, src, dst) {
 }
 
 fun generateLogicCode(code, op, src, dst) {
-  code
+  local toCompareWith = case op of
+    "&&" -> L (2)
+  | "!!" -> L (1)
+  esac;
+  code.generateCompCode("!=", L (0), src)
+      .generateCompCode("!=", L (0), dst)
+      .generateArithmCode("+", src, dst)
+      .generateCompCode(">=", toCompareWith, dst)
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
