@@ -355,7 +355,7 @@ fun generateDivCode(code, op, src, dst) {
 }
 
 fun generateCompCode(code, op, src, dst) {
-  code <+ Binop ("cmp", src, dst) <+ Set (suffix (op), dst)
+  code <+ Binop ("cmp", src, dst) <+ Mov (L (0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, dst)
 }
 
 fun generateLogicCode(code, op, src, dst) {
