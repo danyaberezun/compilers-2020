@@ -4,7 +4,7 @@ import List;
 import World;
 import State;
 import Expr;
-<<<<<<< HEAD
+
 import Buffer;
 import Fun;
 
