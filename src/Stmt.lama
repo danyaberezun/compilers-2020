@@ -25,3 +25,7 @@ fun eval (c@[s, w], stmt) {
 	    | Assn(x, e) 	-> [s <- [x, evalExpr(s, e)], w]
 	    esac
 }
+
+public fun evalStmt (input, stmt) {
+  eval ([emptyState, createWorld (input)], stmt).snd.getOutput
+}
