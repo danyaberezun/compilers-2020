@@ -311,10 +311,10 @@ fun compile (env, code) {
                 
                 | "*" -> [env, code <+ Mov (x, eax) <+ Binop("*", y, eax) <+ Mov (eax, s)]
                 
-                | "&&" -> [env, code <+ Mov (y, edx) <+ Binop ("imull", x, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+                | "&&" -> [env, code <+ Mov (x, eax) <+ Binop("&&", y, eax) <+ Mov (eax, s)]
                 
-                |"!!" -> [env, code <+ Mov (y, edx) <+ Binop ("orl", x, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
-                
+                | "!!" -> [env, code <+ Mov (x, eax) <+ Binop("!!", y, eax) <+ Mov (eax, s)]
+
                 | "/" -> [env, code <+ Mov (x, eax) <+ Cltd  <+ IDiv (y)  <+ Mov (eax, s)]
 
                 | "%" -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (edx, s)]
