@@ -320,6 +320,9 @@ fun compile (env, code) {
                 | "%" -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (edx, s)]
 
                 | _ -> [env, code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
+                  esac
+              esac
+           esac
         esac
       }, [env, emptyBuffer ()], code)
   }
