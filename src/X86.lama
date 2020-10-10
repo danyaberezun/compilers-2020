@@ -301,17 +301,26 @@ fun compile (env, code) {
               [s, env] -> [env, code <+> move (env.loc(x), s)]
             esac
         | BINOP (op) ->
+            fun withOperands(code, x, y, action) {  -- moves first operand to register if both operands are memory
+              if (memOpnd(x) && memOpnd(y))
+                then code <+ Mov (x, edx) <+> action(code, edx, y)
+                else action(code, x, y)
+              fi
+            }
             fun plusLikeImpl (env, x, y, result) {
-              -- todo perf
-              [env, code <+ Mov (x, edx) <+ Binop (op, y, edx) <+ Mov (edx, result)]
+              fun impl (code, x, y) {
+                code <+ Binop (op, y, x) <+ Mov (x, result)
+              }
+              [env, withOperands(code, x, y, impl)]
             }
             fun cmpImpl (env, x, y, result) {
-              -- todo perf binop
-              [env, code
-                <+ Mov (y, eax) <+ Binop ("cmp", eax, x)
-                <+ Mov (L (0), eax) <+ Set (suffix (op), "%al")
-                <+ Mov (eax, result)
-              ]
+              fun impl (code, x, y) {
+                code
+                  <+ Binop ("cmp", y, x)
+                  <+ Mov (L (0), eax) <+ Set (suffix (op), "%al")
+                  <+ Mov (eax, result)
+              }
+              [env, withOperands(code, x, y, impl)]
             }
             case env.pop2 of [y, x, env] ->
               case env.allocate of [result, env] ->  -- вообще result будет равным x?
