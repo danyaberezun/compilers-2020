@@ -288,6 +288,48 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST (v) ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (L (v), s)]
+            esac
+        | ST (x) ->
+            case env.addGlobal(x).pop of
+              [s, env] -> [env, code <+> move (s, env.loc(x))]
+            esac
+        | LD (x) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move (env.loc(x), s)]
+            esac
+        | BINOP (op) ->
+            fun plusLikeImpl (env, x, y, result) {
+              -- todo perf
+              [env, code <+ Mov (x, edx) <+ Binop (op, y, edx) <+ Mov (edx, result)]
+            }
+            fun cmpImpl (env, x, y, result) {
+              -- todo perf binop
+              [env, code
+                <+ Mov (y, eax) <+ Binop ("cmp", eax, x)
+                <+ Mov (L (0), eax) <+ Set (suffix (op), "%al")
+                <+ Mov (eax, result)
+              ]
+            }
+            case env.pop2 of [y, x, env] ->
+              case env.allocate of [result, env] ->  -- вообще result будет равным x?
+                case op of
+                  "+"  -> plusLikeImpl(env, x, y, result)
+                | "-"  -> plusLikeImpl(env, x, y, result)
+                | "*"  -> plusLikeImpl(env, x, y, result)
+                | "/"  -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (eax, result)]
+                | "%"  -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (edx, result)]
+                | "<"  -> cmpImpl(env, x, y, result)
+                | "<=" -> cmpImpl(env, x, y, result)
+                | ">"  -> cmpImpl(env, x, y, result)
+                | ">=" -> cmpImpl(env, x, y, result)
+                | "==" -> cmpImpl(env, x, y, result)
+                | "!=" -> cmpImpl(env, x, y, result)
+                esac
+              esac
+            esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
