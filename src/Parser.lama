@@ -43,6 +43,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
 
 local 
       elseBranch = memo $ eta syntax (
+        kFi {Skip} |
         -kElse stmt -kFi |
         kElif cond=exp kThen s1=stmt s2=elseBranch {If (cond, s1, s2)}
       ),
@@ -51,7 +52,6 @@ local
         kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
         kWrite e=inbr[s("("), exp, s(")")] {Write (e)} |
         x=lident s[":="] e=exp {Assn (x, e)} |
-        kIf cond=exp kThen st=stmt kFi {If (cond, st, Skip)} |
         kIf cond=exp kThen s1=stmt s2=elseBranch {If (cond, s1, s2)} |
         kWhile cond=exp kDo st=stmt kOd {While (cond, st)} |
         kRepeat st=stmt kUntil cond=exp {Repeat (st, cond)} |
