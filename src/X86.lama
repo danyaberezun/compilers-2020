@@ -273,6 +273,20 @@ fun suffix (op) {
   esac
 }
 
+fun opType (op) {
+    case op of
+      "&&" -> 0
+      |"!!" -> 0
+      |"<"  -> 1
+      | "<=" -> 1
+      | "==" -> 1
+      | "!=" -> 1
+      | ">=" -> 1
+      | ">"  -> 1
+      | _ -> 2
+    esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -289,9 +303,42 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST(n) ->
+            case env.allocate of 
+                [s, env] -> [env, code <+ Mov (L(n), s)]
+            esac
+        | LD(x) -> 
+            case env.addGlobal(x).allocate of 
+                [s, env] -> [env, code <+> move (env.loc(x), s)]                
+            esac
+        | ST(x) -> 
+            case env.addGlobal(x).pop of 
+                [s, env] -> [env, code <+> move (s, env.loc(x))]      
+            esac
+        | BINOP(op) -> 
+            case env.pop2 of 
+                [x, y, env] ->
+                    case env.allocate of 
+                        [s, env] -> 
+                            case [op, opType (op)] of
+                                [_, 0] -> [env, code<+ Mov (L (0), eax)
+                                     <+ Mov (L (0), edx)
+                                     <+ Binop ("cmp", L (0), x) 
+                                     <+ Set ("ne", "%al")
+                                     <+ Binop ("cmp", L (0), y)
+                                     <+ Set ("ne", "%dl")
+                                     <+ Binop (op, eax, edx)
+                                     <+ Mov (edx, s)]
+                                | [_, 1] -> [env, code <+ Mov (L (0), eax)  <+ Mov(y, edx) <+ Binop("cmp", edx, x) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                                | ["/", 2] ->  [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, s)]
+                                | ["%", 2] -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, s)]
+                                | [_, 2] -> [env, code <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s)]
+                            esac
+                    esac
+            esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
-      }, [env, {}], code)
+      }, [env, emptyBuffer ()], code)
   }
 
   compile (env, code) 
