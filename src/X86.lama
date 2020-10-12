@@ -312,23 +312,23 @@ fun compile (env, code) {
                                      else [env, code <+ Binop(op, x, y)]
                                      fi
                             | "*" -> if stackOpnd (x) && stackOpnd (y)
-        						  		           then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		           then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
         						  		           else [env, code <+ Binop(op, x, y)]
         						  	             fi
                             | "/" -> if stackOpnd (x) && stackOpnd (y)
-        						  		           then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		           then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
         						  		           else [env, code <+ Binop(op, x, y)]
         						  	             fi
                             | "&&" -> if stackOpnd (x) && stackOpnd (y)
-        						  		           then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		           then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
         						  		           else [env, code <+ Binop(op, x, y)]
         						  	             fi
                             | "!!" -> if stackOpnd (x) && stackOpnd (y)
-        						  		           then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		           then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
         						  		           else [env, code <+ Binop(op, x, y)]
         						  	             fi
                             | "%" -> if stackOpnd (x) && stackOpnd (y)
-        						  		           then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		           then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
         						  		           else [env, code <+ Binop(op, x, y)]
         						  	             fi
                             |  _  -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
