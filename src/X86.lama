@@ -7,10 +7,6 @@ import Buffer;
 import Fun;
 import Manifest;
 
-<<<<<<< HEAD
-
-=======
->>>>>>> bba45f2cb58d52f0140084f2fbe80b4f92284754
 -- Assembler language interface
 -- The registers: 
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
@@ -277,7 +273,6 @@ fun suffix (op) {
   esac
 }
 
-<<<<<<< HEAD
 fun op_type (op) {
   case op of
       "+" -> 1 | "-" -> 1 | "*" -> 1
@@ -285,8 +280,6 @@ fun op_type (op) {
   esac
 }
 
-=======
->>>>>>> bba45f2cb58d52f0140084f2fbe80b4f92284754
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -303,7 +296,6 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-<<<<<<< HEAD
         | CONST (x) ->
             case env.allocate of
               [s, env] -> [env, code <+ Mov (L (x), s)]
@@ -338,23 +330,13 @@ fun compile (env, code) {
             esac
         esac
       }, [env, emptyBuffer ()], code)
-=======
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
-        esac
-      }, [env, {}], code)
->>>>>>> bba45f2cb58d52f0140084f2fbe80b4f92284754
   }
 
   compile (env, code) 
 }
 
-<<<<<<< HEAD
--- A top-level codegeneration function. Takes a stack machine program
--- and returns x86 listing as a string
-=======
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
->>>>>>> bba45f2cb58d52f0140084f2fbe80b4f92284754
 public fun compileX86 (args, code) {
   case compile (initEnv (), code) of
     [env, code] ->
@@ -375,11 +357,7 @@ public fun compileX86 (args, code) {
                         code <+>
                         epilogue ()
                       )
-<<<<<<< HEAD
-                    ).stringcat);
-=======
                    ).stringcat);
->>>>>>> bba45f2cb58d52f0140084f2fbe80b4f92284754
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
