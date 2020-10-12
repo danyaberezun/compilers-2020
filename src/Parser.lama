@@ -71,7 +71,7 @@ fun list (item) {
 -- initializers into assignments
 fun expandScope (defs, expr) {
   fun expandDefs (defs, expr) {
-    foldr (fun ([defs, expr], def) {     
+    foldr (fun ([defs, expr], def) {
              case def of
                 [ident, None]         -> [ident : defs, expr]
              |  [ident, Some (value)] -> [ident : defs, Seq (Ignore (Assn (Ref (ident), value)), expr)]
@@ -81,7 +81,7 @@ fun expandScope (defs, expr) {
            defs)
   }
 
-  case 
+  case
     foldr (fun ([defs, expr], def) {
              case def of
                f@Fun (_, _, _) -> [f : defs, expr]
@@ -94,7 +94,7 @@ fun expandScope (defs, expr) {
            [{}, expr],
            defs) of
     [defs, expr] -> Scope (defs, expr)
-  esac  
+  esac
 }
 
 -- Helper AST function: distributes a scope through an expression
