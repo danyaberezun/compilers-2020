@@ -72,7 +72,7 @@ fun eval (env, c@[stack, mp, world], insns) {
       [CJMP ("z", l), arg:stack] ->
         if arg then eval(env, c, insns) else eval(env, c, env.fromLabel(l)) fi |
       [CJMP ("nz", l), arg:stack] ->
-        if arg != 0 then eval(env, c, insns) else eval(env, c, env.fromLabel(l)) fi
+        if arg == 0 then eval(env, c, insns) else eval(env, c, env.fromLabel(l)) fi
     esac 
   esac
 }
@@ -156,8 +156,8 @@ public fun compileSM (stmt) {
         [l1, l2, env] -> case inner(stmt, env) of
           [body, env] ->
             [
-              singleton(LABEL (l1)) +++ compileExpr(cond) +++ singleton(CJMP ("z", l2)) +++
-              body +++ {JMP (l1), LABEL (l2)}
+              {JMP (l2), LABEL (l1)} +++ body +++ singleton(LABEL (l2)) +++
+              compileExpr(cond) +++ singleton(CJMP ("nz", l1))
             , env]
         esac
       esac |
@@ -171,5 +171,19 @@ public fun compileSM (stmt) {
       esac
     esac
   }
-  inner(stmt, initCompEnv())[0]
+  -- printf("%s\n", inner(stmt, initCompEnv())[0].string);
+  -- reduce jump chains
+  case inner(stmt, initCompEnv())[0] of
+    instr -> case initEvalEnv(instr) of
+      env -> map(fun (i) {
+          case i of
+            JMP (l) -> case env.fromLabel(l) of 
+              _ : JMP (ol) : _ -> JMP (ol) |
+              _ -> i
+            esac |
+            _ -> i
+          esac
+        }, instr)
+    esac
+  esac
 }
