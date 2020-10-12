@@ -307,9 +307,34 @@ fun compile (env, code) {
                                      then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
                                      else [env, code <+ Binop(op, x, y)]
                                      fi
+                            | "-" -> if stackOpnd(x) && stackOpnd(y)
+                                     then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
+                                     else [env, code <+ Binop(op, x, y)]
+                                     fi
+                            | "*" -> if stackOpnd (x) && stackOpnd (y)
+        						  		           then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		           else [env, code <+ Binop(op, x, y)]
+        						  	             fi
+                            | "/" -> if stackOpnd (x) && stackOpnd (y)
+        						  		           then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		           else [env, code <+ Binop(op, x, y)]
+        						  	             fi
+                            | "&&" -> if stackOpnd (x) && stackOpnd (y)
+        						  		           then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		           else [env, code <+ Binop(op, x, y)]
+        						  	             fi
+                            | "!!" -> if stackOpnd (x) && stackOpnd (y)
+        						  		           then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		           else [env, code <+ Binop(op, x, y)]
+        						  	             fi
+                            | "%" -> if stackOpnd (x) && stackOpnd (y)
+        						  		           then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		           else [env, code <+ Binop(op, x, y)]
+        						  	             fi
+                            |  _  -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
+
                              esac
             esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
   }
