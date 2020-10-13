@@ -21,13 +21,22 @@ import World;
 --        Repeat (stmt, expr)
 
 fun eval (c, stmt) {
-	case stmt of
-		Seq(s1, s2) -> eval(eval(c, s1), s2)
-	  | Write(s1) -> [c[0], writeWorld(evalExpr(c[0], s1), c[1])]
-	  | Read(s1) -> 
-			local my_result = readWorld(c[1]);
-			[c[0] <- [s1, my_result[0]], my_result[1]]
-	  | Assn(x, s1) -> [c[0] <- [x, evalExpr(c[0], s1)], c[1]]
+	case c of [sigma, w] ->
+		case stmt of
+		  Assn(x, e)  	 -> [sigma <- [x, evalExpr(sigma, e)], w]
+		| Seq(s1, s2) 	 -> eval(eval(c, s1), s2)
+		| Skip        	 -> c 
+		| Read(x)     	 -> local new_w = readWorld(w);
+							[sigma <- [x, new_w[0]], new_w[1]]
+		| Write (e)    	 -> [sigma, writeWorld(evalExpr(sigma, e), w)]
+		| If(e, s1, s2)  -> if evalExpr(sigma, e) != 0 then eval(c, s1) else eval(c, s2) fi
+		| While(e, s)  	 -> if evalExpr(sigma, e) == 0 then c else eval(eval(c, s), stmt) fi
+		| Repeat(s, e)	 -> 
+							case eval(c, s) of c_new@[sigma_new, w_new] ->
+								if evalExpr(sigma_new, e) != 0 then c_new else eval(c_new, stmt) fi
+							esac
+		| _              -> failure("%s???", stmt.string)
+		esac
 	esac
 }
 
