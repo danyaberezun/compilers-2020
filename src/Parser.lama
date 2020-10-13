@@ -26,12 +26,25 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
           [Nona, {[s(">"), binop], [s("<"), binop], [s(">="), binop], [s("<="), binop], [s("!="), binop], [s("=="), binop]}],
           [Left, {[s("+"), binop], [s("-"), binop]}],
           [Left, {[s("*"), binop], [s("/"), binop], [s("%"), binop]}]
-        }, primary)(id);
+        }, primary);
 
-local stmt = memo $ eta syntax (kRead x=inbr[s("("), lident, s(")")]{Read(x)}|
-                                kWrite x=inbr[s("("), exp, s(")")]{Write(x)} |
-                                x=lident s[":="] y=exp{Assn(x, y)}           |
-                                x=stmt s[";"] y=stmt end{Seq(x, y)});
+local elifParser = memo $ eta syntax (kElse st=stmt {st}|
+                                      kElif e=exp kThen st1=stmt st2=elifParser {If(e,st1,st2)});
+
+local firstStmt = memo $ eta syntax (kRead x=inbr[s("("), lident, s(")")]      {Read(x)}|
+                                kWrite x=inbr[s("("), exp, s(")")]       {Write(x)}|
+                                x=lident s[":="] y=exp                 {Assn(x, y)}|
+                                kWhile e=exp kDo x=stmt kOd           {While(e, x)}|
+                                kIf e=exp kThen x=stmt y=elifParser kFi {If(e,x,y)}|
+                                kIf e=exp kThen x=stmt kFi         {If(e, x, Skip)}|
+                                kRepeat x=stmt kUntil e=exp          {Repeat(x, e)}|
+                                kSkip                                        {Skip}|
+                                kFor x=stmt s[","] e=exp s[","] y=stmt kDo z=stmt kOd{Seq(x,While(e,Seq(z,y)))}),
+                                
+                                stmt = memo $ eta syntax(
+						firstStmt                                     | 
+						x=firstStmt s[";"] y=stmt         {Seq(x, y)}
+						);
    
 
 -- Public top-level parser
