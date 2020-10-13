@@ -319,6 +319,8 @@ fun compile (env, code) {
                 | ">"    -> [env.allocate[1], code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
               esac
             esac
+		| _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        esac
       }, [env, emptyBuffer ()], code)
   }
 
