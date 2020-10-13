@@ -11,3 +11,4 @@
 **/*.run
 **/*.s
 **/*.sm
+regression/#tmp.lama#
