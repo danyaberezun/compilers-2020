@@ -12,9 +12,13 @@ Expr.o: State.o
 
 Stmt.o: State.o Expr.o World.o
 
+<<<<<<< HEAD
 SM.o: State.o World.o 
 
 X86.o: SM.o
+=======
+SM.o: State.o World.o Expr.o
+>>>>>>> A01-straight-line-int-sm
 
 %.o: %.lama
 	$(LAMAC) -I . -c $<
