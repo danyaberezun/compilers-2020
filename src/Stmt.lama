@@ -22,7 +22,7 @@ case stmt of
 	| Read (x) -> [map <- [x, fst (readWorld (world))], snd (readWorld (world))] 
 	| Write (e) -> [map, writeWorld (evalExpr (map, e), world)]
 	| Skip -> [map, world]
-esac 
+esac
 }
 
 -- Evaluates a program with a given input and returns an output
