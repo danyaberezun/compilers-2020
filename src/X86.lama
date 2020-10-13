@@ -303,38 +303,18 @@ fun compile (env, code) {
         | BINOP (op) ->
             case env.pop2 of
               [x, y, env] -> case op of
-                              "+" -> if stackOpnd(x) && stackOpnd(y)
-                                     then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
-                                     else [env, code <+ Binop(op, x, y)]
-                                     fi
-                            | "-" -> if stackOpnd(x) && stackOpnd(y)
-                                     then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
-                                     else [env, code <+ Binop(op, x, y)]
-                                     fi
-                            | "*" -> if stackOpnd (x) && stackOpnd (y)
-        						  		           then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
-        						  		           else [env, code <+ Binop(op, x, y)]
-        						  	             fi
-                            | "/" -> if stackOpnd (x) && stackOpnd (y)
-        						  		           then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
-        						  		           else [env, code <+ Binop(op, x, y)]
-        						  	             fi
-                            | "&&" -> if stackOpnd (x) && stackOpnd (y)
-        						  		           then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
-        						  		           else [env, code <+ Binop(op, x, y)]
-        						  	             fi
-                            | "!!" -> if stackOpnd (x) && stackOpnd (y)
-        						  		           then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
-        						  		           else [env, code <+ Binop(op, x, y)]
-        						  	             fi
-                            | "%" -> if stackOpnd (x) && stackOpnd (y)
-        						  		           then [env, code <+ Mov (x, edx) <+ Mov(edx, x)]
-        						  		           else [env, code <+ Binop(op, x, y)]
-        						  	             fi
+                              "+"  -> [env, code <+ Binop(op, x, y)]
+                            | "-"  -> [env, code <+ Binop(op, x, y)]
+                            | "*"  -> [env, code <+ Binop(op, x, y)]
+                            | "/"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, x)]
+                            | "&&" -> [env, code <+ Binop(op, x, y)]
+                            | "!!" -> [env, code <+ Binop(op, x, y)]
+                            | "%"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, x)]
                             |  _  -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
-
                              esac
             esac
+           | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+
         esac
       }, [env, emptyBuffer ()], code)
   }
