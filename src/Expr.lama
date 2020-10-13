@@ -22,6 +22,13 @@ public fun getOperationFromStr(str) {
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
+--
+-- An expression is represented by a data structure of the following shape:
+--
+-- expr = Var   (string)             |
+--        Const (int)                |
+--        Binop (string, expr, expr)
+
 public fun evalExpr (st, expr) {
   --failure ("evalExpr not implemented\n")
   case expr of Var (x) -> st(x)
