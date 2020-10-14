@@ -1,5 +1,5 @@
 -- X86 codegeneration interface
--- We use stack machine programs as intermediate representation
+
 import SM;
 import Collection;
 import List;
@@ -7,7 +7,6 @@ import Buffer;
 import Fun;
 
 -- Assembler language interface
--- The registers: 
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
 
 -- We can not freely operate with all register; only with 4 by now
@@ -25,31 +24,9 @@ local ebx = R (0),
 
 -- We need to know the word size to calculate offsets correctly
 local wordSize = 4;
-
--- We need to distinguish the following operand types: 
---    R (int)    -- hard register                    
---    S (int)    -- a position on the hardware stack 
---    M (string) -- a named memory location          
---    L (int)    -- an immediate operand             
-
--- Some x86 instruction (we do not need all of them):
---   Mov   (opnd, opnd)         -- copies a value from the first to the second operand  
---   Binop (string, opnd, opnd) -- makes a binary operation; note, the first operand   
---                                 designates x86 operator, not the source language one
---   IDiv  (opnd)               -- x86 integer division, see instruction set reference 
---   Cltd                       -- see instruction set reference           
---   Set   (string, string)     -- sets a value from flags; the first operand is the   
---                                 suffix, which determines the value being set, the
---                                 the second --- (sub)register name 
---   Push  (opnd)               -- pushes the operand on the hardware stack
---   Pop   (opnd)               -- pops from the hardware stack to the operand
---   Call  (string)             -- calls a function by its name 
---   Ret                        -- returns from a function
---   Meta  (string)             -- metainformation (declarations, etc.)
                                                                
 -- Machine instruction printer
 fun insnString (insn) {
-  
   fun binopString (op) {
     case op of
       "+"   -> "addl"
@@ -288,7 +265,34 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+         | CONST (n) ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (L (n), s)]
+            esac
+        | ST (x) -> 
+            case env.addGlobal (x).pop of
+              [s, env] -> [env, code <+> move (s, env.loc (x))]
+            esac   
+        | LD (x) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move (env.loc (x), s)]
+            esac
+        | BINOP (op) ->
+            case env.pop2 of
+              [x, y, env] -> 
+              case env.allocate of
+                [s, env] -> case op of
+                  "+" -> [env, code <+ Mov (y, eax) <+ Binop("+", x, eax) <+ Mov (eax, s)]
+                | "-" -> [env, code <+ Mov (y, eax) <+ Binop("-", x, eax) <+ Mov (eax, s)]
+                | "*" -> [env, code <+ Mov (y, eax) <+ Binop("*", x, eax) <+ Mov (eax, s)]
+                | "&&" -> [env, code <+  Mov (y, edx) <+ Binop ("imull", x, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+                | "!!" -> [env, code <+ Mov (y, edx) <+ Binop ("orl", x, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+                | "/" -> [env, code <+ Mov (y, eax) <+ Cltd  <+ IDiv (x)  <+ Mov (eax, s)]
+                | "%" -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x) <+ Mov (edx, s)]
+                | _ -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
+                  esac
+              esac
+           esac
         esac
       }, [env, emptyBuffer ()], code)
   }
