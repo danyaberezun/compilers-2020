@@ -130,7 +130,7 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-  -- popped items and an updated environment
+  -- popped items and an undated environment
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -319,7 +319,10 @@ fun compile (env, code) {
         esac
       }, [env, emptyBuffer ()], code)
   }
-  
+
+  compile (env, code) 
+}
+
 -- A top-level codegeneration function. Takes a stack machine program
 -- and returns x86 listing as a string
 public fun compileX86 (code) {
