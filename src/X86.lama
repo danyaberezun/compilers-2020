@@ -281,15 +281,19 @@ fun compile (env, code) {
             case env.pop2 of
               [x, y, env] -> 
               case env.allocate of
-                [s, env] -> case op of
-                  "+" -> [env, code <+ Mov (y, eax) <+ Binop("+", x, eax) <+ Mov (eax, s)]
-                | "-" -> [env, code <+ Mov (y, eax) <+ Binop("-", x, eax) <+ Mov (eax, s)]
-                | "*" -> [env, code <+ Mov (y, eax) <+ Binop("*", x, eax) <+ Mov (eax, s)]
-                | "&&" -> [env, code <+  Mov (y, edx) <+ Binop ("imull", x, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
-                | "!!" -> [env, code <+ Mov (y, edx) <+ Binop ("orl", x, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
-                | "/" -> [env, code <+ Mov (y, eax) <+ Cltd  <+ IDiv (x)  <+ Mov (eax, s)]
-                | "%" -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x) <+ Mov (edx, s)]
-                | _ -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
+                 	  "/"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, x)]
+			| "%"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, x)]
+			| "+"  -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
+			| "-"  -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
+			| "*"  -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
+			| "&&" -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
+			| "!!" -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
+			| "<"    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
+			| "<="    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
+			| "=="    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
+			| "!="    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
+			| ">="    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
+			| ">"    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
                   esac
               esac
            esac
