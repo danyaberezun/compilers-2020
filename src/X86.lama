@@ -296,7 +296,6 @@ fun compile (env, code) {
 			| ">"    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
                   esac
               esac
-           esac
         esac
       }, [env, emptyBuffer ()], code)
   }
