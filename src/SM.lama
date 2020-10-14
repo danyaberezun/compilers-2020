@@ -1,0 +1,61 @@
+-- Stack machine.
+
+import List;
+import World;
+import State;
+import Expr;
+import Buffer;
+import Fun;
+
+-- Stack machine interpreter. Takes an SM-configuration and a program,
+-- returns a final configuration
+fun eval (conf@[st, env, wrld], insns) {
+  case insns of 
+      {} -> conf
+  | x:xs -> {
+
+      conf := 
+        case x of 
+          BINOP (op) -> case st of 
+                          y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, wrld]
+                        esac
+        |  READ      -> case readWorld (wrld) of [z, wrld] -> [z:st, env, wrld] esac
+        | WRITE      -> case st of z:st -> [st, env, writeWorld (z, wrld)] esac
+        |    ST (x)  -> case st of z:st -> [st, env <- [x, z], wrld] esac
+        |    LD (x)  -> [env(x):st, env, wrld]
+        | CONST (c)  -> [c:st, env, wrld]
+        esac;
+
+      eval (conf, xs)
+    }
+  esac
+}
+
+-- Runs a stack machine for a given input and a given program, returns an output
+public fun evalSM (input, insns) {
+  eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
+}
+
+-- Compiles an expression into a stack machine code.
+-- Takes an expression, returns a list (of, possibly, lists)
+-- of stack machine instructions
+fun compileExpr (expr) {
+	case expr of
+		  Var (v)            -> return singleton(LD(v))
+		| Const (c)          -> return singleton(CONST(c))
+		| Binop (op, s1, s2) -> return compileExpr(s1) +++ compileExpr(s2) +++ singleton(BINOP(op)) 
+	esac
+}
+
+-- Compiles a statement into a stack machine code.
+-- Takes a statement, returns a list of stack machine
+-- instructions.
+public fun compileSM (stmt) {
+  case stmt of
+		Assn(s, expr) -> return compileExpr(expr) +++ singleton(ST(s))
+		| Seq (stmt1, stmt2) -> return compileSM (stmt1) +++ compileSM (stmt2)
+		| Skip -> {}
+		| Read (s) -> return singleton(READ) +++ singleton(ST(s))
+		| Write (expr) -> return compileExpr(expr) +++ singleton(WRITE)
+	esac
+}

@@ -1,0 +1,37 @@
+-- Expression evaluator
+
+import List;
+import State;
+
+
+fun evalOp(op, l, r)
+{
+  case op of
+    "+" -> return l + r
+  | "-" -> return l - r
+  | "*" -> return l * r
+  | "/" -> return l / r
+  | "%" -> return l % r
+  | ">" -> return l > r
+  | "<" -> return l < r
+  | "==" -> return l == r
+  | "!=" -> return l != r
+  | "<=" -> return l <= r
+  | ">=" -> return l >= r
+  | "&&" -> return l && r
+  | "!!" -> return l !! r
+  esac
+}
+
+
+
+public fun evalExpr (st, expr)
+{
+case expr of
+   Var (x) -> return st(x)
+ | Const (n) -> return n
+ | Binop (op, l, r) -> return evalOp(op, evalExpr(st, l), evalExpr(st, r))
+esac
+}
+
+
