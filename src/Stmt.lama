@@ -24,4 +24,4 @@ fun eval (c@[state, world], stmt) {
     | Read (x)            -> [state <- [x, readWorld(world)[0]], readWorld(world)[1]]
     | Write (expr)        -> [state, writeWorld( evalExpr(state, expr), world)]
   esac
-
+}
