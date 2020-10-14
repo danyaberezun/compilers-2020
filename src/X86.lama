@@ -320,6 +320,11 @@ fun compile (env, code) {
       }, [env, emptyBuffer ()], code)
   }
 
+
+   compile (env, code)
+  }
+  
+  
 -- A top-level codegeneration function. Takes a stack machine program
 -- and returns x86 listing as a string
 public fun compileX86 (code) {
