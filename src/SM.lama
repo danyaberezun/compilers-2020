@@ -4,7 +4,7 @@ import List;
 import World;
 import State;
 import Expr;
-import Buffer;
+mport Buffer;
 import Fun;
 
 -- Stack code printer. Takes a list of SM instructions, return its
@@ -26,25 +26,44 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (c@[stack, st, w@[i,o]], insns) {
+ case insns of
+    {} -> c
+   | READ      : s -> local var_ = readWorld(w);
+                      eval([var_[0] : stack, st, var_[1]], s)
+   | WRITE     : s -> eval([stack[1], st, writeWorld(stack[0], w)], s)
+   | CONST(n)  : s -> eval([n : stack, st, w], s)
+   | BINOP(op) : s -> eval([evalOp(op, stack[1][0], stack[0]) : stack[1][1], st, w], s)
+   | LD(x)     : s -> eval([st(x) : stack, st, w], s)
+   | ST(x)     : s -> eval([stack[1], st <-[x, stack[0]], w], s)
+   esac
 }
-
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
-  eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
+  eval([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
+
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+case expr of
+    Var(k) -> singleton(LD(k))
+   | Const(n) -> singleton(CONST(n))
+   | Binop(op, x, y) -> compileExpr(x) +++ compileExpr(y) +++ singleton(BINOP(op))
+esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+case stmt of
+     Assn(x, expr) -> compileExpr(expr) +++ singleton(ST(x))
+   | Read(x) -> singleton(READ) +++ singleton(ST(x))
+   | Write(expr) -> compileExpr(expr) +++ singleton(WRITE)
+   | Seq(s1, s2) -> compileSM(s1) +++ compileSM(s2)
+   | Skip -> {}
+esac
 }
