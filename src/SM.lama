@@ -54,10 +54,6 @@ fun eval(c, insns){
     esac
 }
 
-public fun evalSM(input, insns){
-  eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
-}
-
 -- Compiles an expression into a stack machine code.
 
 fun compileExpr(expr){
