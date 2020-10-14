@@ -1,4 +1,4 @@
-- Statement evaluator.
+-- Statement evaluator.
 
 import State;
 import Expr;
