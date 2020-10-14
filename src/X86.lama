@@ -318,6 +318,7 @@ fun compile (env, code) {
                       |"!=" -> [env, code <+ Mov(x, eax) <+ Binop("cmp", eax, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
                       |">=" -> [env, code <+ Mov(x, eax) <+ Binop("cmp", eax, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
                       |">"  -> [env, code <+ Mov(x, eax) <+ Binop("cmp", eax, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+              	   esac
               esac
             esac     
               
