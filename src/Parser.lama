@@ -34,12 +34,27 @@ local primary = memo $ eta syntax (x = decimal {Const (stringInt (x))} |
 									}]
 							 }, primary) (id);
 
-local stmt = memo $ eta syntax(
-							   kWrite x = inbr[s("("), exp, s(")")]   {Write(x)}  |
-							   kRead  v = inbr[s("("), lident, s(")")] {Read(v)}  |
-							   v = lident s[":="] x = exp           {Assn(v, x)}  | 
-							   s1 = stmt s[";"] s2 = stmt end      {Seq(s1, s2)}
-							  );
+local el = memo $ eta syntax(
+						kElse st = stmt kFi                                     {st}  |
+						kFi                                                   {Skip}  |
+						kElif x = exp kThen s1 = stmt s2 = el        {If(x, s1, s2)}
+						);
+
+local prStmt = memo $ eta syntax(
+							   kWrite x = inbr[s("("), exp, s(")")]       {Write(x)}  |
+							   kRead  v = inbr[s("("), lident, s(")")]     {Read(v)}  |
+							   v = lident s[":="] x = exp               {Assn(v, x)}  |
+							   kSkip                                          {Skip}  |
+							   kWhile x = exp kDo s = stmt kOd         {While(x, s)}  |
+							   kIf x = exp kThen s1 = stmt s2 = el   {If(x, s1, s2)}  |
+							   kRepeat s = stmt kUntil x = exp        {Repeat(s, x)}  |
+							   kFor s1 = stmt s[","] e = exp s[","] s2 = stmt kDo
+								s3 = stmt kOd       {Seq(s1, While(e, Seq(s3, s2)))}
+							   ),
+				stmt = memo $ eta syntax(
+							   s = prStmt                                        {s}  |
+							   s1 = prStmt s[";"] s2 = stmt            {Seq(s1, s2)}
+							   );
    
 
 -- Public top-level parser

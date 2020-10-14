@@ -21,12 +21,19 @@ import World;
 
 fun eval (c, stmt) {
 	-- printf("%s %s\n", c.string, stmt.string);
-	case stmt of
-		  Seq (s1, s2) -> eval(eval(c, s1), s2)
-		| Read (v)     -> local a = readWorld(c[1]); [c[0] <- [v, a[0]], a[1]]
-		| Write (s)    -> [c[0], writeWorld(evalExpr(c[0], s), c[1])]
-		| Assn (v, s)  -> [c[0] <- [v, evalExpr(c[0], s)], c[1]]
-		| _            -> printf("Statement %s not found.\n", stmt)
+	case c of
+		[st, w] ->
+			case stmt of
+				  Seq (s1, s2)   -> eval(eval(c, s1), s2)
+				| Read (v)       -> local a = readWorld(w); [st <- [v, a[0]], a[1]]
+				| Write (e)      -> [st, writeWorld(evalExpr(st, e), w)]
+				| Assn (v, e)    -> [st <- [v, evalExpr(st, e)], w]
+				| If (e, s1, s2) -> if evalExpr(st, e) != 0 then eval(c, s1) else eval(c, s2) fi
+				| While (e, s)   -> if evalExpr(st, e) != 0 then eval(eval(c, s), stmt) else c fi
+				| Skip           -> c
+				| Repeat (s, e)  -> local cc = eval(c, s); if evalExpr(cc[0], e) != 0 then cc else eval(cc, stmt) fi
+				| _              -> printf("Statement %s not found.\n", stmt)
+			esac
 	esac
 }
 
