@@ -302,18 +302,19 @@ fun compile (env, code) {
             esac
         | BINOP (op) ->
             case env.pop2 of
-              [x, y, env] -> case op of
-                              "+"  -> [env, code <+ Binop(op, x, y)]
-                            | "-"  -> [env, code <+ Binop(op, x, y)]
-                            | "*"  -> [env, code <+ Binop(op, x, y)]
-                            | "/"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, x)]
-                            | "&&" -> [env, code <+ Binop(op, x, y)]
-                            | "!!" -> [env, code <+ Binop(op, x, y)]
-                            | "%"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, x)]
-                            |  _  -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+              [x, y, env] ->  case env.allocate of
+                [s, env] -> case op of
+                              "/"  -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (eax, s)]
+                            | "%"  -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (edx, s)]
+                            | "+"  -> [env, code <+ Mov (x, eax) <+ Binop("+", y, eax) <+ Mov (eax, s)]
+                            | "-"  -> [env, code <+ Mov (x, eax) <+ Binop("-", y, eax) <+ Mov (eax, s)]
+                            | "*" - > [env, code <+ Mov (x, eax) <+ Binop("*", y, eax) <+ Mov (eax, s)]
+                            | "&&" -> [env, code <+ Mov (x, eax) <+ Binop("&&", y, eax) <+ Mov (eax, s)]
+                            | "!!" -> [env, code <+ Mov (x, eax) <+ Binop("!!", y, eax) <+ Mov (eax, s)]
+                            | _    -> [env, code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
                              esac
+                    esac
             esac
-           | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
 
         esac
       }, [env, emptyBuffer ()], code)
