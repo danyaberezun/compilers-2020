@@ -26,18 +26,16 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-  	case c of
-		[s, st, w@[i,o]] -> case insns of
-		{} -> c
-		|READ: p -> case i of x : it -> eval([x : s, st, [it, o]], p) esac
-		|WRITE: p -> case s of x : ss -> eval([ss, st, [i, x : o]], p) esac
-		|BINOP(b): p -> case s of x : y: ss -> eval([binopOp(b, y, x): ss, st, w], p) esac
-		|CONST(n): p -> eval([n : s, st, w], p)
-		|LD(x): p -> eval([st(x) : s, st, w], p)
-		|ST(x): p -> case s of y : ss -> eval([s, (st <- [x,y]), w], p) esac
-     esac
-    esac
+fun eval (c@[st, state, w], insns) {
+	case insns of
+		  {} -> [st, state, w]
+		| READ      : s -> local world_ = readWorld(w); eval([world_[0] : st, state, world_[1]], s)
+		| WRITE     : s -> eval([st[1], state, writeWorld(st[0], w)], s)
+		| BINOP(op) : s -> eval([binop(op, st[1][0], st[0]) : st[1][1], state, w], s)
+		| CONST(n)  : s -> eval([n : st, state, w], s)
+		| LD(x)     : s -> eval([state(x) : st, state, w], s)
+		| ST(x)     : s -> eval([st[1], state <- [x, st[0]], w], s)
+	esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
