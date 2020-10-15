@@ -26,16 +26,16 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c@[stack, st, w@[i,o]], insns) {
+fun eval (c@[s, st, w@[i,o]], insns) {
  case insns of
     {} -> c
-   | READ      : s -> local var_ = readWorld(w);
-                      eval([var_[0] : stack, st, var_[1]], s)
-   | WRITE     : s -> eval([stack[1], st, writeWorld(stack[0], w)], s)
-   | CONST(n)  : s -> eval([n : stack, st, w], s)
-   | BINOP(op) : s -> eval([evalOp(op, stack[1][0], stack[0]) : stack[1][1], st, w], s)
-   | LD(x)     : s -> eval([st(x) : stack, st, w], s)
-   | ST(x)     : s -> eval([stack[1], st <-[x, stack[0]], w], s)
+   | READ      : e -> local var_ = readWorld(w);
+                      eval([var_[0] : s, st, var_[1]], e)
+   | WRITE     : e -> eval([s[1], st, writeWorld(s[0], w)], e)
+   | CONST(n)  : e -> eval([n : s, st, w], e)
+   | BINOP(op) : e -> eval([evalOp(op, s[1][0], s[0]) : s[1][1], st, w], e)
+   | LD(x)     : e -> eval([st(x) : s, st, w], e)
+   | ST(x)     : e -> eval([s[1], st <-[x, s[0]], w], e)
    esac
 }
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -49,7 +49,7 @@ public fun evalSM (input, insns) {
 
 fun compileExpr (expr) {
 case expr of
-    Var(k) -> singleton(LD(k))
+    Var(x) -> singleton(LD(x))
    | Const(n) -> singleton(CONST(n))
    | Binop(op, x, y) -> compileExpr(x) +++ compileExpr(y) +++ singleton(BINOP(op))
 esac
