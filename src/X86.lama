@@ -305,9 +305,9 @@ fun compile (env, code) {
 	      [x, y, env] ->
               	case env.allocate of
                 	[s, env] ->	 case op of
-						  "+"  -> [env, code <+ Mov (y, edx) <+ Binop (op, x, edx)      	<+ Mov (edx, s)]
-						| "-"  -> [env, code <+ Mov (y, edx) <+ Binop (op, x, edx)      	<+ Mov (edx, s)]
-						| "*"  -> [env, code <+ Mov (y, edx) <+ Binop (op, x, edx)      	<+ Mov (edx, s)]
+						  "+"  -> [env, code <+ Mov (y, edx) <+ Binop ("+", x, edx)      	<+ Mov (edx, s)]
+						| "-"  -> [env, code <+ Mov (y, edx) <+ Binop ("-", x, edx)      	<+ Mov (edx, s)]
+						| "*"  -> [env, code <+ Mov (y, edx) <+ Binop ("*", x, edx)      	<+ Mov (edx, s)]
 						| "/"  -> [env, code <+ Mov (y, edx) <+ Cltd  <+ IDiv (x)       	<+ Mov (edx, s)]
 						| "%"  -> [env, code <+ Mov (y, eax) <+ Cltd  <+ IDiv (x)       	<+ Mov (edx, s)]
 						| "&&" -> [env, code <+ Mov (y, edx) <+ Binop ("imull", x, edx) 	<+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
