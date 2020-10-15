@@ -9,21 +9,21 @@ import Expr;
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c@[stack, state, world@[input, output]], insns) {
-  case insns of
-       {} -> c
-        | BINOP (op) : rest_insns -> case stack of
-	                                  second : first : stack -> eval ([operation (op, first, second) : stack, state, world], rest_insns)
-				     esac
-	| CONST (n) : rest_insns -> eval([n : stack, state, world], rest_insns)
-	| READ : rest_insns -> eval([frst (readWorld(world)) : stack, state, scnd (readWorld(world))], rest_insns)
-	| WRITE : rest_insns -> case stack of
-	                             first : rest_stack -> eval([rest_stack, state, writeWorld(first, world)], rest_insns)
-				     esac
-	| LD (x) : rest_insns -> eval([state (x) : stack, state, world], rest_insns)
-        | ST (x) : rest_insns -> case stack of
-	                              first : stack -> eval([stack, state <- [x, first], world], rest_insns) 
-				      esac
-  esac
+	case insns of
+	{} -> c
+	    | BINOP (op) : rest_insns -> case stack of
+								         second : first : stack -> eval ([operation (op, first, second) : stack, state, world], rest_insns)
+									    esac
+	    | CONST (n) : rest_insns -> eval([n : stack, state, world], rest_insns)
+	    | READ : rest_insns -> eval([fst (readWorld(world)) : stack, state, snd (readWorld(world))], rest_insns)
+	    | WRITE : rest_insns -> case stack of
+		                               first : rest_stack -> eval([rest_stack, state, writeWorld(first, world)], rest_insns)
+									   esac
+		| LD (x) : rest_insns -> eval([state (x) : stack, state, world], rest_insns)
+		| ST (x) : rest_insns -> case stack of
+    	  				            first : stack -> eval([stack, state <- [x, first], world], rest_insns) 
+									  esac
+	esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -51,6 +51,6 @@ public fun compileSM (stmt) {
      	| Write (e) -> compileExpr (e) +++ (WRITE : {})
     	| Assn (x, e) -> compileExpr (e) +++ (ST (x) : {})
         | Seq (s1, s2) -> compileSM (s1) +++ compileSM (s2)
-    	| Skip -> {}
+     	| Skip -> {}
   esac
 }

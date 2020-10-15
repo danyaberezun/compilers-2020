@@ -14,7 +14,7 @@ import State;
 --        Binop (string, expr, expr)
 
 public fun operation (op, x, y) {
-  case operation of
+  case op of
       "+" -> x + y
       | "-" -> x - y
       | "/" -> x / y

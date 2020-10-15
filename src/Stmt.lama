@@ -19,7 +19,7 @@ fun eval (c@[state, world@[input, output]], stmt) {
   case stmt of 
     Assn (x, expr) -> [state <- [x, expression (state, expr)], world]
     | Seq (s1, s2) -> eval (eval(c, s1), s2 )
-    | Read (x) -> [state <- [x, frst (readWorld (world))], scnd (readWorld (world))]
+    | Read (x) -> [state <- [x, fst (readWorld (world))], snd (readWorld (world))]
     | Write (expr) -> [state, writeWorld (expression (state, expr), world)]
     | Skip -> c
   esac
