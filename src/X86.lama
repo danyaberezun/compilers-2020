@@ -294,20 +294,20 @@ fun compile (env, code) {
             esac
         | ST (x) ->
             case env.addGlobal(x).pop of
-              [s, env] -> [env, code <+> move(s, end.loc(x))]  
+              [s, env] -> [env, code <+> move(s, env.loc(x))]  
             esac
         | LD (x) ->
           case env.allocate of
-            [s, env] -> [env, code <+ move(end.loc(x), s)]
+            [s, env] -> [env, code <+> move(env.loc(x), s)]
           esac
         | BINOP (op) -> 
-            case end.pop2 of
-              [x, y, end] -> 
-                case end.allocate of
-                  [s, end] -> 
+            case env.pop2 of
+              [x, y, env] -> 
+                case env.allocate of
+                  [s, env] -> 
                     case op of
  		        "+"	-> [env, code <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s)]
- 		      | "-" 	-> [env, code <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s)]
+ 		      | "-" 	-> [env, code <+ Mov(y, eax) <+ Binop(op, x, eax) <+ Mov(eax, s)]
  		      | "*"	-> [env, code <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s)]
  		      | "/"	-> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
  		      | "%" 	-> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
