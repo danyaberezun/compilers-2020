@@ -66,4 +66,5 @@ public fun compileSM (stmt) {
      	|Assn(x, e) -> compileExpr(e) +++ singleton(ST(x))
     	|Seq(st1,st2) ->compileSM(st1) +++ compileSM(st2)
     	|Skip -> {}
+	esac
 }
