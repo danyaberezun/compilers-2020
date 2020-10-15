@@ -8,6 +8,21 @@ import Buffer;
 import Fun;
 
 
+public fun showSMInsn (i) {
+  case i of
+    READ      -> sprintf ("READ")
+  | WRITE     -> sprintf ("WRITE")
+  | BINOP (s) -> sprintf ("BINOP %s", s)
+  | LD (x)    -> sprintf ("LD %s", x)
+  | ST (x)    -> sprintf ("ST %s", x)
+  | CONST (n) -> sprintf ("CONST %d", n)
+  esac
+}
+
+public fun showSM (prg) {
+  map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
+}
+
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 -- conf@[st, env, wrld]

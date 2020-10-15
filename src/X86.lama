@@ -288,6 +288,35 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST (n) -> 
+            case env.allocate of 
+              [s, env] -> [env, code <+ Mov(L(n), s)]
+            esac
+        | ST (x) ->
+            case env.addGlobal(x).pop of
+              [s, env] -> [env, code <+> move(s, end.loc(x))]  
+            esac
+        | LD (x) ->
+          case env.allocate of
+            [s, env] -> [env, code <+ move(end.loc(x), s)]
+          esac
+        | BINOP (op) -> 
+            case end.pop2 of
+              [x, y, end] -> 
+                case end.allocate of
+                  [s, end] -> 
+                    case op of
+ 		        "+"	-> [env, code <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s)]
+ 		      | "-" 	-> [env, code <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s)]
+ 		      | "*"	-> [env, code <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s)]
+ 		      | "/"	-> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
+ 		      | "%" 	-> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
+ 		      | "!!"	-> [env, code <+ Mov(y, ebx) <+ Binop(op, x, eax) <+ Binop("cmp", L(0), ebx) <+ Set("ne", "%al") <+ Mov(ebx, s)]
+ 		      | "&&" 	-> [env, code <+ Mov(y, ebx) <+ Binop(op, x, ebx) <+ Binop("cmp", L(0), ebx)<+ Set("ne", "%al") <+ Mov(ebx, s)]
+ 		      | _	-> [env, code <+ Mov(x, eax) <+ Binop("cmp", eax, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                    esac
+                esac
+             esac         
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
