@@ -293,11 +293,11 @@ fun compile (env, code) {
 	      [s, env] -> [env, code <+ Mov(L(n), s)]
 	    esac
 	| ST (x) ->
-	    case env.pop of
+	    case env.addGlobal (x).pop of
               [s, env] -> [env, code <+> move (s, env.loc (x))]
 	    esac
 	| LD (x) ->
-	    case env.addGlobal (x).allocate of
+	    case env.allocate of
 	      [s, env] -> [env, code <+> move (env.loc (x), s)]
 	    esac
 	| BINOP (op) ->
@@ -305,14 +305,14 @@ fun compile (env, code) {
 	      [x, y, env] ->
               	case env.allocate of
                 	[s, env] ->	 case op of
-						  "+"  -> [env, code <+ Mov (y, edx) <+ Binop (op, x, edx)      <+ Mov (edx, s)]
-						| "-"  -> [env, code <+ Mov (y, edx) <+ Binop (op, x, edx)      <+ Mov (edx, s)]
-						| "*"  -> [env, code <+ Mov (y, edx) <+ Binop (op, x, edx)      <+ Mov (edx, s)]
-						| "/"  -> [env, code <+ Mov (y, edx) <+ Cltd  <+ IDiv (x)       <+ Mov (edx, s)]
-						| "%"  -> [env, code <+ Mov (y, eax) <+ Cltd  <+ IDiv (x)       <+ Mov (edx, s)]
+						  "+"  -> [env, code <+ Mov (y, edx) <+ Binop (op, x, edx)      	<+ Mov (edx, s)]
+						| "-"  -> [env, code <+ Mov (y, edx) <+ Binop (op, x, edx)      	<+ Mov (edx, s)]
+						| "*"  -> [env, code <+ Mov (y, edx) <+ Binop (op, x, edx)      	<+ Mov (edx, s)]
+						| "/"  -> [env, code <+ Mov (y, edx) <+ Cltd  <+ IDiv (x)       	<+ Mov (edx, s)]
+						| "%"  -> [env, code <+ Mov (y, eax) <+ Cltd  <+ IDiv (x)       	<+ Mov (edx, s)]
 						| "&&" -> [env, code <+ Mov (y, edx) <+ Binop ("imull", x, edx) 	<+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
 						| "!!" -> [env, code <+ Mov (y, edx) <+ Binop ("orl", x, edx)   	<+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
-						| _    -> [env, code <+ Mov (x, edx) <+ Binop ("cmp", edx, y)   <+ Set (suffix (op), "%al")  <+ Mov (edx, s)]
+						| _    -> [env, code <+ Mov (x, edx) <+ Binop ("cmp", edx, y)   	<+ Set (suffix (op), "%al")  <+ Mov (edx, s)]
 					 esac
 		esac
 	    esac
