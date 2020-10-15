@@ -3,4 +3,6 @@
 *.s
 regression/*.log
 regression/test???
+regression/test???.run
+regression/tmp.sm
 
