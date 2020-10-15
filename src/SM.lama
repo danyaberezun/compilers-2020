@@ -7,6 +7,7 @@ import Expr;
 import Buffer;
 import Fun;
 
+
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
 public fun showSMInsn (i) {
@@ -27,15 +28,19 @@ public fun showSM (prg) {
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c@[st, state, w], insns) {
-	case insns of
-		  {} -> [st, state, w]
-		| READ      : s -> local world_ = readWorld(w); eval([world_[0] : st, state, world_[1]], s)
-		| WRITE     : s -> eval([st[1], state, writeWorld(st[0], w)], s)
-		| BINOP(op) : s -> eval([binop(op, st[1][0], st[0]) : st[1][1], state, w], s)
-		| CONST(n)  : s -> eval([n : st, state, w], s)
-		| LD(x)     : s -> eval([state(x) : st, state, w], s)
-		| ST(x)     : s -> eval([st[1], state <- [x, st[0]], w], s)
-	esac
+
+  case insns of
+		{} -> [st, state, w]
+		|BINOP(op) : s -> eval([binop(op, st[1][0], st[0]) : st[1][1], state, w], s)
+		|CONST(n)  : s -> eval([n : st, state, w], s)
+		|READ      : s -> local world_ = readWorld(w); eval([world_[0] : st, state, world_[1]], s)
+		|WRITE     : s -> eval([st[1], state, writeWorld(st[0], w)], s)
+		|LD(x)     : s -> eval([state(x) : st, state, w], s)
+		|ST(x)     : s -> eval([st[1], state <- [x, st[0]], w], s)
+
+
+  esac
+  
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -47,22 +52,29 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-	case expr of
-		Var(x) -> singleton(LD(x))
-		|Const(n) -> singleton(CONST(n))
-		|Binop (op, lim1, lim2) -> compileExpr(lim1) +++ compileExpr(lim2) +++ singleton(BINOP(op))
-	esac
+  
+  case expr of
+
+  	  Const (n) 	  ->  singleton(CONST(n))
+  	| Var (x) 		  ->  singleton(LD(x))
+  	| Binop(op, l, r) ->  compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op)) 
+  
+  esac
+
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-	case stmt of
-		Read(x) -> {READ, ST(x)}
+  
+  case stmt of
+  	
+		Assn(x, e) -> compileExpr(e) +++ singleton(ST(x))
 		|Write(x) -> compileExpr(x) +++ singleton(WRITE)
-     	|Assn(x, e) -> compileExpr(e) +++ singleton(ST(x))
-    	|Seq(st1,st2) ->compileSM(st1) +++ compileSM(st2)
-    	|Skip -> {}
-	esac
+		|Read(x) -> singleton(READ) +++ singleton(ST(x))
+		|Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2)
+		|Skip -> {}
+
+  esac
 }
