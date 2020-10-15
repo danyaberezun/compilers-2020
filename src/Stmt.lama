@@ -17,7 +17,7 @@ import World;
 --        Write  (expr)             |
 --        if     (expr, stmt, stmt) |
 --        While  (expr, stmt)       |
---        Repeat (stmt, expr)
+--        Rep (stmt, expr)
 
 fun eval (c, stmt) {
   case c of [state, world] ->
@@ -43,6 +43,21 @@ fun eval (c, stmt) {
             eval(c, stmt1),
             stmt2
           )
+        | If(cond, stmt, estmt) -> case evalExpr(state, cond) of 
+            0 -> case estmt of Some(wstmt) -> eval(c, wstmt) | _ -> c esac |
+            _ -> eval(c, stmt)
+          esac
+        | While(cond, stmt) -> case evalExpr(state, cond) of 
+            0 -> [state, world] |
+            _ -> eval(eval(c, stmt), While(cond, stmt))
+          esac
+        | Rep(stmt, cond) -> 
+            case eval(c, stmt) of newConf@[newState, newWorld] ->
+                case evalExpr(newState, cond) of 
+                    0 -> eval(newConf, Rep(stmt, cond)) |
+                    _ -> newConf
+                esac
+            esac
         | Skip -> c
       esac
   esac
