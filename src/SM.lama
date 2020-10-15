@@ -31,10 +31,10 @@ fun eval (c, insns) {
     case c of [s, st, w@[in, out]] ->
         case insns of
              {} -> c
-            |Binop(bin): p -> case s of r : l : ss -> eval([operation(bin, l, r): ss, st, w], p) esac
-            |Const(n): p-> eval([n : s, st, w], p)
-            |Read: p -> case in of elem : i -> eval([elem: s, st, [i, out]], p) esac
-            |Write: p-> case s of elem : ss -> eval([ss, st, [in, elem : out]], p) esac
+            |BINOP(bin): p -> case s of r : l : ss -> eval([operation(bin, l, r): ss, st, w], p) esac
+            |CONST(n): p-> eval([n : s, st, w], p)
+            |READ: p -> case in of elem : i -> eval([elem: s, st, [i, out]], p) esac
+            |WRITE: p-> case s of elem : ss -> eval([ss, st, [in, elem : out]], p) esac
             |LD(elem): p -> eval([st(elem) : s, st, w], p)
             |ST(elem): p -> 
                 case s of elemo : ss -> 
@@ -55,8 +55,8 @@ public fun evalSM (input, insns) {
 fun compileExpr (expr) {
     case expr of
          Var(elem) -> singleton(LD(elem))
-        |Const(n) -> singleton(Const(n))
-        |Binop(op, l, r) -> compileExpr(l) +++ compileExpr(r) +++ singleton(Binop(op))
+        |Const(n) -> singleton(CONST(n))
+        |Binop(op, l, r) -> compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
     esac
 }
 
@@ -65,8 +65,8 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
     case stmt of
-         Read(elem) -> singleton(Read) +++ singleton(ST(elem))
-        |Write(elem) -> compileExpr(elem) +++ singleton(Write)
+         Read(elem) -> singleton(READ) +++ singleton(ST(elem))
+        |Write(elem) -> compileExpr(elem) +++ singleton(WRITE)
         |Assn(elem, expr) -> compileExpr(expr) +++ singleton(ST(elem))
         |Skip -> {}
         |Seq(s1, s2) -> compileSM(s1) +++ compileSM(s2)
