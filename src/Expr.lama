@@ -14,7 +14,6 @@ import State;
 --        Const (int)                |
 --        Binop (string, expr, expr)
 
-
 fun evalOp(op, l, r)
 {
 case op of
