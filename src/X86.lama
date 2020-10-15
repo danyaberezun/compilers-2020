@@ -301,9 +301,12 @@ fun compile (env, code) {
                       true -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
                     | false ->
                       case op of
-                        "/"  -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
-                      | "%"  -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
-                      | _    -> [env, code <+ Binop(op, x, y) <+ Mov(y, s)]
+                        "/"   -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
+                      | "%"   -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
+                      --                       [ x != 0                                        ]    [saving...]    [ y != 0                                        ]    [ x != 0 _ y != 0]
+                      | "!!"  -> [env, code <+ Binop("cmp", L(0), x) <+ Set(suffix("!="), "%al") <+ Mov(eax, s) <+ Binop("cmp", L(0), y) <+ Set(suffix("!="), "%al") <+ Binop("!!", eax, s)]
+                      | "&&"  -> [env, code <+ Binop("cmp", L(0), x) <+ Set(suffix("!="), "%al") <+ Mov(eax, s) <+ Binop("cmp", L(0), y) <+ Set(suffix("!="), "%al") <+ Binop("&&", eax, s)]
+                      | _     -> [env, code <+ Binop(op, x, y) <+ Mov(y, s)]
                       esac
                     esac
                 esac
