@@ -10,13 +10,13 @@ import Expr;
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c@[st, state, w], insns) {
 	case insns of
-		  {} -> c
-		| READ : p -> local world_ = readWorld(w); eval([world_[0] : st, state, world_[1]], p)
+		  READ : p -> local world = readWorld(w); eval([world[0] : st, state, world[1]], p)
 		| WRITE : p -> eval([st[1], state, writeWorld(st[0], w)], p)
 		| BINOP(op) : p -> eval([evalOp(op, st[1][0], st[0]) : st[1][1], state, w], p)
 		| CONST(n) : p -> eval([n : st, state, w], p)
 		| LD(x) : p -> eval([state(x) : st, state, w], p)
 		| ST(x) : p -> eval([st[1], state <- [x, st[0]], w], p)
+		| {} -> [st, state, w]
 	esac
 }
 
