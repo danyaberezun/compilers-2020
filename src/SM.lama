@@ -26,8 +26,49 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+  case c of
+    [stack, state, world] -> 
+  	case insns of
+  	  READ:tail ->
+        case readWorld(world) of
+          [a, newWorld] -> eval([a:stack, state, newWorld], tail)
+        esac
+		| LD(x):tail -> eval([state(x):stack, state, world], tail)
+		| CONST(c):tail -> eval([c:stack, state, world], tail)
+		| BINOP(op):tail ->
+			case stack of
+			  y:x:stack_tail -> {
+					local res = calculate(op, x, y);
+					eval([res:stack_tail, state, world], tail)
+        }
+			| _ -> failure("Not enough arguments in stack for binop!")
+			esac
+		| ST(x):tail ->
+		  case stack of
+			  val:stack_tail -> eval([stack_tail, state <- [x, val], world], tail)
+			esac
+		| Var(x):tail ->
+		  eval([state(x):stack, state, world], tail)
+		| WRITE:tail ->
+		  case stack of
+			  val:stack_tail -> {
+          eval([stack_tail, state, writeWorld(val, world)], tail)
+        }
+			| _ -> failure("Not enough arguments in stack for write!")
+			esac
+		| WRITE ->
+		  case stack of
+			  val:stack_tail -> {
+          eval([stack_tail, state, writeWorld(val, world)], {})
+        }
+			| _ -> failure("Not enough arguments in stack for write!")
+			esac
+  	| {} -> c
+  	| _ -> failure("Can't match insns... %s", insns.string)
+  	esac
+	esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -35,16 +76,36 @@ public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
+fun cexpr (expr) {
+  case expr of
+    Binop (op, a, b) -> cexpr(a) +++ cexpr(b) +++ (BINOP(op):{})
+    | Var(x) -> LD(x):{}
+    | Const(c) -> CONST(c):{}
+  esac
+}
+
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  cexpr(expr)
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of
+    Seq (head, tail) -> toInstr(head) +++ compileSM(tail)
+    | head -> toInstr(head)
+  esac
+}
+
+-- Returns list from one instruction
+public fun toInstr (head) {
+  case head of
+    Read(x) -> READ:ST(x):{}
+    | Assn (z, expr) -> compileExpr(expr) +++ (ST(z):{})
+    | Write (expr) -> compileExpr(expr) +++ (WRITE:{})
+  esac
 }
