@@ -43,7 +43,9 @@ fun eval (c, insns) {
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
-@@ -39,12 +53,23 @@ public fun evalSM (input, insns) {
+public fun evalSM (input, insns) {
+  eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
+}
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
