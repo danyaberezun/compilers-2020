@@ -1,6 +1,6 @@
 -- Stack machine.
 
-iimport List;
+import List;
 import World;
 import State;
 import Expr;
