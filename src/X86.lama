@@ -260,6 +260,12 @@ fun isComparator(op) {
   esac
 }
 
+fun cmpEax(op, reg) {
+  singletonBuffer (Binop("cmp", reg, eax)) <+
+                   Set(suffix(op), "%al") <+
+                   Binop("&&", L(1), eax)
+}
+
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
@@ -283,7 +289,7 @@ fun compile (env, code) {
             esac
         | LD (x) ->
             case env.allocate of
-              [s, env] -> [env, code <+ Mov (env.loc(x), s)]
+              [s, env] -> [env, code <+ Mov(env.loc(x), eax) <+ Mov (eax, s)]
             esac
         | ST (x) ->
             case env.pop of
@@ -298,15 +304,14 @@ fun compile (env, code) {
                 case env.allocate of
                   [s, env] ->
                     case isComparator(op) of
-                      true -> [env, code <+ Binop("cmp", x, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                      true -> [env, code <+ Mov(y, eax) <+> cmpEax(op, x) <+ Mov(eax, s)]
                     | false ->
                       case op of
                         "/"   -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
                       | "%"   -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
-                      --                       [ x != 0                                        ]    [saving...]    [ y != 0                                        ]    [ x != 0 _ y != 0]
-                      | "!!"  -> [env, code <+ Binop("cmp", L(0), x) <+ Set(suffix("!="), "%al") <+ Mov(eax, s) <+ Binop("cmp", L(0), y) <+ Set(suffix("!="), "%al") <+ Binop("!!", eax, s)]
-                      | "&&"  -> [env, code <+ Binop("cmp", L(0), x) <+ Set(suffix("!="), "%al") <+ Mov(eax, s) <+ Binop("cmp", L(0), y) <+ Set(suffix("!="), "%al") <+ Binop("&&", eax, s)]
-                      | _     -> [env, code <+ Binop(op, x, y) <+ Mov(y, s)]
+                      | "!!"  -> [env, code <+ Mov(y, eax) <+ Binop("!!", x, eax) <+> cmpEax("!=", L(0)) <+ Mov(eax, s)]
+                      | "&&"  -> [env, code <+ Mov(y, eax) <+ Binop("*", x, eax) <+> cmpEax("!=", L(0)) <+ Mov(eax, s)]
+                      | _     -> [env, code <+ Mov(y, eax) <+ Binop(op, x, eax) <+ Mov(eax, s)]
                       esac
                     esac
                 esac
