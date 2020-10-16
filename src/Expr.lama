@@ -4,6 +4,26 @@ import List;
 import State;
 
 
+-- The evaluator itself: takes a state and an expression,
+-- returns integer value
+
+public fun binop(op, l, r) {
+    case op of
+		  "+" -> l + r 
+		| "-" -> l - r 
+		| "*" -> l * r 
+		| "/" -> l / r 
+		| "%" -> l % r
+		| "==" -> l == r 
+		| "!=" -> l != r 
+		| "<" -> l < r 
+		| ">" -> l > r 
+		| "<=" -> l <= r 
+		| ">=" -> l >= r 
+		| "&&" -> l && r 
+		| "!!" -> l !! r
+    esac
+}
 
 public fun evalExpr (st, expr) {
 	case expr of
