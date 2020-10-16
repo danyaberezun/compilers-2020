@@ -51,7 +51,7 @@ public fun evalSM (input, insns) {
 fun compileExpr (expr) {
   case expr of 
     Var   (x)         -> singleton (LD (x))
-  | Const (n)         -> singleton (expr)
+  | Const (n)         -> singleton (CONST (n))
   | Binop (op, e1, e2) -> compileExpr (e1) +++ compileExpr (e2) +++ singleton (BINOP (op))
   esac
 }
@@ -63,7 +63,6 @@ public fun compileSM (stmt) {
   case stmt of
 	    Assn (val, expr)   -> compileExpr(expr) +++ singleton( ST(val) )
 	  | Seq (stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2)
-	  | Skip               -> {}
 	  | Read (val)         -> { READ, ST(val) }
 	  | Write (expr)       -> compileExpr(expr) +++ singleton( WRITE )
 	  esac
