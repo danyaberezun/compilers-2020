@@ -4,8 +4,20 @@ import State;
 import Expr;
 import World;
 
-fun eval(c, stmt){
-	case c of [st, [in, out]] ->
+-- Evaluates a statement "stmt" in a configuration "c".
+-- A configuration is a pair of a state "s" and a world "w".
+-- Returns a final configuration (if any)
+--
+-- A statement is represented by a data structure of the following shape:
+--
+-- stmt = Assn   (string, expr)     |
+--        Seq    (stmt, stmt)       |
+--        Skip                      |
+--        Read   (string)           |
+--        Write  (expr)             |
+
+fun eval (c, stmt) {
+    case c of [st, [in, out]] ->
         case stmt of
              Skip -> c
             |Read(elem) -> case in of elemo : i -> [st <- [elem, elemo], [i, out]] esac
@@ -16,6 +28,7 @@ fun eval(c, stmt){
     esac      
 }
 
-public fun evalStmt(input, stmt){
+-- Evaluates a program with a given input and returns an output
+public fun evalStmt (input, stmt) {
   eval ([emptyState, createWorld (input)], stmt).snd.getOutput
 }
