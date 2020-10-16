@@ -289,12 +289,85 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST (val) ->
+          case env.allocate of
+            [s, env] -> [env, code <+ Mov (L (val), s)]
+          esac
+        | LD (name) ->
+          case env.addGlobal (name).allocate of
+            [s, env] -> [env, code <+> move (env.loc(name), s)]
+          esac
+        | ST (name) ->
+          case env.addGlobal (name).pop of
+            [s, env] -> [env, code <+> move (s, env.loc (name))]
+          esac
+        | BINOP (op) ->
+          case env.pop2 of
+            [x, y, env] ->
+              case env.allocate of
+                [result, env] ->
+                  case op.ofCategory of
+                    Arithm -> [env, code.generateArithmCode (op, x, y)]
+                  | Div    -> [env, code.generateDivCode (op, x, y)]
+                  | Comp   -> [env, code.generateCompCode (op, x, y)]
+                  | Logic  -> [env, code.generateLogicCode (op, x, y)]
+                  esac
+              esac
+          esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
   }
 
   compile (env, code) 
+}
+
+fun ofCategory(op) {
+  case op of
+    "+"  -> Arithm
+  | "-"  -> Arithm
+  | "*"  -> Arithm
+  | "/"  -> Div
+  | "%"  -> Div
+  | "<"  -> Comp
+  | "<=" -> Comp
+  | ">"  -> Comp
+  | ">=" -> Comp
+  | "==" -> Comp
+  | "!=" -> Comp
+  | "&&" -> Logic
+  | "!!" -> Logic
+  esac
+}
+
+fun generateArithmCode(code, op, src, dst) {
+  if stackOpnd (src) && stackOpnd (dst)
+  then code <+ Mov (src, eax) <+ Binop (op, eax, dst)
+  else code <+ Binop(op, src, dst)
+  fi
+}
+
+fun generateDivCode(code, op, src, dst) {
+  code <+ Mov (dst, eax) <+ Cltd <+ IDiv (src) <+
+    case op of
+      "/" -> Mov (eax, dst)
+    | "%" -> Mov (edx, dst)
+    esac
+}
+
+fun generateCompCode(code, op, src, dst) {
+  code <+ Binop ("cmp", src, dst) <+ Mov (L (0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, dst)
+}
+
+fun generateLogicCode(code, op, src, dst) {
+  local toCompareWith = case op of
+    "&&" -> L (2)
+  | "!!" -> L (1)
+  esac;
+  code.generateCompCode("!=", L (0), src)
+      .generateCompCode("!=", L (0), dst)
+      .generateArithmCode("+", src, dst)
+      .generateCompCode(">=", toCompareWith, dst)
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
@@ -307,9 +380,9 @@ public fun compileX86 (args, code) {
                          #unboxed -> "../runtime/"
                        | path     -> path
                        esac ++ "/runtime.o";
-       
+
        fwrite (asmFile,
-               map (insnString, 
+               map (insnString,
                     getBuffer $
                       singletonBuffer (Meta ("\t.global\tmain\n")) <+>
                       dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
@@ -320,7 +393,7 @@ public fun compileX86 (args, code) {
                         epilogue ()
                       )
                     ).stringcat);
-                    
+
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }
