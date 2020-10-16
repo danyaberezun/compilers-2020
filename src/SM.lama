@@ -7,7 +7,7 @@ import Expr;
 
 fun eval (c@[st, state, w], insns) {
     case insns of
- 	    BINOP (op) : remInsns -> eval( [binOp(op, st[1][0], st[0]) : st[1][1], state, w], remInsns)
+ 	    BINOP (op) : remInsns -> eval( [binopOp(op, st[1][0], st[0]) : st[1][1], state, w], remInsns)
  	  | CONST (n) : remInsns -> eval([n : st, state, w], remInsns)
  	  | READ : remInsns -> eval([readWorld(w)[0] : st, state, readWorld(w)[1]], remInsns)
  	  | WRITE : remInsns -> case st of
