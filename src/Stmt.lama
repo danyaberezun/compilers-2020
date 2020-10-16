@@ -12,6 +12,7 @@ fun eval (c, stmt) {
 							[c[0] <- [x, res[0]], res[1]]
 		| Seq(s1, s2) -> 	eval(eval(c, s1), s2)
 	esac
+}
 
 
 public fun evalStmt (input, stmt) {
