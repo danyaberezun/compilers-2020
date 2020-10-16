@@ -2,7 +2,7 @@
 import List;
 import State;
 
-public fun evalO(op, l, r)
+public fun binopOp(op, l, r)
 {
     case op of
 		  "+" -> l + r 
@@ -23,8 +23,8 @@ public fun evalO(op, l, r)
 
 public fun evalExpr (st, expr) {
 	case expr of
-		   Const (z)	-> z
-		|  Var (x)	-> st(x)
+		  Const (n)	-> n
+		| Var (x)	-> st(x)
 		| Binop (op, l, r) -> evalO(op, evalExpr(st, l), evalExpr(st, r))
 	esac
 }
