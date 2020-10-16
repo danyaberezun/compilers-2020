@@ -24,6 +24,7 @@ fun eval (c, stmt) {
 		| Read(str) -> local res = readWorld(c[1]);
 					   [c[0] <- [str, res[0]], res[1]]
 		| Write(str) -> [c[0], writeWorld(evalExpr(c[0], str), c[1])]
+	esac
 }
 
 -- Evaluates a program with a given input and returns an output
