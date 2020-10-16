@@ -8,7 +8,7 @@ import Expr;
 fun eval (c@[st, state, w], insns) {
 	case insns of
 		  {} -> [st, state, w]
-		| BINOP(op) : s -> eval([binop(op, st[1][0], st[0]) : st[1][1], state, w], s)
+		| BINOP(op) : s -> eval([evalO(op, st[1][0], st[0]) : st[1][1], state, w], s)
 		| CONST(n)  : s -> eval([n : st, state, w], s)
 		| READ      : s -> local world_ = readWorld(w); eval([world_[0] : st, state, world_[1]], s)
 		| WRITE     : s -> eval([st[1], state, writeWorld(st[0], w)], s)
