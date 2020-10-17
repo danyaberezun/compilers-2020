@@ -63,7 +63,7 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
   Succ (program) ->
     case args.getMode of
       Comp -> compileX86 (args, compileSM (program))
-    | mode ->z
+    | mode ->
        local input =
           reverse (fix (fun (f) {
                           fun (acc) {
