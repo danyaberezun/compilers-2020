@@ -49,4 +49,4 @@ local singleStmt = memo $ eta syntax  ( kSkip                                   
       stmt = memo $ eta syntax (x=singleStmt s[";"] y=stmt {Seq (x, y)} | singleStmt);
 
 -- Public top-level parser
-public parse = stmt; 
+public parse = stmt;

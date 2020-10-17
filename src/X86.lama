@@ -318,7 +318,7 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-                | CONST (n) ->
+        | CONST (n) ->
             case env.allocate of
               [s, env] -> [env, code <+ Mov (L (n), s)]
             esac  
