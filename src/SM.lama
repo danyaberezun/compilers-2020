@@ -30,14 +30,14 @@ fun eval (c, insns) {
   case c of
     [s, st, world@[input, output]] -> case insns of
        {} -> c
-       | Binop (op) : irest -> case s of 
+       | BINOP (op) : irest -> case s of 
           rhs : lhs : rest -> eval ([evalBinop (op, lhs, rhs) : rest, st, world], irest) 
         esac
-       | Const (n) : irest -> eval ([n : s, st, world], irest)
-       | Read : irest -> case input of 
+       | CONST (n) : irest -> eval ([n : s, st, world], irest)
+       | READ : irest -> case input of 
           lhs : it -> eval ([lhs : s, st, [it, output]], irest) 
         esac
-       | Write : irest -> case s of 
+       | WRITE : irest -> case s of 
           var : rest -> eval ([rest, st, [input, var : output]], irest) 
         esac
        | LD (var) : irest -> eval ([st (var) : s, st, world], irest)
@@ -58,9 +58,9 @@ public fun evalSM (input, insns) {
 -- of stack machine instructions
 fun compileExpr (expr) {
   case expr of
-     Const (numb)        -> singleton(Const (numb))
+     Const (numb)        -> singleton(CONST (numb))
    | Var (var)          -> singleton(LD (var))
-   | Binop (op, lhs, rhs) -> compileExpr(lhs) +++ compileExpr(rhs) +++ singleton(Binop (op))
+   | Binop (op, lhs, rhs) -> compileExpr(lhs) +++ compileExpr(rhs) +++ singleton(BINOP (op))
    esac
 }
 
@@ -70,8 +70,8 @@ fun compileExpr (expr) {
 public fun compileSM (stmt) {
   case stmt of
      Assn (var, expr) -> compileExpr(expr) +++ singleton(ST (var))
-   | Read (var) -> {Read, ST (var)}
-   | Write (expr) -> compileExpr(expr) +++ singleton(Write)
+   | Read (var) -> {READ, ST (var)}
+   | Write (expr) -> compileExpr(expr) +++ singleton(WRITE)
    | Seq (s1, s2) -> compileSM(s1) +++ compileSM(s2)
    esac
 }
