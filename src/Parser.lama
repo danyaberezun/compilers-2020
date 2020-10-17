@@ -137,5 +137,15 @@ local primary    = memo $ eta syntax (
                                      primary)),
       exp        = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
 
+local stmt = memo $ eta (seqParser |> bypass(end));
+
+local assnParser = memo $ eta syntax (name=lident s[":="] value=exp {Assn (name, value)}),
+      readParser = memo $ eta syntax (kRead s["("] name=lident s[")"] {Read (name)}),
+      writeParser = memo $ eta syntax (kWrite s["("] value=exp s[")"] {Write (value)}),
+      skipParser = memo $ eta syntax (kSkip {Skip}),
+      singleStatementParser = memo $ eta (assnParser | readParser | writeParser | skipParser),
+      seqParser = memo $ eta syntax (stmt=singleStatementParser s[";"] tail=seqParser {Seq (stmt, tail)} |
+                                     singleStatementParser);
+
 -- Public top-level parser
 public parse = syntax (s=scopeExpr {s (Void)});
