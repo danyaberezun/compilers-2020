@@ -61,10 +61,9 @@ local args = parseArgs (arrayList (sysargs).tl);
 -- code generator
 case parseString (parse |> bypass (end), fread (args.getInFile)) of
   Succ (program) ->
-    -- failure("otuput: " ++ program.string ++ "\n\n");
     case args.getMode of
       Comp -> compileX86 (args, compileSM (program))
-    | mode ->
+    | mode ->z
        local input =
           reverse (fix (fun (f) {
                           fun (acc) {
