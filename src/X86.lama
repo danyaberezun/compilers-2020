@@ -354,7 +354,7 @@ fun compile (env, code) {
             esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
-      }, [env, emptyBuffer ()], code)
+      }, [env, {}], code)
   }
 
   compile (env, code) 
