@@ -92,8 +92,6 @@ global_stmt:	.int	1
 
 # PUBLIC ("global_parse") / 
 
-# EXTERN ("LevalStmt") / 
-
 # EXTERN ("LinitMatcher") / 
 
 # EXTERN ("LgetCol") / 
@@ -814,16 +812,15 @@ _continue:
 	call	initList
 	call	initFun
 	call	initMatcher
-	call	initStmt
 # SLABEL ("L1") / 
 
 L1:
 
-# LINE (17) / 
+# LINE (18) / 
 
-	.stabn 68,0,17,0
+	.stabn 68,0,18,0
 
-	.stabn 68,0,17,.L0-initParser
+	.stabn 68,0,18,.L0-initParser
 
 .L0:
 
@@ -866,9 +863,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (20) / 
+# LINE (21) / 
 
-	.stabn 68,0,20,.L1-initParser
+	.stabn 68,0,21,.L1-initParser
 
 .L1:
 
@@ -891,9 +888,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (21) / 
+# LINE (22) / 
 
-	.stabn 68,0,21,.L2-initParser
+	.stabn 68,0,22,.L2-initParser
 
 .L2:
 
@@ -985,9 +982,9 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%esi
-# LINE (22) / 
+# LINE (23) / 
 
-	.stabn 68,0,22,.L3-initParser
+	.stabn 68,0,23,.L3-initParser
 
 .L3:
 
@@ -1079,9 +1076,9 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%edi
-# LINE (23) / 
+# LINE (24) / 
 
-	.stabn 68,0,23,.L4-initParser
+	.stabn 68,0,24,.L4-initParser
 
 .L4:
 
@@ -1405,9 +1402,9 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	-4(%ebp)
-# LINE (24) / 
+# LINE (25) / 
 
-	.stabn 68,0,24,.L5-initParser
+	.stabn 68,0,25,.L5-initParser
 
 .L5:
 
@@ -1557,9 +1554,9 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	-8(%ebp)
-# LINE (25) / 
+# LINE (26) / 
 
-	.stabn 68,0,25,.L6-initParser
+	.stabn 68,0,26,.L6-initParser
 
 .L6:
 
@@ -1825,9 +1822,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (26) / 
+# LINE (27) / 
 
-	.stabn 68,0,26,.L7-initParser
+	.stabn 68,0,27,.L7-initParser
 
 .L7:
 
@@ -1896,9 +1893,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (28) / 
+# LINE (29) / 
 
-	.stabn 68,0,28,.L8-initParser
+	.stabn 68,0,29,.L8-initParser
 
 .L8:
 
@@ -1941,9 +1938,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (37) / 
+# LINE (38) / 
 
-	.stabn 68,0,37,.L9-initParser
+	.stabn 68,0,38,.L9-initParser
 
 .L9:
 
@@ -1986,9 +1983,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (41) / 
+# LINE (42) / 
 
-	.stabn 68,0,41,.L10-initParser
+	.stabn 68,0,42,.L10-initParser
 
 .L10:
 
@@ -2031,9 +2028,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (46) / 
+# LINE (47) / 
 
-	.stabn 68,0,46,.L11-initParser
+	.stabn 68,0,47,.L11-initParser
 
 .L11:
 
@@ -2108,11 +2105,11 @@ Llambda_5:
 
 L122:
 
-# LINE (42) / 
+# LINE (43) / 
 
-	.stabn 68,0,42,0
+	.stabn 68,0,43,0
 
-	.stabn 68,0,42,.L12-Llambda_5
+	.stabn 68,0,43,.L12-Llambda_5
 
 .L12:
 
@@ -2135,9 +2132,9 @@ L122:
 	call	Li__Infix_64
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (43) / 
+# LINE (44) / 
 
-	.stabn 68,0,43,.L13-Llambda_5
+	.stabn 68,0,44,.L13-Llambda_5
 
 .L13:
 
@@ -2547,11 +2544,11 @@ Llambda_4:
 
 L154:
 
-# LINE (38) / 
+# LINE (39) / 
 
-	.stabn 68,0,38,0
+	.stabn 68,0,39,0
 
-	.stabn 68,0,38,.L14-Llambda_4
+	.stabn 68,0,39,.L14-Llambda_4
 
 .L14:
 
@@ -2574,9 +2571,9 @@ L154:
 	call	Li__Infix_64
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (39) / 
+# LINE (40) / 
 
-	.stabn 68,0,39,.L15-Llambda_4
+	.stabn 68,0,40,.L15-Llambda_4
 
 .L15:
 
@@ -2603,9 +2600,9 @@ L154:
 	addl	$8,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (40) / 
+# LINE (41) / 
 
-	.stabn 68,0,40,.L16-Llambda_4
+	.stabn 68,0,41,.L16-Llambda_4
 
 .L16:
 
@@ -3121,11 +3118,11 @@ Llambda_11_8:
 
 L197:
 
-# LINE (39) / 
+# LINE (40) / 
 
-	.stabn 68,0,39,0
+	.stabn 68,0,40,0
 
-	.stabn 68,0,39,.L17-Llambda_11_8
+	.stabn 68,0,40,.L17-Llambda_11_8
 
 .L17:
 
@@ -3419,11 +3416,11 @@ Llambda_3:
 
 L218:
 
-# LINE (29) / 
+# LINE (30) / 
 
-	.stabn 68,0,29,0
+	.stabn 68,0,30,0
 
-	.stabn 68,0,29,.L18-Llambda_3
+	.stabn 68,0,30,.L18-Llambda_3
 
 .L18:
 
@@ -3446,9 +3443,9 @@ L218:
 	call	Li__Infix_64
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (30) / 
+# LINE (31) / 
 
-	.stabn 68,0,30,.L19-Llambda_3
+	.stabn 68,0,31,.L19-Llambda_3
 
 .L19:
 
@@ -3475,9 +3472,9 @@ L218:
 	addl	$8,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (31) / 
+# LINE (32) / 
 
-	.stabn 68,0,31,.L20-Llambda_3
+	.stabn 68,0,32,.L20-Llambda_3
 
 .L20:
 
@@ -3508,9 +3505,9 @@ L218:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%esi
-# LINE (32) / 
+# LINE (33) / 
 
-	.stabn 68,0,32,.L21-Llambda_3
+	.stabn 68,0,33,.L21-Llambda_3
 
 .L21:
 
@@ -3545,9 +3542,9 @@ L218:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%edi
-# LINE (33) / 
+# LINE (34) / 
 
-	.stabn 68,0,33,.L22-Llambda_3
+	.stabn 68,0,34,.L22-Llambda_3
 
 .L22:
 
@@ -3585,9 +3582,9 @@ L218:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	-4(%ebp)
-# LINE (34) / 
+# LINE (35) / 
 
-	.stabn 68,0,34,.L23-Llambda_3
+	.stabn 68,0,35,.L23-Llambda_3
 
 .L23:
 
@@ -3625,9 +3622,9 @@ L218:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	-8(%ebp)
-# LINE (35) / 
+# LINE (36) / 
 
-	.stabn 68,0,35,.L24-Llambda_3
+	.stabn 68,0,36,.L24-Llambda_3
 
 .L24:
 
@@ -3665,9 +3662,9 @@ L218:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	-12(%ebp)
-# LINE (36) / 
+# LINE (37) / 
 
-	.stabn 68,0,36,.L25-Llambda_3
+	.stabn 68,0,37,.L25-Llambda_3
 
 .L25:
 
@@ -4259,11 +4256,11 @@ Llambda_25_21:
 
 L281:
 
-# LINE (35) / 
+# LINE (36) / 
 
-	.stabn 68,0,35,0
+	.stabn 68,0,36,0
 
-	.stabn 68,0,35,.L26-Llambda_25_21
+	.stabn 68,0,36,.L26-Llambda_25_21
 
 .L26:
 
@@ -4583,11 +4580,11 @@ Llambda_24_21:
 
 L303:
 
-# LINE (34) / 
+# LINE (35) / 
 
-	.stabn 68,0,34,0
+	.stabn 68,0,35,0
 
-	.stabn 68,0,34,.L27-Llambda_24_21
+	.stabn 68,0,35,.L27-Llambda_24_21
 
 .L27:
 
@@ -5386,11 +5383,11 @@ Llambda_23_21:
 
 L356:
 
-# LINE (33) / 
+# LINE (34) / 
 
-	.stabn 68,0,33,0
+	.stabn 68,0,34,0
 
-	.stabn 68,0,33,.L28-Llambda_23_21
+	.stabn 68,0,34,.L28-Llambda_23_21
 
 .L28:
 
@@ -5793,11 +5790,11 @@ Llambda_22_21:
 
 L383:
 
-# LINE (32) / 
+# LINE (33) / 
 
-	.stabn 68,0,32,0
+	.stabn 68,0,33,0
 
-	.stabn 68,0,32,.L29-Llambda_22_21
+	.stabn 68,0,33,.L29-Llambda_22_21
 
 .L29:
 
@@ -6053,11 +6050,11 @@ Llambda_21_21:
 
 L401:
 
-# LINE (31) / 
+# LINE (32) / 
 
-	.stabn 68,0,31,0
+	.stabn 68,0,32,0
 
-	.stabn 68,0,31,.L30-Llambda_21_21
+	.stabn 68,0,32,.L30-Llambda_21_21
 
 .L30:
 
@@ -6252,11 +6249,11 @@ Llambda_20_21:
 
 L417:
 
-# LINE (30) / 
+# LINE (31) / 
 
-	.stabn 68,0,30,0
+	.stabn 68,0,31,0
 
-	.stabn 68,0,30,.L31-Llambda_20_21
+	.stabn 68,0,31,.L31-Llambda_20_21
 
 .L31:
 
@@ -6522,11 +6519,11 @@ Llambda_2:
 
 L439:
 
-# LINE (26) / 
+# LINE (27) / 
 
-	.stabn 68,0,26,0
+	.stabn 68,0,27,0
 
-	.stabn 68,0,26,.L32-Llambda_2
+	.stabn 68,0,27,.L32-Llambda_2
 
 .L32:
 
@@ -6617,11 +6614,11 @@ L446:
 
 L449:
 
-# LINE (20) / 
+# LINE (21) / 
 
-	.stabn 68,0,20,0
+	.stabn 68,0,21,0
 
-	.stabn 68,0,20,.L33-Llambda_1
+	.stabn 68,0,21,.L33-Llambda_1
 
 .L33:
 
@@ -6704,11 +6701,11 @@ Llambda_0:
 
 L454:
 
-# LINE (17) / 
+# LINE (18) / 
 
-	.stabn 68,0,17,0
+	.stabn 68,0,18,0
 
-	.stabn 68,0,17,.L34-Llambda_0
+	.stabn 68,0,18,.L34-Llambda_0
 
 .L34:
 
@@ -6731,9 +6728,9 @@ L454:
 	call	Li__Infix_64
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (18) / 
+# LINE (19) / 
 
-	.stabn 68,0,18,.L35-Llambda_0
+	.stabn 68,0,19,.L35-Llambda_0
 
 .L35:
 
@@ -6760,9 +6757,9 @@ L454:
 	addl	$8,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (19) / 
+# LINE (20) / 
 
-	.stabn 68,0,19,.L36-Llambda_0
+	.stabn 68,0,20,.L36-Llambda_0
 
 .L36:
 
@@ -6999,11 +6996,11 @@ L477:
 
 L480:
 
-# LINE (18) / 
+# LINE (19) / 
 
-	.stabn 68,0,18,0
+	.stabn 68,0,19,0
 
-	.stabn 68,0,18,.L37-Llambda_51_64
+	.stabn 68,0,19,.L37-Llambda_51_64
 
 .L37:
 
@@ -7082,11 +7079,11 @@ L483:
 
 L486:
 
-# LINE (17) / 
+# LINE (18) / 
 
-	.stabn 68,0,17,0
+	.stabn 68,0,18,0
 
-	.stabn 68,0,17,.L38-Llambda_50_64
+	.stabn 68,0,18,.L38-Llambda_50_64
 
 .L38:
 
@@ -7175,11 +7172,11 @@ L490:
 
 L493:
 
-# LINE (13) / 
+# LINE (14) / 
 
-	.stabn 68,0,13,0
+	.stabn 68,0,14,0
 
-	.stabn 68,0,13,.L39-Linbr
+	.stabn 68,0,14,.L39-Linbr
 
 .L39:
 

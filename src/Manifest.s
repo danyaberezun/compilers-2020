@@ -2,6 +2,8 @@
 
 	.stabs "/home/natashka/Desktop/compilers-2020/src/Manifest.lama",100,0,0,.Ltext
 
+	.globl	LdumpSM
+
 	.globl	LgetBaseName
 
 	.globl	LgetInFile
@@ -13,6 +15,8 @@
 	.data
 
 string_0:	.string	".lama"
+
+string_1:	.string	".sm"
 
 _init:	.int 0
 
@@ -32,7 +36,21 @@ filler:	.fill	1, 4, 1
 
 # PUBLIC ("LgetInFile") / 
 
+# PUBLIC ("LdumpSM") / 
+
 # PUBLIC ("LgetBaseName") / 
+
+# EXTERN ("Lfix") / 
+
+# EXTERN ("Li__Infix_35") / 
+
+# EXTERN ("Li__Infix_36") / 
+
+# EXTERN ("Lid") / 
+
+# EXTERN ("Lforce") / 
+
+# EXTERN ("LmakeLazy") / 
 
 # EXTERN ("LtagHash") / 
 
@@ -180,6 +198,8 @@ _continue:
 	rep movsl	
 	call	initLazy
 	call	initLazy
+	call	initLazy
+	call	initFun
 # SLABEL ("L1") / 
 
 L1:
@@ -246,11 +266,11 @@ L4:
 
 L7:
 
-# LINE (12) / 
+# LINE (20) / 
 
-	.stabn 68,0,12,0
+	.stabn 68,0,20,0
 
-	.stabn 68,0,12,.L0-LgetBaseName
+	.stabn 68,0,20,.L0-LgetBaseName
 
 .L0:
 
@@ -367,11 +387,11 @@ L14:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (13) / 
+# LINE (21) / 
 
-	.stabn 68,0,13,0
+	.stabn 68,0,21,0
 
-	.stabn 68,0,13,.L1-Llambda_0_3
+	.stabn 68,0,21,.L1-Llambda_0_3
 
 .L1:
 
@@ -430,9 +450,9 @@ L14:
 
 L29:
 
-# LINE (14) / 
+# LINE (22) / 
 
-	.stabn 68,0,14,.L2-Llambda_0_3
+	.stabn 68,0,22,.L2-Llambda_0_3
 
 .L2:
 
@@ -489,9 +509,9 @@ L22:
 
 L37:
 
-# LINE (15) / 
+# LINE (23) / 
 
-	.stabn 68,0,15,.L3-Llambda_0_3
+	.stabn 68,0,23,.L3-Llambda_0_3
 
 .L3:
 
@@ -538,11 +558,194 @@ LLlambda_0_3_epilogue:
 
 	.size Llambda_0_3, .-Llambda_0_3
 
+# LABEL ("LdumpSM") / 
+
+LdumpSM:
+
+# BEGIN ("LdumpSM", 2, 0, [], ["args"; "smCode"], [{ blab="L39"; elab="L40"; names=[]; subs=[{ blab="L42"; elab="L43"; names=[]; subs=[{ blab="L49"; elab="L50"; names=[]; subs=[]; }]; }]; }]) / 
+
+	.type dumpSM, @function
+
+	.stabs "dumpSM:F1",36,0,0,LdumpSM
+
+	.stabs "args:p1",160,0,0,8
+
+	.stabs "smCode:p1",160,0,0,12
+
+	.cfi_startproc
+
+	.cfi_adjust_cfa_offset	4
+
+	pushl	%ebp
+	.cfi_adjust_cfa_offset	4
+
+	movl	%esp,	%ebp
+	.cfi_def_cfa_register	5
+
+	subl	$LLdumpSM_SIZE,	%esp
+	movl	%esp,	%edi
+	movl	$filler,	%esi
+	movl	$LSLdumpSM_SIZE,	%ecx
+	rep movsl	
+# SLABEL ("L39") / 
+
+L39:
+
+# SLABEL ("L42") / 
+
+L42:
+
+# LINE (14) / 
+
+	.stabn 68,0,14,0
+
+	.stabn 68,0,14,.L4-LdumpSM
+
+.L4:
+
+# LD (Arg (0)) / 
+
+	movl	8(%ebp),	%ebx
+# CONST (2) / 
+
+	movl	$5,	%ecx
+# CALL (".elem", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	Belem
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# CALLC (0, false) / 
+
+	pushl	%ebx
+	movl	%ebx,	%edx
+	call	*(%ebx)
+	addl	$0,	%esp
+	popl	%ebx
+	movl	%eax,	%ebx
+# CJMP ("z", "L45") / 
+
+	sarl	%ebx
+	cmpl	$0,	%ebx
+	jz	L45
+# SLABEL ("L49") / 
+
+L49:
+
+# LINE (15) / 
+
+	.stabn 68,0,15,.L5-LdumpSM
+
+.L5:
+
+# LD (Arg (0)) / 
+
+	movl	8(%ebp),	%ebx
+# CALL ("LgetBaseName", 1, false) / 
+
+	pushl	%ebx
+	call	LgetBaseName
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING (".sm") / 
+
+	movl	$string_1,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("Li__Infix_4343", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	Li__Infix_4343
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# CLOSURE ("Lforce", []) / 
+
+	pushl	%ebx
+	pushl	$Lforce
+	pushl	$1
+	call	Bclosure
+	addl	$8,	%esp
+	movl	%eax,	%ecx
+	popl	%ebx
+# LD (Arg (1)) / 
+
+	movl	12(%ebp),	%esi
+# CALL ("Li__Infix_36", 2, false) / 
+
+	pushl	%ebx
+	pushl	%esi
+	pushl	%ecx
+	call	Li__Infix_36
+	addl	$8,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("Lfwrite", 2, true) / 
+
+	movl	%ebx,	8(%ebp)
+	movl	%ecx,	12(%ebp)
+	movl	%ebp,	%esp
+	popl	%ebp
+	jmp	Lfwrite
+# SLABEL ("L50") / 
+
+L50:
+
+# JMP ("L41") / 
+
+	jmp	L41
+# LABEL ("L45") / 
+
+L45:
+
+# CONST (0) / 
+
+	movl	$1,	%ebx
+# JMP ("L41") / 
+
+	jmp	L41
+# SLABEL ("L43") / 
+
+L43:
+
+# LABEL ("L41") / 
+
+L41:
+
+# SLABEL ("L40") / 
+
+L40:
+
+# END / 
+
+	movl	%ebx,	%eax
+LLdumpSM_epilogue:
+
+	movl	%ebp,	%esp
+	popl	%ebp
+	.cfi_restore	5
+
+	.cfi_def_cfa	4, 4
+
+	ret
+	.cfi_endproc
+
+	.set	LLdumpSM_SIZE,	0
+
+	.set	LSLdumpSM_SIZE,	0
+
+	.size LdumpSM, .-LdumpSM
+
 # LABEL ("LgetInFile") / 
 
 LgetInFile:
 
-# BEGIN ("LgetInFile", 1, 0, [], ["args"], [{ blab="L39"; elab="L40"; names=[]; subs=[{ blab="L42"; elab="L43"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("LgetInFile", 1, 0, [], ["args"], [{ blab="L59"; elab="L60"; names=[]; subs=[{ blab="L62"; elab="L63"; names=[]; subs=[]; }]; }]) / 
 
 	.type getInFile, @function
 
@@ -565,21 +768,21 @@ LgetInFile:
 	movl	$filler,	%esi
 	movl	$LSLgetInFile_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L39") / 
+# SLABEL ("L59") / 
 
-L39:
+L59:
 
-# SLABEL ("L42") / 
+# SLABEL ("L62") / 
 
-L42:
+L62:
 
-# LINE (8) / 
+# LINE (10) / 
 
-	.stabn 68,0,8,0
+	.stabn 68,0,10,0
 
-	.stabn 68,0,8,.L4-LgetInFile
+	.stabn 68,0,10,.L6-LgetInFile
 
-.L4:
+.L6:
 
 # LD (Arg (0)) / 
 
@@ -602,13 +805,13 @@ L42:
 	addl	$0,	%esp
 	popl	%ebx
 	movl	%eax,	%ebx
-# SLABEL ("L43") / 
+# SLABEL ("L63") / 
 
-L43:
+L63:
 
-# SLABEL ("L40") / 
+# SLABEL ("L60") / 
 
-L40:
+L60:
 
 # END / 
 
@@ -634,7 +837,7 @@ LLgetInFile_epilogue:
 
 LgetMode:
 
-# BEGIN ("LgetMode", 1, 0, [], ["args"], [{ blab="L47"; elab="L48"; names=[]; subs=[{ blab="L50"; elab="L51"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("LgetMode", 1, 0, [], ["args"], [{ blab="L67"; elab="L68"; names=[]; subs=[{ blab="L70"; elab="L71"; names=[]; subs=[]; }]; }]) / 
 
 	.type getMode, @function
 
@@ -657,21 +860,21 @@ LgetMode:
 	movl	$filler,	%esi
 	movl	$LSLgetMode_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L47") / 
+# SLABEL ("L67") / 
 
-L47:
+L67:
 
-# SLABEL ("L50") / 
+# SLABEL ("L70") / 
 
-L50:
+L70:
 
-# LINE (4) / 
+# LINE (6) / 
 
-	.stabn 68,0,4,0
+	.stabn 68,0,6,0
 
-	.stabn 68,0,4,.L5-LgetMode
+	.stabn 68,0,6,.L7-LgetMode
 
-.L5:
+.L7:
 
 # LD (Arg (0)) / 
 
@@ -694,13 +897,13 @@ L50:
 	addl	$0,	%esp
 	popl	%ebx
 	movl	%eax,	%ebx
-# SLABEL ("L51") / 
+# SLABEL ("L71") / 
 
-L51:
+L71:
 
-# SLABEL ("L48") / 
+# SLABEL ("L68") / 
 
-L48:
+L68:
 
 # END / 
 

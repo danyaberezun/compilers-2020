@@ -1,9 +1,6 @@
 -- Manifests a top-level environment
-<<<<<<< HEAD
-=======
 import Lazy;
 import Fun;
->>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 
 public fun getMode (args) {
   args [0] ()
@@ -13,15 +10,12 @@ public fun getInFile (args) {
   args [1] ()
 }
 
-<<<<<<< HEAD
-=======
 public fun dumpSM (args, smCode) {
   if args [2] () then
     fwrite (args.getBaseName ++ ".sm", force $ smCode)
   fi
 }
 
->>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 public fun getBaseName (args) {
   force (lazy ({local name = args.getInFile;
                if (matchSubString (name, ".lama", name.length - 5))

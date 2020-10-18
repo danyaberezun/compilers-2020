@@ -12,8 +12,6 @@
 
 string_0:	.string	"State.lama"
 
-string_1:	.string	"undefined variable \"%s\"\n"
-
 _init:	.int 0
 
 	.section custom_data,"aw",@progbits
@@ -369,11 +367,11 @@ L9:
 
 L13:
 
-# LINE (10) / 
+# LINE (11) / 
 
-	.stabn 68,0,10,0
+	.stabn 68,0,11,0
 
-	.stabn 68,0,10,.L0-Li__Infix_6045
+	.stabn 68,0,11,.L0-Li__Infix_6045
 
 .L0:
 
@@ -402,10 +400,10 @@ L12:
 
 L7:
 
-# FAIL ((9, 39), true) / 
+# FAIL ((10, 39), true) / 
 
 	pushl	$79
-	pushl	$19
+	pushl	$21
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -479,11 +477,11 @@ L15:
 
 L18:
 
-# LINE (11) / 
+# LINE (12) / 
 
-	.stabn 68,0,11,0
+	.stabn 68,0,12,0
 
-	.stabn 68,0,11,.L1-Llambda_0_4
+	.stabn 68,0,12,.L1-Llambda_0_4
 
 .L1:
 
@@ -630,31 +628,9 @@ L32:
 
 L35:
 
-# LINE (5) / 
+# CONST (0) / 
 
-	.stabn 68,0,5,0
-
-	.stabn 68,0,5,.L2-LemptyState
-
-.L2:
-
-# STRING ("undefined variable \"%s\"\\n") / 
-
-	movl	$string_1,	%ebx
-	pushl	%ebx
-	call	Bstring
-	addl	$4,	%esp
-	movl	%eax,	%ebx
-# LD (Arg (0)) / 
-
-	movl	8(%ebp),	%ecx
-# CALL ("Lfailure", 2, true) / 
-
-	pushl	%ecx
-	pushl	%ebx
-	call	Lfailure
-	addl	$8,	%esp
-	movl	%eax,	%ebx
+	movl	$1,	%ebx
 # SLABEL ("L36") / 
 
 L36:
