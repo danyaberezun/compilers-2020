@@ -41,7 +41,14 @@ local wordSize = 4;
 --   Cltd                       -- see instruction set reference           
 --   Set   (string, string)     -- sets a value from flags; the first operand is the   
 --                                 suffix, which determines the value being set, the
+<<<<<<< HEAD
 --                                 the second --- (sub)register name 
+=======
+--                                 the second --- (sub)register name
+--   Jmp   (string)             -- unconditional jump to a label
+--   CJmp  (string, string)     -- conditional jump to a label
+--   Label (string)             -- a label
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 --   Push  (opnd)               -- pushes the operand on the hardware stack
 --   Pop   (opnd)               -- pops from the hardware stack to the operand
 --   Call  (string)             -- calls a function by its name 
@@ -82,6 +89,12 @@ fun insnString (insn) {
   | Pop   (s)          -> sprintf ("\tpopl\t%s\n", opndString (s))
   | Ret                -> "\tret\n"
   | Call  (p)          -> sprintf ("\tcall\t%s\n", p)
+<<<<<<< HEAD
+=======
+  | Label (l)          -> sprintf ("%s:\n", l)
+  | Jmp   (l)          -> sprintf ("\tjmp\t%s\n", l)
+  | CJmp  (c, l)       -> sprintf ("\tj%s\t%s\n", c, l)
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
   | Meta  (m)          -> m
   esac
 }
@@ -273,6 +286,7 @@ fun suffix (op) {
   esac
 }
 
+<<<<<<< HEAD
 fun op_type (op) {
   case op of
       "+" -> 1 | "-" -> 1 | "*" -> 1
@@ -280,6 +294,8 @@ fun op_type (op) {
   esac
 }
 
+=======
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -296,6 +312,7 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+<<<<<<< HEAD
         | CONST (x) ->
             case env.allocate of
               [s, env] -> [env, code <+ Mov (L (x), s)]
@@ -328,6 +345,9 @@ fun compile (env, code) {
                     esac 
                 esac
             esac
+=======
+        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
         esac
       }, [env, emptyBuffer ()], code)
   }
@@ -356,7 +376,11 @@ public fun compileX86 (args, code) {
                         prologue (getStackSize (env)) <+>
                         code <+>
                         epilogue ()
+<<<<<<< HEAD
                       )
+=======
+                    )
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
                    ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)

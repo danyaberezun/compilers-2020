@@ -4,7 +4,11 @@ import Ostap;
 import Lexer;
 import List;
 import Fun;
+<<<<<<< HEAD
 import Matcher;      
+=======
+import Matcher;
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 
 -- A parser of "something" in brackets; l, r are left and right
 -- brackets as parsers, p --- a parser of "something"
@@ -12,6 +16,7 @@ fun inbr (l, p, r) {
   syntax (-l p -r)
 }
 
+<<<<<<< HEAD
         
 local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
                                    x=lident  {Var (x)}               |
@@ -40,6 +45,16 @@ local primary_stmt = memo $ eta syntax (
       stmt = memo $ eta syntax (
         primary_stmt |
         x1=primary_stmt s[";"] x2=stmt {Seq (x1, x2)});
+=======
+-- Primary expression
+local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
+                            lident  @ fun (x) {Var (x)} |
+                            inbr (s ("("), exp, s (")"))),
+      exp = memo $ eta (failure ("expression parsing not implemented\n"));
+
+local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
+   
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 
 -- Public top-level parser
 public parse = stmt;

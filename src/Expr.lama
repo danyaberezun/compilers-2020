@@ -3,6 +3,7 @@
 import List;
 import State;
 
+<<<<<<< HEAD
 public fun binopParser (str, x, y) {
   case str of
       "+"  -> x + y
@@ -20,6 +21,8 @@ public fun binopParser (str, x, y) {
     | "!!" -> x !! y
   esac
 }
+=======
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
@@ -31,9 +34,13 @@ public fun binopParser (str, x, y) {
 --        Binop (string, expr, expr)
 
 public fun evalExpr (st, expr) {
+<<<<<<< HEAD
   case expr of 
       Var (x)              -> st (x)
     | Const (x)            -> x
     | Binop (op,  e1, e2)  -> binopParser (op, evalExpr (st, e1), evalExpr (st, e2))
   esac
+=======
+  failure ("evalExpr not implemented\n")
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 }

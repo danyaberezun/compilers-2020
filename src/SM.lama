@@ -1,22 +1,44 @@
 -- Stack machine.
 
+<<<<<<< HEAD
 import List;
+=======
+import Array;
+import List;
+import Fun;
+import Collection;
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 import World;
 import State;
 import Expr;
 import Buffer;
+<<<<<<< HEAD
 import Fun;
+=======
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
 public fun showSMInsn (i) {
   case i of
+<<<<<<< HEAD
     READ      -> sprintf ("READ")
   | WRITE     -> sprintf ("WRITE")
   | BINOP (s) -> sprintf ("BINOP %s", s)
   | LD    (x) -> sprintf ("LD %s", x)
   | ST    (x) -> sprintf ("ST %s", x)
   | CONST (n) -> sprintf ("CONST %d", n)
+=======
+    READ         -> sprintf ("READ")
+  | WRITE        -> sprintf ("WRITE")
+  | BINOP (s)    -> sprintf ("BINOP %s", s)
+  | LD    (x)    -> sprintf ("LD %s", x)
+  | ST    (x)    -> sprintf ("ST %s", x)
+  | CONST (n)    -> sprintf ("CONST %d", n)
+  | LABEL (s)    -> sprintf ("LABEL %s", s)
+  | JMP   (l)    -> sprintf ("JMP %s", l)
+  | CJMP  (c, l) -> sprintf ("CJMP %s, %s", c, l)
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
   esac
 }
 
@@ -24,6 +46,7 @@ public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
 
+<<<<<<< HEAD
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c, insns) {
@@ -38,28 +61,96 @@ fun eval (c, insns) {
       | ST    (x) : p -> case s of y : ss -> eval ([s, (st <- [x, y]), w], p) esac
     esac
   esac
+=======
+-- Evaluation environment: keeps a mapping between labels and (sub)programs
+fun initEvalEnv (insns) {
+  local map =
+    fix (fun (rec) {
+          fun ([m, insns]) {
+            case insns of
+              {}               -> m
+            | LABEL (lab) : tl -> rec ([addMap (m, lab, insns), tl])
+            | _ : tl           -> rec ([m, tl])
+            esac
+          }
+        }) $ [emptyMap (compare), insns];
+  
+  [fun (l) {
+     case findMap (map, l) of Some (insns) -> insns esac
+  }]
+}
+
+-- Accessor function
+fun fromLabel (env, lab) {
+  env [0] (lab)
+}
+
+-- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
+-- returns a final configuration
+fun eval (env, c, insns) {
+  failure ("SM eval not implemented\n")
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
+<<<<<<< HEAD
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
+=======
+  eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
+}
+
+-- Compilation environment: generates labels
+fun makeCompEnv (n) {
+  [fun () {
+     [sprintf ("L%d", n), makeCompEnv (n+1)]
+  }]
+}
+
+fun initCompEnv () {
+  makeCompEnv (0)
+}
+
+-- Accessor function: generates one label
+fun genLabel (env) {
+  env [0] ()
+}
+
+-- Utility function: generates n labels
+fun genLabels (env, n) {
+  fun inner (env, n) {
+    if n == 0
+    then singleton (env)
+    else case env.genLabel of
+           [lab, env] -> lab : inner (env, n-1)
+         esac
+    fi
+  }
+
+  listArray (inner (env, n))
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 }
 
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
+<<<<<<< HEAD
   case expr of 
     Var   (x)         -> singleton (LD (x))
   | Const (n)         -> singleton (CONST (n))
   | Binop (b, e1, e2) -> compileExpr (e1) +++ compileExpr (e2) +++ singleton (BINOP (b))
   esac
+=======
+  failure ("compileExpr not implemented\n")
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
+<<<<<<< HEAD
   case stmt of
     Assn (x, expr) -> compileExpr (expr) +++ singleton (ST (x))
   | Read (x)       -> {READ, ST (x)}
@@ -67,3 +158,7 @@ public fun compileSM (stmt) {
   | Seq (s1, s2)   -> compileSM (s1) +++ compileSM (s2)
   esac
 }
+=======
+  failure ("compileSM not implemented\n")
+}
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9

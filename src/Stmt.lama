@@ -3,7 +3,10 @@
 import State;
 import Expr;
 import World;
+<<<<<<< HEAD
 import List;
+=======
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 
 -- Evaluates a statement "stmt" in a configuration "c".
 -- A configuration is a pair of a state "s" and a world "w".
@@ -21,6 +24,7 @@ import List;
 --        Repeat (stmt, expr)
 
 fun eval (c, stmt) {
+<<<<<<< HEAD
   case c of [st, [i, o]] ->
     case stmt of
         Skip              -> c
@@ -45,6 +49,9 @@ fun eval (c, stmt) {
       
     esac 
   esac
+=======
+  failure ("Stmt eval not implemented\n")
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 }
 
 -- Evaluates a program with a given input and returns an output

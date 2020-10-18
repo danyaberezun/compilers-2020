@@ -2,7 +2,12 @@
 
 -- Empty state (undefined everywhere)
 public fun emptyState (x) {
+<<<<<<< HEAD
   failure ("undefined variable ""%s""\n", x)
+=======
+  0
+  --failure ("undefined variable ""%s""\n", x)
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 }
 
 -- Putting a binding into a state

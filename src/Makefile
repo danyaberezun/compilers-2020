@@ -11,9 +11,15 @@ all: Parser.o Lexer.o X86.o Stmt.o SM.o Manifest.o
 
 Parser.o: Lexer.o
 
+<<<<<<< HEAD
 Expr.o: State.o
 
 Stmt.o: State.o Expr.o World.o
+=======
+Expr.o: State.o 
+
+Stmt.o: State.o Expr.o World.o 
+>>>>>>> e882db85f3362146ffd6b8c65badb180495f82b9
 
 SM.o: State.o World.o Expr.o
 
