@@ -43,7 +43,6 @@ public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*
       rRepeat      = createRegexp ("repeat\\b", """repeat"""),
       rUntil       = createRegexp ("until\\b", """until"""),
       rFor         = createRegexp ("for\\b", """for""");
-      
 
 local whiteSpace = token (rWhiteSpace);
 
