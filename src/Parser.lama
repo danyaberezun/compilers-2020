@@ -37,14 +37,29 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
           }
         );
 
-        memo $ eta expr (ops, primary) (id) -- TODO: change? 
+        memo $ eta expr (ops, primary)
       };
 
+-- local stmt; -- remove?
+
+local ifNoKw = memo $ eta syntax (
+  cond=exp kThen thn=stmt els=(
+    -kElse stmt -kFi     |
+    -kElif ifNoKw        |
+    kFi { Skip }
+  ) { If (cond, thn, els) }
+);
+
 local simpleStmt = memo $ eta syntax (
-  kRead id=inbr[s("("), lident, s(")")] { Read (id) } |
-  kWrite e=inbr[s("("), exp, s(")")] { Write (e) }    |
-  kSkip { Skip }                                      |
-  id=lident s[":="] e=exp { Assn (id, e) }            
+  kRead id=inbr[s("("), lident, s(")")] { Read (id) }      |
+  kWrite e=inbr[s("("), exp, s(")")] { Write (e) }         |
+  kSkip { Skip }                                           |
+  id=lident s[":="] e=exp { Assn (id, e) }                 |
+  -kIf ifNoKw                                              |
+  kWhile cond=exp kDo body=stmt kOd { While (cond, body) } |
+  kFor init=stmt s[","] cond=exp s[","] step=stmt kDo body=stmt kOd
+    { Seq (init, While (cond, Seq (body, step))) }         |
+  kRepeat body=stmt kUntil cond=exp { Repeat (body, cond) }
 );
 
 local stmt = memo $ eta syntax (
