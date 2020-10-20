@@ -70,23 +70,27 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
-fun evalStep (env, c, insns) {
-    case insns[0] of
-      READ           -> local reader = readWorld(c[2]); [singleton(reader[0]) +++ c[0], c[1], reader[1]]
-      |  WRITE       -> [c[0][1], c[1], writeWorld(c[0][0], c[2])]
-      |  BINOP(s1)   -> [singleton(computeExpr(s1,c[0][1][0],c[0][0])) +++ c[0][1][1], c[1], c[2]]
-      |  CONST(n)    -> [singleton(n) +++ c[0], c[1], c[2]]
-      |  LD(x)       -> [singleton(c[1](x)) +++ c[0], c[1], c[2]]
-      |  ST(x)       -> [c[0][1], c[1] <- [x, c[0][0]], c[2]]
-    esac
-}
-
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c, insns) {
   while size(insns) > 0 do
-    c := evalStep(env, c, insns);
-    insns := insns[1]
+    case insns[0] of
+      READ           -> local reader = readWorld(c[2]); c := [singleton(reader[0]) +++ c[0], c[1], reader[1]]; insns := insns[1]
+      |  WRITE       -> c := [c[0][1], c[1], writeWorld(c[0][0], c[2])]; insns := insns[1]
+      |  BINOP(s1)   -> c := [singleton(computeExpr(s1,c[0][1][0],c[0][0])) +++ c[0][1][1], c[1], c[2]]; insns := insns[1]
+      |  CONST(n)    -> c := [singleton(n) +++ c[0], c[1], c[2]]; insns := insns[1]
+      |  LD(x)       -> c := [singleton(c[1](x)) +++ c[0], c[1], c[2]]; insns := insns[1]
+      |  ST(x)       -> c := [c[0][1], c[1] <- [x, c[0][0]], c[2]]; insns := insns[1]
+      |  Skip        -> insns := insns[1]
+      |  LABEL(l)    -> insns := insns[1]
+      |  CJMP(s,l)   -> if (c[0][0] && compare(s,"nz")==0) !! (c[0][0]==0 && compare(s,"z")==0) then
+          insns:=fromLabel(env, l)
+        else
+          insns := insns[1]
+        fi;
+        c := [c[0][1], c[1], c[2]]
+      |  JMP(l)   ->  insns:=fromLabel(env, l)
+    esac
   od;
   c
 }
@@ -140,11 +144,37 @@ fun compileExpr (expr) {
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
-public fun compileSM (stmt) {
+fun compileSM2 (env, stmt) {
   case stmt of
-   Seq(s1,s2)        -> compileSM(s1) +++ compileSM(s2)
-   | Write(s1)       -> compileExpr(s1) +++ singleton(WRITE)
-   | Read(s1)        -> singleton(READ) +++ singleton(ST(s1))
-   | Assn(s1,s2)     -> compileExpr(s2) +++ singleton(ST(s1))
+   Seq(s1,s2)        -> case compileSM2(env, s1) of [env1, insns1]
+                       -> case compileSM2(env1, s2) of [env2, insns2]
+                         -> [env2, insns1 +++ insns2]
+                       esac
+                     esac
+   | Write(s1)       -> [env, compileExpr(s1) +++ singleton(WRITE)]
+   | Read(s1)        -> [env, singleton(READ) +++ singleton(ST(s1))]
+   | Assn(s1,s2)     -> [env, compileExpr(s2) +++ singleton(ST(s1))]
+   | Skip            -> [env, {}]
+   | While(e, st)    -> case compileSM2(env, st) of [env1, insns]
+                       -> case genLabels(env1,2) of [l1, l2, env2]
+-> [env2, singleton(JMP(l2)) +++ singleton(LABEL(l1)) +++ insns +++ singleton(LABEL(l2)) +++ compileExpr(e) +++ singleton(CJMP("nz", l1))]
+                       esac
+                     esac
+   | If(e, st1, st2) -> case compileSM2(env, st1) of [env1, insns1]
+                       -> case compileSM2(env1, st2) of [env2, insns2]
+                         -> case genLabels(env2,2) of [l1, l2, env3]
+-> [env3, compileExpr(e) +++ singleton(CJMP("z", l1)) +++ insns1 +++ singleton(JMP(l2)) +++ singleton(LABEL(l1)) +++ insns2 +++ singleton(LABEL(l2))]
+                         esac
+                       esac
+                     esac
+   | Repeat(st, e)    -> case compileSM2(env, st) of [env1, insns]
+                       -> case genLabels(env1,1) of [l, env2]
+                           -> [env2, singleton(LABEL(l)) +++ insns +++ compileExpr(e) +++ singleton(CJMP("z", l))]
+                       esac
+                     esac
   esac
+}
+
+public fun compileSM (stmt){
+  compileSM2(initCompEnv(),stmt)[1]
 }
