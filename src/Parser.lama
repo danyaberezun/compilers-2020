@@ -28,14 +28,22 @@ local oprts = {
 local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
                             lident  @ fun (x) {Var (x)} |
                             inbr (s ("("), exp, s (")"))),
-      exp = memo $ eta expr (oprts, primary) (id);
+      exp = memo $ eta expr (oprts, primary);
+
+local ifHelper = memo $ eta syntax (x=exp kThen tr=seqStmt fls=(-kElse seqStmt -kFi | -kElif ifHelper | kFi {Skip}) {If (x, tr, fls)});
 
 local stmt = memo $ eta syntax (x=kSkip {Skip} | 
                                 x=lident s[":="] e=exp {Assn (x, e)} |
                                 kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
                                 kWrite x=inbr[s("("), exp, s(")")] {Write (x)} |
-                                s1=stmt s[";"] s2=stmt end {Seq (s1, s2)});
+                                kWhile x=exp kDo y=seqStmt kOd {While (x, y)} |
+                                kFor i=stmt s[","] x=exp s[","] y=stmt kDo st=seqStmt kOd {Seq (i, While (x, Seq (st, y)))} |
+                                kRepeat st=seqStmt kUntil x=exp {Repeat (st, x)} |
+                                -kIf ifHelper
+                                );
+
+local seqStmt = memo $ eta syntax (s1=seqStmt s[";"] s2=stmt {Seq (s1, s2)} | stmt);
    
 
 -- Public top-level parser
-public parse = stmt;
+public parse = seqStmt;
