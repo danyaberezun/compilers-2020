@@ -32,7 +32,7 @@ local primary = memo $ eta syntax (x = decimal {Const (stringInt (x))} |
 									 [s("/"),  fun(l,op,r) {Binop(op, l, r)}],
 									 [s("%"),  fun(l,op,r) {Binop(op, l, r)}]
 									}]
-							 }, primary) (id);
+							 }, primary);
 
 local el = memo $ eta syntax(
 						kElse st = stmt kFi                                     {st}  |

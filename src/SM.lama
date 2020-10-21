@@ -30,21 +30,35 @@ public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
 
--- Stack machine interpreter. Takes an SM-configuration and a program,
+-- Stack machine interpreter. Takes an env, SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
+fun eval (env, c, insns) {
 	if size(insns) == 0 then c
 	else
 		local i = insns[1], s = c[0], d = c[1], w = c[2];
 		case insns[0] of
-			  LD(v)     -> eval([singleton(d(v)) +++ s, d, w], i)
-			| CONST(ct) -> eval([singleton(ct) +++ s, d, w], i)
-			| BINOP(op) -> eval([singleton(evalBinop(op, s[1][0], s[0])) +++ s[1][1], d, w], i)
-			| READ      -> local v = readWorld(w);
-							eval([singleton(v[0]) +++ s, d, v[1]], i)
-			| WRITE     -> eval([s[1], d, writeWorld(s[0], w)], i)
-			| ST(v)     -> eval([s[1], d <- [v, s[0]], w], i)
-			| _         -> failure("SM-configuration %s not found.\n", insns[0])
+			  LD (v)        -> eval(env, [singleton(d(v)) +++ s, d, w], i)
+			| CONST (ct)    -> eval(env, [singleton(ct) +++ s, d, w], i)
+			| BINOP (op)    -> eval(env, [singleton(evalBinop(op, s[1][0], s[0])) +++ s[1][1], d, w], i)
+			| READ          -> local v = readWorld(w);
+							  eval(env, [singleton(v[0]) +++ s, d, v[1]], i)
+			| WRITE         -> eval(env, [s[1], d, writeWorld(s[0], w)], i)
+			| ST (v)        -> eval(env, [s[1], d <- [v, s[0]], w], i)
+			| LABEL (nm)    -> eval(env, c, i)
+			| JMP (lb)      -> eval(env, c, fromLabel(env, lb))
+			| CJMP (ch, lb) -> 
+							case s of cmp : r ->
+								local tmp;
+								case ch of
+									  "z"  -> tmp := (cmp == 0)
+									| "nz" -> tmp := (cmp != 0)
+								esac;
+								if (tmp)
+									then eval(env, c, fromLabel(env, lb))
+									else eval(env, c, i)
+								fi
+							esac
+			| _             -> failure("SM-configuration %s not found.\n", insns[0])
 		esac
 	fi
 }
@@ -66,6 +80,7 @@ fun evalBinop(op, x, y){
 		| "!!" -> (x !! y)
 		| _    -> failure("Operation %s not found.\n", op)
 	esac
+}
 
 -- Evaluation environment: keeps a mapping between labels and (sub)programs
 fun initEvalEnv (insns) {
@@ -140,12 +155,56 @@ fun compileExpr (expr) {
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
+
 public fun compileSM (stmt) {
-	case stmt of
-		  Read (v)      -> singleton(READ) +++ singleton(ST(v))
-		| Write (s)     -> compileExpr(s) +++ singleton(WRITE)
-		| Assn (v, s)   -> compileExpr (s) +++ singleton(ST(v))
-		| Seq (s1, s2)  -> compileSM (s1) +++ compileSM(s2)
-		| _             -> failure("Statement %s not found.\n", stmt)
+	fun cmpSM (env, stmt) {
+		case stmt of
+			  Read (v)       -> [env, {READ, ST(v)}]
+			| Write (e)      -> [env, compileExpr(e) +++ singleton(WRITE)]
+			| Assn (v, e)    -> [env, compileExpr (e) +++ singleton(ST(v))]
+			| Skip           -> [env, {}]
+			| Seq (s1, s2)   -> case cmpSM(env, s1) of [env1, i1] ->
+									case cmpSM(env1, s2) of [env2, i2] ->
+										[env2, i1 +++ i2]
+									esac
+								esac
+			| While (e, s)   -> case genLabels(env, 2) of [lb1, lb2, env1] ->
+									case cmpSM(env1, s) of [env2, ins] ->
+										[env2, {JMP (lb2), LABEL (lb1)} +++ ins +++ singleton(LABEL (lb2)) 
+										+++ compileExpr(e) +++ singleton(CJMP ("nz", lb1))]
+									esac
+								esac
+			| Repeat (s, e)  -> case genLabels(env, 1) of [lb, env1] ->
+									case cmpSM(env1, s) of [env2, ins] ->
+										[env2, singleton(LABEL (lb)) +++ ins +++ compileExpr(e) +++ singleton(CJMP ("z", lb))]
+									esac
+								esac
+			| If (e, s1, s2) -> case genLabels(env, 2) of [lElse, lFi, env0] ->
+									case cmpSM(env0, s1) of [env1, i1] ->
+										case cmpSM(env1, s2) of [env2, i2] ->
+											local lEnd;
+											case getEnd(i1) of
+												  [i, LABEL (lb)] -> lEnd := lb; i1 := i
+												| _               -> lEnd := lFi
+											esac;
+											[env2, compileExpr(e) +++ singleton(CJMP ("z", lElse)) +++ i1 
+												+++ {JMP (lEnd), LABEL (lElse)} +++ i2 +++ singleton(LABEL (lEnd))]
+										esac
+									esac
+								esac
+			| _              -> failure("Statement %s not found.\n", stmt)
+		esac
+	}
+	cmpSM (initCompEnv(), stmt) [1]
+}
+
+fun getEnd (st){
+	case st of
+		  {} -> [{}]
+		| s : {} -> [{}, s]
+		| s1 : s2  -> 
+			case getEnd (s2) of 
+				[t1, t2] -> [s1 : t1, t2]
+			esac
 	esac
 }

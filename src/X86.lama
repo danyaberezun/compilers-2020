@@ -324,6 +324,12 @@ fun compile (env, code) {
 			case env.allocate of
 				[s, env] -> [env, code <+ Mov (L(n), s)]
 			esac
+		| LABEL (lb) -> [env, code <+ Label (lb)]
+		| JMP (lb) -> [env, code <+ Jmp (lb)]
+		| CJMP (ch, lb) ->
+			case env.pop of
+				[s, env] -> [env, code <+ Mov (L(0), eax) <+ Binop("cmp", s, eax) <+ CJmp (ch, lb)]
+			esac
 		| BINOP (op) ->
 			case env.pop2 of
 				[x, y, env] ->
