@@ -5,6 +5,7 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
+import Manifest;
 
 -- Assembler language interface
 -- The registers: 
@@ -280,8 +281,8 @@ fun compile (env, code) {
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
-         READ ->
-           case env.allocate of
+          READ ->
+            case env.allocate of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
             esac             
         | WRITE ->
@@ -325,21 +326,30 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
--- A top-level codegeneration function. Takes a stack machine program
--- and returns x86 listing as a string
-public fun compileX86 (code) {
+-- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
+-- compiles the program into machine code, and compiles the machine code into an executable
+public fun compileX86 (args, code) {
   case compile (initEnv (), code) of
     [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
+       local asmFile = args.getBaseName ++ ".s",
+             runtime = case getEnv ("LAMA_RUNTIME") of
+                         #unboxed -> "../runtime/"
+                       | path     -> path
+                       esac ++ "/runtime.o";
+       
+       fwrite (asmFile,
+               map (insnString, 
+                    getBuffer $
+                      singletonBuffer (Meta ("\t.global\tmain\n")) <+>
+                      dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
+                      codeSection (
+                        singletonBuffer (Meta ("main:\n")) <+>
+                        prologue (getStackSize (env)) <+>
+                        code <+>
+                        epilogue ()
+                      )
+                    ).stringcat);
+                    
+       system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }
