@@ -350,22 +350,5 @@ public fun compileX86 (args, code) {
                     ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
-       
--- A top-level codegeneration function. Takes a stack machine program
--- and returns x86 listing as a string
-public fun compileX86 (code) {
-  case compile (initEnv (), code) of
-    [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
   esac
 }
