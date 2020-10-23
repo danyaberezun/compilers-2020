@@ -35,6 +35,7 @@ L0:
 	popl	%eax
 # JMP L2
 	jmp	L2
+# DUP
 # LABEL L1
 L1:
 # LD n
@@ -59,6 +60,7 @@ L1:
 	popl	%eax
 # JMP L4
 	jmp	L4
+# DUP
 # LABEL L3
 L3:
 # LD n
@@ -83,6 +85,7 @@ L3:
 	popl	%eax
 # JMP L6
 	jmp	L6
+# DUP
 # LABEL L5
 L5:
 # LD n
@@ -107,6 +110,7 @@ L5:
 	popl	%eax
 # JMP L8
 	jmp	L8
+# DUP
 # LABEL L7
 L7:
 # CONST 10
@@ -145,20 +149,27 @@ L2:
 	popl	%eax
 # JMP L10
 	jmp	L10
+# DUP
 # LABEL L9
 L9:
 # LABEL L10
 L10:
-# LD n
-	movl	global_n,	%ebx
-# CONST 1
-	movl	$1,	%ecx
-# BINOP -
-	movl	%ebx,	%eax
-	subl	%ecx,	%eax
+# LDA n
+	leal	global_n,	%eax
 	movl	%eax,	%ebx
-# ST n
-	movl	%ebx,	global_n
+# LD n
+	movl	global_n,	%ecx
+# CONST 1
+	movl	$1,	%esi
+# BINOP -
+	movl	%ecx,	%eax
+	subl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD n
 	movl	global_n,	%ebx
 # CONST 0

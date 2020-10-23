@@ -18,108 +18,144 @@ main:
 	movl	%eax,	%ebx
 # ST y
 	movl	%ebx,	global_y
+# LDA z
+	leal	global_z,	%eax
+	movl	%eax,	%ebx
 # LD x
-	movl	global_x,	%ebx
+	movl	global_x,	%ecx
 # LD y
-	movl	global_y,	%ecx
+	movl	global_y,	%esi
 # BINOP <
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
 	movl	$0,	%eax
 	setl	%al
-	movl	%eax,	%ebx
-# ST z
-	movl	%ebx,	global_z
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD z
 	movl	global_z,	%ebx
 # WRITE
 	pushl	%ebx
 	call	Lwrite
 	popl	%eax
+# LDA z
+	leal	global_z,	%eax
+	movl	%eax,	%ebx
 # LD x
-	movl	global_x,	%ebx
+	movl	global_x,	%ecx
 # LD y
-	movl	global_y,	%ecx
+	movl	global_y,	%esi
 # BINOP <=
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
 	movl	$0,	%eax
 	setle	%al
-	movl	%eax,	%ebx
-# ST z
-	movl	%ebx,	global_z
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD z
 	movl	global_z,	%ebx
 # WRITE
 	pushl	%ebx
 	call	Lwrite
 	popl	%eax
+# LDA z
+	leal	global_z,	%eax
+	movl	%eax,	%ebx
 # LD x
-	movl	global_x,	%ebx
+	movl	global_x,	%ecx
 # LD y
-	movl	global_y,	%ecx
+	movl	global_y,	%esi
 # BINOP ==
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
 	movl	$0,	%eax
 	sete	%al
-	movl	%eax,	%ebx
-# ST z
-	movl	%ebx,	global_z
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD z
 	movl	global_z,	%ebx
 # WRITE
 	pushl	%ebx
 	call	Lwrite
 	popl	%eax
+# LDA z
+	leal	global_z,	%eax
+	movl	%eax,	%ebx
 # LD x
-	movl	global_x,	%ebx
+	movl	global_x,	%ecx
 # LD y
-	movl	global_y,	%ecx
+	movl	global_y,	%esi
 # BINOP !=
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
 	movl	$0,	%eax
 	setne	%al
-	movl	%eax,	%ebx
-# ST z
-	movl	%ebx,	global_z
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD z
 	movl	global_z,	%ebx
 # WRITE
 	pushl	%ebx
 	call	Lwrite
 	popl	%eax
+# LDA z
+	leal	global_z,	%eax
+	movl	%eax,	%ebx
 # LD x
-	movl	global_x,	%ebx
+	movl	global_x,	%ecx
 # LD y
-	movl	global_y,	%ecx
+	movl	global_y,	%esi
 # BINOP >=
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
 	movl	$0,	%eax
 	setge	%al
-	movl	%eax,	%ebx
-# ST z
-	movl	%ebx,	global_z
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD z
 	movl	global_z,	%ebx
 # WRITE
 	pushl	%ebx
 	call	Lwrite
 	popl	%eax
+# LDA z
+	leal	global_z,	%eax
+	movl	%eax,	%ebx
 # LD x
-	movl	global_x,	%ebx
+	movl	global_x,	%ecx
 # LD y
-	movl	global_y,	%ecx
+	movl	global_y,	%esi
 # BINOP >
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
 	movl	$0,	%eax
 	setg	%al
-	movl	%eax,	%ebx
-# ST z
-	movl	%ebx,	global_z
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD z
 	movl	global_z,	%ebx
 # WRITE

@@ -7,7 +7,7 @@ global_y:	.int	0
 main:
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$4,	%esp
 # READ
 	call	Lread
 	movl	%eax,	%ebx
@@ -18,34 +18,40 @@ main:
 	movl	%eax,	%ebx
 # ST x1
 	movl	%ebx,	global_x1
+# LDA y
+	leal	global_y,	%eax
+	movl	%eax,	%ebx
 # CONST 17
-	movl	$17,	%ebx
+	movl	$17,	%ecx
 # CONST 28
-	movl	$28,	%ecx
+	movl	$28,	%esi
 # CONST 29
-	movl	$29,	%esi
-# BINOP +
-	movl	%ecx,	%eax
-	addl	%esi,	%eax
-	movl	%eax,	%ecx
-# LD x0
-	movl	global_x0,	%esi
-# CONST 41
-	movl	$41,	%edi
+	movl	$29,	%edi
 # BINOP +
 	movl	%esi,	%eax
 	addl	%edi,	%eax
 	movl	%eax,	%esi
+# LD x0
+	movl	global_x0,	%edi
+# CONST 41
+	movl	$41,	-4(%ebp)
+# BINOP +
+	movl	%edi,	%eax
+	addl	-4(%ebp),	%eax
+	movl	%eax,	%edi
 # BINOP *
-	movl	%ecx,	%eax
-	imull	%esi,	%eax
-	movl	%eax,	%ecx
+	movl	%esi,	%eax
+	imull	%edi,	%eax
+	movl	%eax,	%esi
 # BINOP -
+	movl	%ecx,	%eax
+	subl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
 	movl	%ebx,	%eax
-	subl	%ecx,	%eax
-	movl	%eax,	%ebx
-# ST y
-	movl	%ebx,	global_y
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD y
 	movl	global_y,	%ebx
 # WRITE

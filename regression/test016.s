@@ -12,32 +12,50 @@ main:
 	movl	%eax,	%ebx
 # ST n
 	movl	%ebx,	global_n
-# CONST 1
-	movl	$1,	%ebx
-# ST s
-	movl	%ebx,	global_s
-# LABEL L0
-L0:
-# LD s
-	movl	global_s,	%ebx
-# LD n
-	movl	global_n,	%ecx
-# BINOP *
-	movl	%ebx,	%eax
-	imull	%ecx,	%eax
+# LDA s
+	leal	global_s,	%eax
 	movl	%eax,	%ebx
-# ST s
-	movl	%ebx,	global_s
-# LD n
-	movl	global_n,	%ebx
 # CONST 1
 	movl	$1,	%ecx
-# BINOP -
+# STI
 	movl	%ebx,	%eax
-	subl	%ecx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LABEL L0
+L0:
+# LDA s
+	leal	global_s,	%eax
 	movl	%eax,	%ebx
-# ST n
-	movl	%ebx,	global_n
+# LD s
+	movl	global_s,	%ecx
+# LD n
+	movl	global_n,	%esi
+# BINOP *
+	movl	%ecx,	%eax
+	imull	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA n
+	leal	global_n,	%eax
+	movl	%eax,	%ebx
+# LD n
+	movl	global_n,	%ecx
+# CONST 1
+	movl	$1,	%esi
+# BINOP -
+	movl	%ecx,	%eax
+	subl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD n
 	movl	global_n,	%ebx
 # CONST 0

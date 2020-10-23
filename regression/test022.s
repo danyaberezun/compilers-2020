@@ -15,54 +15,102 @@ main:
 	movl	%eax,	%ebx
 # ST n
 	movl	%ebx,	global_n
+# LDA fib_1
+	leal	global_fib_1,	%eax
+	movl	%eax,	%ebx
 # CONST 1
-	movl	$1,	%ebx
-# ST fib_1
-	movl	%ebx,	global_fib_1
+	movl	$1,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA fib_2
+	leal	global_fib_2,	%eax
+	movl	%eax,	%ebx
 # CONST 1
-	movl	$1,	%ebx
-# ST fib_2
-	movl	%ebx,	global_fib_2
+	movl	$1,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA fib
+	leal	global_fib,	%eax
+	movl	%eax,	%ebx
 # CONST 1
-	movl	$1,	%ebx
-# ST fib
-	movl	%ebx,	global_fib
+	movl	$1,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA i
+	leal	global_i,	%eax
+	movl	%eax,	%ebx
 # CONST 2
-	movl	$2,	%ebx
-# ST i
-	movl	%ebx,	global_i
+	movl	$2,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # JMP L1
 	jmp	L1
 # LABEL L0
 L0:
+# LDA fib
+	leal	global_fib,	%eax
+	movl	%eax,	%ebx
 # LD fib_1
-	movl	global_fib_1,	%ebx
+	movl	global_fib_1,	%ecx
 # LD fib_2
-	movl	global_fib_2,	%ecx
+	movl	global_fib_2,	%esi
 # BINOP +
+	movl	%ecx,	%eax
+	addl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
 	movl	%ebx,	%eax
-	addl	%ecx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA fib_2
+	leal	global_fib_2,	%eax
 	movl	%eax,	%ebx
-# ST fib
-	movl	%ebx,	global_fib
 # LD fib_1
-	movl	global_fib_1,	%ebx
-# ST fib_2
-	movl	%ebx,	global_fib_2
-# LD fib
-	movl	global_fib,	%ebx
-# ST fib_1
-	movl	%ebx,	global_fib_1
-# LD i
-	movl	global_i,	%ebx
-# CONST 1
-	movl	$1,	%ecx
-# BINOP +
+	movl	global_fib_1,	%ecx
+# STI
 	movl	%ebx,	%eax
-	addl	%ecx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA fib_1
+	leal	global_fib_1,	%eax
 	movl	%eax,	%ebx
-# ST i
-	movl	%ebx,	global_i
+# LD fib
+	movl	global_fib,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA i
+	leal	global_i,	%eax
+	movl	%eax,	%ebx
+# LD i
+	movl	global_i,	%ecx
+# CONST 1
+	movl	$1,	%esi
+# BINOP +
+	movl	%ecx,	%eax
+	addl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LABEL L1
 L1:
 # LD i

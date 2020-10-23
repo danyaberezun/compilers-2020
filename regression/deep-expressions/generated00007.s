@@ -9,7 +9,7 @@ global_y:	.int	0
 main:
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$20,	%esp
+	subl	$24,	%esp
 # READ
 	call	Lread
 	movl	%eax,	%ebx
@@ -30,85 +30,37 @@ main:
 	movl	%eax,	%ebx
 # ST x3
 	movl	%ebx,	global_x3
+# LDA y
+	leal	global_y,	%eax
+	movl	%eax,	%ebx
 # LD x0
-	movl	global_x0,	%ebx
+	movl	global_x0,	%ecx
 # LD x1
-	movl	global_x1,	%ecx
+	movl	global_x1,	%esi
 # BINOP -
-	movl	%ebx,	%eax
-	subl	%ecx,	%eax
-	movl	%eax,	%ebx
+	movl	%ecx,	%eax
+	subl	%esi,	%eax
+	movl	%eax,	%ecx
 # CONST 909
-	movl	$909,	%ecx
+	movl	$909,	%esi
 # CONST 548
-	movl	$548,	%esi
+	movl	$548,	%edi
 # BINOP <=
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	%ecx
-# BINOP <
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%ebx
-# LD x1
-	movl	global_x1,	%ecx
-# CONST 212
-	movl	$212,	%esi
-# BINOP !!
-	movl	%ecx,	%edx
-	orl	%esi,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%ecx
-# LD x1
-	movl	global_x1,	%esi
-# CONST 252
-	movl	$252,	%edi
-# BINOP *
-	movl	%esi,	%eax
-	imull	%edi,	%eax
-	movl	%eax,	%esi
-# BINOP -
-	movl	%ecx,	%eax
-	subl	%esi,	%eax
-	movl	%eax,	%ecx
-# BINOP <
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%ebx
-# CONST 193
-	movl	$193,	%ecx
-# LD x1
-	movl	global_x1,	%esi
-# BINOP -
-	movl	%ecx,	%eax
-	subl	%esi,	%eax
-	movl	%eax,	%ecx
-# CONST 475
-	movl	$475,	%esi
-# CONST 456
-	movl	$456,	%edi
-# BINOP !=
 	movl	%edi,	%edx
 	cmpl	%edx,	%esi
 	movl	$0,	%eax
-	setne	%al
+	setle	%al
 	movl	%eax,	%esi
-# BINOP *
-	movl	%ecx,	%eax
-	imull	%esi,	%eax
+# BINOP <
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
+	movl	$0,	%eax
+	setl	%al
 	movl	%eax,	%ecx
-# CONST 66
-	movl	$66,	%esi
-# CONST 82
-	movl	$82,	%edi
+# LD x1
+	movl	global_x1,	%esi
+# CONST 212
+	movl	$212,	%edi
 # BINOP !!
 	movl	%esi,	%edx
 	orl	%edi,	%edx
@@ -116,11 +68,50 @@ main:
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	%esi
-# LD x2
-	movl	global_x2,	%edi
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-4(%ebp)
+# LD x1
+	movl	global_x1,	%edi
+# CONST 252
+	movl	$252,	-4(%ebp)
+# BINOP *
+	movl	%edi,	%eax
+	imull	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# BINOP -
+	movl	%esi,	%eax
+	subl	%edi,	%eax
+	movl	%eax,	%esi
+# BINOP <
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	%ecx
+# CONST 193
+	movl	$193,	%esi
+# LD x1
+	movl	global_x1,	%edi
+# BINOP -
+	movl	%esi,	%eax
+	subl	%edi,	%eax
+	movl	%eax,	%esi
+# CONST 475
+	movl	$475,	%edi
+# CONST 456
+	movl	$456,	-4(%ebp)
+# BINOP !=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	%edi
+# BINOP *
+	movl	%esi,	%eax
+	imull	%edi,	%eax
+	movl	%eax,	%esi
+# CONST 66
+	movl	$66,	%edi
+# CONST 82
+	movl	$82,	-4(%ebp)
 # BINOP !!
 	movl	%edi,	%edx
 	orl	-4(%ebp),	%edx
@@ -128,602 +119,12 @@ main:
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	%edi
-# BINOP >
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	%esi
-# BINOP ==
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	%ecx
-# BINOP &&
-	movl	%ebx,	%edx
-	imull	%ecx,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%ebx
-# LD x1
-	movl	global_x1,	%ecx
-# CONST 215
-	movl	$215,	%esi
-# BINOP +
-	movl	%ecx,	%eax
-	addl	%esi,	%eax
-	movl	%eax,	%ecx
-# CONST 401
-	movl	$401,	%esi
-# CONST 960
-	movl	$960,	%edi
-# BINOP *
-	movl	%esi,	%eax
-	imull	%edi,	%eax
-	movl	%eax,	%esi
-# BINOP >
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	%ecx
-# LD x1
-	movl	global_x1,	%esi
-# CONST 861
-	movl	$861,	%edi
-# BINOP >=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%esi
-# CONST 321
-	movl	$321,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP <=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	%edi
-# BINOP -
-	movl	%esi,	%eax
-	subl	%edi,	%eax
-	movl	%eax,	%esi
-# BINOP -
-	movl	%ecx,	%eax
-	subl	%esi,	%eax
-	movl	%eax,	%ecx
-# LD x1
-	movl	global_x1,	%esi
-# CONST 540
-	movl	$540,	%edi
-# BINOP <
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%esi
-# CONST 565
-	movl	$565,	%edi
-# CONST 642
-	movl	$642,	-4(%ebp)
-# BINOP >
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	%edi
-# BINOP !!
-	movl	%esi,	%edx
-	orl	%edi,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%esi
-# LD x2
-	movl	global_x2,	%edi
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP *
-	movl	%edi,	%eax
-	imull	-4(%ebp),	%eax
-	movl	%eax,	%edi
 # LD x2
 	movl	global_x2,	%eax
 	movl	%eax,	-4(%ebp)
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP !=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	-4(%ebp)
-# BINOP <=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	%edi
-# BINOP *
-	movl	%esi,	%eax
-	imull	%edi,	%eax
-	movl	%eax,	%esi
-# BINOP -
-	movl	%ecx,	%eax
-	subl	%esi,	%eax
-	movl	%eax,	%ecx
-# BINOP !!
-	movl	%ebx,	%edx
-	orl	%ecx,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%ebx
-# LD x0
-	movl	global_x0,	%ecx
-# LD x3
-	movl	global_x3,	%esi
-# BINOP !=
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%ecx
-# CONST 336
-	movl	$336,	%esi
-# CONST 69
-	movl	$69,	%edi
-# BINOP >
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	%esi
-# BINOP !=
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%ecx
-# LD x3
-	movl	global_x3,	%esi
-# CONST 625
-	movl	$625,	%edi
-# BINOP <
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%esi
-# CONST 286
-	movl	$286,	%edi
-# CONST 248
-	movl	$248,	-4(%ebp)
-# BINOP >=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%edi
-# BINOP !!
-	movl	%esi,	%edx
-	orl	%edi,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%esi
-# BINOP !!
-	movl	%ecx,	%edx
-	orl	%esi,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%ecx
-# LD x0
-	movl	global_x0,	%esi
-# CONST 707
-	movl	$707,	%edi
-# BINOP -
-	movl	%esi,	%eax
-	subl	%edi,	%eax
-	movl	%eax,	%esi
-# LD x1
-	movl	global_x1,	%edi
-# CONST 650
-	movl	$650,	-4(%ebp)
-# BINOP *
-	movl	%edi,	%eax
-	imull	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# BINOP >=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%esi
-# CONST 449
-	movl	$449,	%edi
-# CONST 415
-	movl	$415,	-4(%ebp)
-# BINOP -
-	movl	%edi,	%eax
-	subl	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP >
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	-4(%ebp)
-# BINOP >=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%edi
-# BINOP >=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%esi
-# BINOP *
-	movl	%ecx,	%eax
-	imull	%esi,	%eax
-	movl	%eax,	%ecx
-# CONST 334
-	movl	$334,	%esi
-# LD x0
-	movl	global_x0,	%edi
-# BINOP >=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%esi
-# CONST 594
-	movl	$594,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP >=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%edi
-# BINOP +
-	movl	%esi,	%eax
-	addl	%edi,	%eax
-	movl	%eax,	%esi
-# LD x0
-	movl	global_x0,	%edi
-# CONST 805
-	movl	$805,	-4(%ebp)
-# BINOP <=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	%edi
 # LD x2
 	movl	global_x2,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 54
-	movl	$54,	-8(%ebp)
-# BINOP <=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	-4(%ebp)
-# BINOP !=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
-# BINOP *
-	movl	%esi,	%eax
-	imull	%edi,	%eax
-	movl	%eax,	%esi
-# LD x1
-	movl	global_x1,	%edi
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP !=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
-# CONST 584
-	movl	$584,	-4(%ebp)
-# LD x3
-	movl	global_x3,	%eax
 	movl	%eax,	-8(%ebp)
-# BINOP &&
-	movl	-4(%ebp),	%edx
-	imull	-8(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	-4(%ebp)
-# BINOP +
-	movl	%edi,	%eax
-	addl	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 95
-	movl	$95,	-8(%ebp)
-# BINOP >=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	-4(%ebp)
-# CONST 533
-	movl	$533,	-8(%ebp)
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP &&
-	movl	-8(%ebp),	%edx
-	imull	-12(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	-8(%ebp)
-# BINOP -
-	movl	-4(%ebp),	%eax
-	subl	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP ==
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	%edi
-# BINOP <
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%esi
-# BINOP <
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%ecx
-# BINOP !!
-	movl	%ebx,	%edx
-	orl	%ecx,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%ebx
-# LD x1
-	movl	global_x1,	%ecx
-# CONST 53
-	movl	$53,	%esi
-# BINOP <=
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	%ecx
-# LD x1
-	movl	global_x1,	%esi
-# CONST 965
-	movl	$965,	%edi
-# BINOP >=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%esi
-# BINOP +
-	movl	%ecx,	%eax
-	addl	%esi,	%eax
-	movl	%eax,	%ecx
-# CONST 767
-	movl	$767,	%esi
-# CONST 824
-	movl	$824,	%edi
-# BINOP !=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%esi
-# CONST 453
-	movl	$453,	%edi
-# CONST 950
-	movl	$950,	-4(%ebp)
-# BINOP <
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%edi
-# BINOP &&
-	movl	%esi,	%edx
-	imull	%edi,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%esi
-# BINOP +
-	movl	%ecx,	%eax
-	addl	%esi,	%eax
-	movl	%eax,	%ecx
-# CONST 544
-	movl	$544,	%esi
-# LD x3
-	movl	global_x3,	%edi
-# BINOP *
-	movl	%esi,	%eax
-	imull	%edi,	%eax
-	movl	%eax,	%esi
-# LD x2
-	movl	global_x2,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP !=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
-# BINOP >=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%esi
-# LD x3
-	movl	global_x3,	%edi
-# CONST 23
-	movl	$23,	-4(%ebp)
-# BINOP !=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 908
-	movl	$908,	-8(%ebp)
-# BINOP +
-	movl	-4(%ebp),	%eax
-	addl	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP <
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%edi
-# BINOP >=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%esi
-# BINOP >=
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%ecx
-# LD x1
-	movl	global_x1,	%esi
-# LD x0
-	movl	global_x0,	%edi
-# BINOP !!
-	movl	%esi,	%edx
-	orl	%edi,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%esi
-# LD x1
-	movl	global_x1,	%edi
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP ==
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	%edi
-# BINOP !!
-	movl	%esi,	%edx
-	orl	%edi,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%esi
-# LD x1
-	movl	global_x1,	%edi
-# CONST 456
-	movl	$456,	-4(%ebp)
-# BINOP ==
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	%edi
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-4(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP <
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	-4(%ebp)
-# BINOP >=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%edi
-# BINOP +
-	movl	%esi,	%eax
-	addl	%edi,	%eax
-	movl	%eax,	%esi
-# CONST 856
-	movl	$856,	%edi
-# CONST 573
-	movl	$573,	-4(%ebp)
-# BINOP -
-	movl	%edi,	%eax
-	subl	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 993
-	movl	$993,	-8(%ebp)
-# BINOP +
-	movl	-4(%ebp),	%eax
-	addl	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP +
-	movl	%edi,	%eax
-	addl	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 85
-	movl	$85,	-8(%ebp)
 # BINOP !!
 	movl	-4(%ebp),	%edx
 	orl	-8(%ebp),	%edx
@@ -731,296 +132,11 @@ main:
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	-4(%ebp)
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-8(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP <=
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	-8(%ebp)
-# BINOP <
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	-4(%ebp)
-# BINOP -
-	movl	%edi,	%eax
-	subl	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# BINOP <=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	%esi
-# BINOP <
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%ecx
-# LD x3
-	movl	global_x3,	%esi
-# CONST 295
-	movl	$295,	%edi
-# BINOP <=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	%esi
-# CONST 413
-	movl	$413,	%edi
-# CONST 253
-	movl	$253,	-4(%ebp)
-# BINOP &&
-	movl	%edi,	%edx
-	imull	-4(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
-# BINOP !!
-	movl	%esi,	%edx
-	orl	%edi,	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%esi
-# LD x1
-	movl	global_x1,	%edi
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP ==
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	%edi
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 945
-	movl	$945,	-8(%ebp)
-# BINOP >
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	-4(%ebp)
-# BINOP !=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
-# BINOP >=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%esi
-# LD x2
-	movl	global_x2,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP !!
-	movl	%edi,	%edx
-	orl	-4(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
-# CONST 310
-	movl	$310,	-4(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP ==
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	-4(%ebp)
-# BINOP <
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%edi
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 258
-	movl	$258,	-8(%ebp)
-# BINOP <=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	-4(%ebp)
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-8(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP *
-	movl	-8(%ebp),	%eax
-	imull	-12(%ebp),	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP !=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	-4(%ebp)
 # BINOP >
 	movl	-4(%ebp),	%edx
 	cmpl	%edx,	%edi
 	movl	$0,	%eax
 	setg	%al
-	movl	%eax,	%edi
-# BINOP *
-	movl	%esi,	%eax
-	imull	%edi,	%eax
-	movl	%eax,	%esi
-# LD x2
-	movl	global_x2,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP <
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%edi
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-4(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP >
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	-4(%ebp)
-# BINOP !!
-	movl	%edi,	%edx
-	orl	-4(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-4(%ebp)
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP ==
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	-4(%ebp)
-# CONST 265
-	movl	$265,	-8(%ebp)
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP >
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	-8(%ebp)
-# BINOP >=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	-4(%ebp)
-# BINOP !=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
-# CONST 299
-	movl	$299,	-4(%ebp)
-# CONST 475
-	movl	$475,	-8(%ebp)
-# BINOP >=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	-4(%ebp)
-# CONST 735
-	movl	$735,	-8(%ebp)
-# CONST 206
-	movl	$206,	-12(%ebp)
-# BINOP ==
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	-8(%ebp)
-# BINOP &&
-	movl	-4(%ebp),	%edx
-	imull	-8(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	-4(%ebp)
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-8(%ebp)
-# CONST 813
-	movl	$813,	-12(%ebp)
-# BINOP >=
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	-8(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-12(%ebp)
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-16(%ebp)
-# BINOP *
-	movl	-12(%ebp),	%eax
-	imull	-16(%ebp),	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP !=
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	-8(%ebp)
-# BINOP >=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	-4(%ebp)
-# BINOP +
-	movl	%edi,	%eax
-	addl	-4(%ebp),	%eax
 	movl	%eax,	%edi
 # BINOP ==
 	movl	%edi,	%edx
@@ -1035,46 +151,111 @@ main:
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	%ecx
-# BINOP !=
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%ebx
-# CONST 323
-	movl	$323,	%ecx
-# CONST 486
-	movl	$486,	%esi
-# BINOP *
-	movl	%ecx,	%eax
-	imull	%esi,	%eax
-	movl	%eax,	%ecx
-# LD x3
-	movl	global_x3,	%esi
-# CONST 630
-	movl	$630,	%edi
-# BINOP *
+# LD x1
+	movl	global_x1,	%esi
+# CONST 215
+	movl	$215,	%edi
+# BINOP +
 	movl	%esi,	%eax
-	imull	%edi,	%eax
+	addl	%edi,	%eax
 	movl	%eax,	%esi
-# BINOP -
-	movl	%ecx,	%eax
-	subl	%esi,	%eax
-	movl	%eax,	%ecx
-# LD x0
-	movl	global_x0,	%esi
-# CONST 312
-	movl	$312,	%edi
-# BINOP >=
+# CONST 401
+	movl	$401,	%edi
+# CONST 960
+	movl	$960,	-4(%ebp)
+# BINOP *
+	movl	%edi,	%eax
+	imull	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# BINOP >
 	movl	%edi,	%edx
 	cmpl	%edx,	%esi
 	movl	$0,	%eax
-	setge	%al
+	setg	%al
 	movl	%eax,	%esi
+# LD x1
+	movl	global_x1,	%edi
+# CONST 861
+	movl	$861,	-4(%ebp)
+# BINOP >=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	%edi
+# CONST 321
+	movl	$321,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP <=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setle	%al
+	movl	%eax,	-4(%ebp)
+# BINOP -
+	movl	%edi,	%eax
+	subl	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# BINOP -
+	movl	%esi,	%eax
+	subl	%edi,	%eax
+	movl	%eax,	%esi
+# LD x1
+	movl	global_x1,	%edi
+# CONST 540
+	movl	$540,	-4(%ebp)
+# BINOP <
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	%edi
+# CONST 565
+	movl	$565,	-4(%ebp)
+# CONST 642
+	movl	$642,	-8(%ebp)
+# BINOP >
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-4(%ebp)
+# BINOP !!
+	movl	%edi,	%edx
+	orl	-4(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	%edi
 # LD x2
-	movl	global_x2,	%edi
+	movl	global_x2,	%eax
+	movl	%eax,	-4(%ebp)
 # LD x3
 	movl	global_x3,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP *
+	movl	-4(%ebp),	%eax
+	imull	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-8(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP !=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-8(%ebp)
+# BINOP <=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setle	%al
 	movl	%eax,	-4(%ebp)
 # BINOP *
 	movl	%edi,	%eax
@@ -1084,31 +265,65 @@ main:
 	movl	%esi,	%eax
 	subl	%edi,	%eax
 	movl	%eax,	%esi
-# BINOP >
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
+# BINOP !!
+	movl	%ecx,	%edx
+	orl	%esi,	%edx
+	cmpl	$0,	%edx
 	movl	$0,	%eax
-	setg	%al
+	setne	%al
 	movl	%eax,	%ecx
-# CONST 370
-	movl	$370,	%esi
-# CONST 374
-	movl	$374,	%edi
-# BINOP >=
+# LD x0
+	movl	global_x0,	%esi
+# LD x3
+	movl	global_x3,	%edi
+# BINOP !=
 	movl	%edi,	%edx
 	cmpl	%edx,	%esi
 	movl	$0,	%eax
-	setge	%al
+	setne	%al
 	movl	%eax,	%esi
-# CONST 937
-	movl	$937,	%edi
-# CONST 956
-	movl	$956,	-4(%ebp)
-# BINOP >=
+# CONST 336
+	movl	$336,	%edi
+# CONST 69
+	movl	$69,	-4(%ebp)
+# BINOP >
 	movl	-4(%ebp),	%edx
 	cmpl	%edx,	%edi
 	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	%edi
+# BINOP !=
+	movl	%edi,	%edx
+	cmpl	%edx,	%esi
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	%esi
+# LD x3
+	movl	global_x3,	%edi
+# CONST 625
+	movl	$625,	-4(%ebp)
+# BINOP <
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	%edi
+# CONST 286
+	movl	$286,	-4(%ebp)
+# CONST 248
+	movl	$248,	-8(%ebp)
+# BINOP >=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
 	setge	%al
+	movl	%eax,	-4(%ebp)
+# BINOP !!
+	movl	%edi,	%edx
+	orl	-4(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
 	movl	%eax,	%edi
 # BINOP !!
 	movl	%esi,	%edx
@@ -1117,33 +332,195 @@ main:
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	%esi
-# LD x1
-	movl	global_x1,	%edi
+# LD x0
+	movl	global_x0,	%edi
+# CONST 707
+	movl	$707,	-4(%ebp)
+# BINOP -
+	movl	%edi,	%eax
+	subl	-4(%ebp),	%eax
+	movl	%eax,	%edi
 # LD x1
 	movl	global_x1,	%eax
+	movl	%eax,	-4(%ebp)
+# CONST 650
+	movl	$650,	-8(%ebp)
+# BINOP *
+	movl	-4(%ebp),	%eax
+	imull	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# BINOP >=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	%edi
+# CONST 449
+	movl	$449,	-4(%ebp)
+# CONST 415
+	movl	$415,	-8(%ebp)
+# BINOP -
+	movl	-4(%ebp),	%eax
+	subl	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP >
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-8(%ebp)
+# BINOP >=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-4(%ebp)
+# BINOP >=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	%edi
+# BINOP *
+	movl	%esi,	%eax
+	imull	%edi,	%eax
+	movl	%eax,	%esi
+# CONST 334
+	movl	$334,	%edi
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-4(%ebp)
+# BINOP >=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	%edi
+# CONST 594
+	movl	$594,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP >=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-4(%ebp)
+# BINOP +
+	movl	%edi,	%eax
+	addl	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-4(%ebp)
+# CONST 805
+	movl	$805,	-8(%ebp)
+# BINOP <=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setle	%al
+	movl	%eax,	-4(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 54
+	movl	$54,	-12(%ebp)
+# BINOP <=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setle	%al
+	movl	%eax,	-8(%ebp)
+# BINOP !=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setne	%al
 	movl	%eax,	-4(%ebp)
 # BINOP *
 	movl	%edi,	%eax
 	imull	-4(%ebp),	%eax
 	movl	%eax,	%edi
-# CONST 870
-	movl	$870,	-4(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-4(%ebp)
 # LD x3
 	movl	global_x3,	%eax
 	movl	%eax,	-8(%ebp)
-# BINOP *
-	movl	-4(%ebp),	%eax
-	imull	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
 # BINOP !=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# CONST 584
+	movl	$584,	-8(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP &&
+	movl	-8(%ebp),	%edx
+	imull	-12(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-8(%ebp)
+# BINOP +
+	movl	-4(%ebp),	%eax
+	addl	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 95
+	movl	$95,	-12(%ebp)
+# BINOP >=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-8(%ebp)
+# CONST 533
+	movl	$533,	-12(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP &&
+	movl	-12(%ebp),	%edx
+	imull	-16(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-12(%ebp)
+# BINOP -
+	movl	-8(%ebp),	%eax
+	subl	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP ==
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-4(%ebp)
+# BINOP <
 	movl	-4(%ebp),	%edx
 	cmpl	%edx,	%edi
 	movl	$0,	%eax
-	setne	%al
+	setl	%al
 	movl	%eax,	%edi
-# BINOP *
-	movl	%esi,	%eax
-	imull	%edi,	%eax
+# BINOP <
+	movl	%edi,	%edx
+	cmpl	%edx,	%esi
+	movl	$0,	%eax
+	setl	%al
 	movl	%eax,	%esi
 # BINOP !!
 	movl	%ecx,	%edx
@@ -1154,18 +531,47 @@ main:
 	movl	%eax,	%ecx
 # LD x1
 	movl	global_x1,	%esi
-# LD x1
-	movl	global_x1,	%edi
-# BINOP <
+# CONST 53
+	movl	$53,	%edi
+# BINOP <=
 	movl	%edi,	%edx
 	cmpl	%edx,	%esi
 	movl	$0,	%eax
-	setl	%al
+	setle	%al
 	movl	%eax,	%esi
-# CONST 798
-	movl	$798,	%edi
-# LD x0
-	movl	global_x0,	%eax
+# LD x1
+	movl	global_x1,	%edi
+# CONST 965
+	movl	$965,	-4(%ebp)
+# BINOP >=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	%edi
+# BINOP +
+	movl	%esi,	%eax
+	addl	%edi,	%eax
+	movl	%eax,	%esi
+# CONST 767
+	movl	$767,	%edi
+# CONST 824
+	movl	$824,	-4(%ebp)
+# BINOP !=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	%edi
+# CONST 453
+	movl	$453,	-4(%ebp)
+# CONST 950
+	movl	$950,	-8(%ebp)
+# BINOP <
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setl	%al
 	movl	%eax,	-4(%ebp)
 # BINOP &&
 	movl	%edi,	%edx
@@ -1178,21 +584,124 @@ main:
 	movl	%esi,	%eax
 	addl	%edi,	%eax
 	movl	%eax,	%esi
+# CONST 544
+	movl	$544,	%edi
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-4(%ebp)
+# BINOP *
+	movl	%edi,	%eax
+	imull	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-4(%ebp)
 # LD x0
-	movl	global_x0,	%edi
-# CONST 795
-	movl	$795,	-4(%ebp)
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
 # BINOP !=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# BINOP >=
 	movl	-4(%ebp),	%edx
 	cmpl	%edx,	%edi
 	movl	$0,	%eax
-	setne	%al
+	setge	%al
 	movl	%eax,	%edi
 # LD x3
 	movl	global_x3,	%eax
 	movl	%eax,	-4(%ebp)
+# CONST 23
+	movl	$23,	-8(%ebp)
+# BINOP !=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 908
+	movl	$908,	-12(%ebp)
+# BINOP +
+	movl	-8(%ebp),	%eax
+	addl	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP <
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	-4(%ebp)
+# BINOP >=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	%edi
+# BINOP >=
+	movl	%edi,	%edx
+	cmpl	%edx,	%esi
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	%esi
+# LD x1
+	movl	global_x1,	%edi
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-4(%ebp)
+# BINOP !!
+	movl	%edi,	%edx
+	orl	-4(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	%edi
 # LD x1
 	movl	global_x1,	%eax
+	movl	%eax,	-4(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP ==
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-4(%ebp)
+# BINOP !!
+	movl	%edi,	%edx
+	orl	-4(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	%edi
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-4(%ebp)
+# CONST 456
+	movl	$456,	-8(%ebp)
+# BINOP ==
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-4(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-8(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP <
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setl	%al
 	movl	%eax,	-8(%ebp)
 # BINOP >=
 	movl	-8(%ebp),	%edx
@@ -1204,20 +713,104 @@ main:
 	movl	%edi,	%eax
 	addl	-4(%ebp),	%eax
 	movl	%eax,	%edi
+# CONST 856
+	movl	$856,	-4(%ebp)
+# CONST 573
+	movl	$573,	-8(%ebp)
+# BINOP -
+	movl	-4(%ebp),	%eax
+	subl	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 993
+	movl	$993,	-12(%ebp)
 # BINOP +
-	movl	%esi,	%eax
-	addl	%edi,	%eax
-	movl	%eax,	%esi
-# CONST 428
-	movl	$428,	%edi
-# CONST 5
-	movl	$5,	-4(%ebp)
-# BINOP *
-	movl	%edi,	%eax
-	imull	-4(%ebp),	%eax
+	movl	-8(%ebp),	%eax
+	addl	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP +
+	movl	-4(%ebp),	%eax
+	addl	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 85
+	movl	$85,	-12(%ebp)
+# BINOP !!
+	movl	-8(%ebp),	%edx
+	orl	-12(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-8(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-12(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP <=
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	setle	%al
+	movl	%eax,	-12(%ebp)
+# BINOP <
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	-8(%ebp)
+# BINOP -
+	movl	-4(%ebp),	%eax
+	subl	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# BINOP <=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setle	%al
 	movl	%eax,	%edi
-# CONST 760
-	movl	$760,	-4(%ebp)
+# BINOP <
+	movl	%edi,	%edx
+	cmpl	%edx,	%esi
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	%esi
+# LD x3
+	movl	global_x3,	%edi
+# CONST 295
+	movl	$295,	-4(%ebp)
+# BINOP <=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setle	%al
+	movl	%eax,	%edi
+# CONST 413
+	movl	$413,	-4(%ebp)
+# CONST 253
+	movl	$253,	-8(%ebp)
+# BINOP &&
+	movl	-4(%ebp),	%edx
+	imull	-8(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# BINOP !!
+	movl	%edi,	%edx
+	orl	-4(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	%edi
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-4(%ebp)
 # LD x3
 	movl	global_x3,	%eax
 	movl	%eax,	-8(%ebp)
@@ -1227,23 +820,44 @@ main:
 	movl	$0,	%eax
 	sete	%al
 	movl	%eax,	-4(%ebp)
-# BINOP *
-	movl	%edi,	%eax
-	imull	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 862
-	movl	$862,	-8(%ebp)
-# BINOP ==
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 945
+	movl	$945,	-12(%ebp)
+# BINOP >
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-8(%ebp)
+# BINOP !=
 	movl	-8(%ebp),	%edx
 	cmpl	%edx,	-4(%ebp)
 	movl	$0,	%eax
-	sete	%al
+	setne	%al
 	movl	%eax,	-4(%ebp)
-# CONST 912
-	movl	$912,	-8(%ebp)
+# BINOP >=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	%edi
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP !!
+	movl	-4(%ebp),	%edx
+	orl	-8(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# CONST 310
+	movl	$310,	-8(%ebp)
 # LD x0
 	movl	global_x0,	%eax
 	movl	%eax,	-12(%ebp)
@@ -1259,71 +873,178 @@ main:
 	movl	$0,	%eax
 	setl	%al
 	movl	%eax,	-4(%ebp)
-# BINOP <
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 258
+	movl	$258,	-12(%ebp)
+# BINOP <=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
 	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%edi
-# BINOP !=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%esi
-# BINOP *
-	movl	%ecx,	%eax
-	imull	%esi,	%eax
-	movl	%eax,	%ecx
-# CONST 908
-	movl	$908,	%esi
-# LD x3
-	movl	global_x3,	%edi
-# BINOP >
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	%esi
-# LD x0
-	movl	global_x0,	%edi
+	setle	%al
+	movl	%eax,	-8(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-12(%ebp)
 # LD x0
 	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP ==
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	%edi
+	movl	%eax,	-16(%ebp)
 # BINOP *
-	movl	%esi,	%eax
-	imull	%edi,	%eax
-	movl	%eax,	%esi
-# CONST 121
-	movl	$121,	%edi
-# CONST 841
-	movl	$841,	-4(%ebp)
-# BINOP ==
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
+	movl	-12(%ebp),	%eax
+	imull	-16(%ebp),	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP !=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
 	movl	$0,	%eax
-	sete	%al
+	setne	%al
+	movl	%eax,	-8(%ebp)
+# BINOP >
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-4(%ebp)
+# BINOP *
+	movl	%edi,	%eax
+	imull	-4(%ebp),	%eax
 	movl	%eax,	%edi
-# LD x3
-	movl	global_x3,	%eax
+# LD x2
+	movl	global_x2,	%eax
 	movl	%eax,	-4(%ebp)
-# CONST 940
-	movl	$940,	-8(%ebp)
-# BINOP -
-	movl	-4(%ebp),	%eax
-	subl	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
 # BINOP <
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
 	movl	$0,	%eax
 	setl	%al
+	movl	%eax,	-4(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-8(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP >
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-8(%ebp)
+# BINOP !!
+	movl	-4(%ebp),	%edx
+	orl	-8(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-8(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP ==
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-8(%ebp)
+# CONST 265
+	movl	$265,	-12(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP >
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-12(%ebp)
+# BINOP >=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-8(%ebp)
+# BINOP !=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# CONST 299
+	movl	$299,	-8(%ebp)
+# CONST 475
+	movl	$475,	-12(%ebp)
+# BINOP >=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-8(%ebp)
+# CONST 735
+	movl	$735,	-12(%ebp)
+# CONST 206
+	movl	$206,	-16(%ebp)
+# BINOP ==
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-12(%ebp)
+# BINOP &&
+	movl	-8(%ebp),	%edx
+	imull	-12(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-8(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-12(%ebp)
+# CONST 813
+	movl	$813,	-16(%ebp)
+# BINOP >=
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-12(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-16(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-20(%ebp)
+# BINOP *
+	movl	-16(%ebp),	%eax
+	imull	-20(%ebp),	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP !=
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-12(%ebp)
+# BINOP >=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-8(%ebp)
+# BINOP +
+	movl	-4(%ebp),	%eax
+	addl	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# BINOP ==
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	sete	%al
 	movl	%eax,	%edi
 # BINOP &&
 	movl	%esi,	%edx
@@ -1332,208 +1053,118 @@ main:
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	%esi
-# LD x0
-	movl	global_x0,	%edi
-# CONST 372
-	movl	$372,	-4(%ebp)
-# BINOP >
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP <=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	-4(%ebp)
-# BINOP !!
-	movl	%edi,	%edx
-	orl	-4(%ebp),	%edx
-	cmpl	$0,	%edx
+# BINOP !=
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
 	movl	$0,	%eax
 	setne	%al
-	movl	%eax,	%edi
-# CONST 337
-	movl	$337,	-4(%ebp)
-# CONST 71
-	movl	$71,	-8(%ebp)
-# BINOP <=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	-4(%ebp)
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-8(%ebp)
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP +
-	movl	-8(%ebp),	%eax
-	addl	-12(%ebp),	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP <
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	-4(%ebp)
-# BINOP !!
-	movl	%edi,	%edx
-	orl	-4(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
+	movl	%eax,	%ecx
+# CONST 323
+	movl	$323,	%esi
+# CONST 486
+	movl	$486,	%edi
 # BINOP *
 	movl	%esi,	%eax
 	imull	%edi,	%eax
 	movl	%eax,	%esi
-# LD x1
-	movl	global_x1,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP >=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 765
-	movl	$765,	-8(%ebp)
-# BINOP <
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	-4(%ebp)
-# BINOP ==
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	%edi
 # LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-4(%ebp)
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP +
-	movl	-4(%ebp),	%eax
-	addl	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-8(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP +
-	movl	-8(%ebp),	%eax
-	addl	-12(%ebp),	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP >=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	-4(%ebp)
-# BINOP <
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	%edi
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 437
-	movl	$437,	-8(%ebp)
+	movl	global_x3,	%edi
+# CONST 630
+	movl	$630,	-4(%ebp)
 # BINOP *
-	movl	-4(%ebp),	%eax
-	imull	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 644
-	movl	$644,	-8(%ebp)
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP >
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	-8(%ebp)
-# BINOP +
-	movl	-4(%ebp),	%eax
-	addl	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-8(%ebp)
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP ==
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	-8(%ebp)
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-12(%ebp)
-# CONST 379
-	movl	$379,	-16(%ebp)
-# BINOP >=
-	movl	-16(%ebp),	%edx
-	cmpl	%edx,	-12(%ebp)
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	-12(%ebp)
-# BINOP +
-	movl	-8(%ebp),	%eax
-	addl	-12(%ebp),	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP !!
-	movl	-4(%ebp),	%edx
-	orl	-8(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	-4(%ebp)
-# BINOP >=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setge	%al
+	movl	%edi,	%eax
+	imull	-4(%ebp),	%eax
 	movl	%eax,	%edi
 # BINOP -
 	movl	%esi,	%eax
 	subl	%edi,	%eax
 	movl	%eax,	%esi
-# BINOP +
-	movl	%ecx,	%eax
-	addl	%esi,	%eax
-	movl	%eax,	%ecx
-# CONST 521
-	movl	$521,	%esi
 # LD x0
 	movl	global_x0,	%edi
+# CONST 312
+	movl	$312,	-4(%ebp)
+# BINOP >=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	%edi
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-4(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP *
+	movl	-4(%ebp),	%eax
+	imull	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# BINOP -
+	movl	%edi,	%eax
+	subl	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# BINOP >
+	movl	%edi,	%edx
+	cmpl	%edx,	%esi
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	%esi
+# CONST 370
+	movl	$370,	%edi
+# CONST 374
+	movl	$374,	-4(%ebp)
+# BINOP >=
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	%edi
+# CONST 937
+	movl	$937,	-4(%ebp)
+# CONST 956
+	movl	$956,	-8(%ebp)
+# BINOP >=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-4(%ebp)
+# BINOP !!
+	movl	%edi,	%edx
+	orl	-4(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	%edi
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-4(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP *
+	movl	-4(%ebp),	%eax
+	imull	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# CONST 870
+	movl	$870,	-8(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP *
+	movl	-8(%ebp),	%eax
+	imull	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP !=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# BINOP *
+	movl	%edi,	%eax
+	imull	-4(%ebp),	%eax
+	movl	%eax,	%edi
 # BINOP !!
 	movl	%esi,	%edx
 	orl	%edi,	%edx
@@ -1541,176 +1172,114 @@ main:
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	%esi
-# CONST 878
-	movl	$878,	%edi
-# LD x2
-	movl	global_x2,	%eax
+# LD x1
+	movl	global_x1,	%edi
+# LD x1
+	movl	global_x1,	%eax
 	movl	%eax,	-4(%ebp)
-# BINOP *
-	movl	%edi,	%eax
-	imull	-4(%ebp),	%eax
+# BINOP <
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
+	movl	$0,	%eax
+	setl	%al
 	movl	%eax,	%edi
-# BINOP *
-	movl	%esi,	%eax
-	imull	%edi,	%eax
-	movl	%eax,	%esi
-# LD x0
-	movl	global_x0,	%edi
+# CONST 798
+	movl	$798,	-4(%ebp)
 # LD x0
 	movl	global_x0,	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP <=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	%edi
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-4(%ebp)
-# LD x1
-	movl	global_x1,	%eax
 	movl	%eax,	-8(%ebp)
-# BINOP -
-	movl	-4(%ebp),	%eax
-	subl	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP !=
+# BINOP &&
 	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%edi
-# BINOP !=
-	movl	%edi,	%edx
-	cmpl	%edx,	%esi
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	%esi
-# LD x2
-	movl	global_x2,	%edi
-# CONST 574
-	movl	$574,	-4(%ebp)
-# BINOP -
-	movl	%edi,	%eax
-	subl	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 586
-	movl	$586,	-8(%ebp)
-# BINOP !!
-	movl	-4(%ebp),	%edx
-	orl	-8(%ebp),	%edx
+	imull	-8(%ebp),	%edx
 	cmpl	$0,	%edx
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	-4(%ebp)
-# BINOP *
+# BINOP +
 	movl	%edi,	%eax
-	imull	-4(%ebp),	%eax
+	addl	-4(%ebp),	%eax
 	movl	%eax,	%edi
 # LD x0
 	movl	global_x0,	%eax
+	movl	%eax,	-4(%ebp)
+# CONST 795
+	movl	$795,	-8(%ebp)
+# BINOP !=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setne	%al
 	movl	%eax,	-4(%ebp)
 # LD x3
 	movl	global_x3,	%eax
 	movl	%eax,	-8(%ebp)
-# BINOP >
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setg	%al
-	movl	%eax,	-4(%ebp)
-# CONST 12
-	movl	$12,	-8(%ebp)
-# LD x2
-	movl	global_x2,	%eax
+# LD x1
+	movl	global_x1,	%eax
 	movl	%eax,	-12(%ebp)
-# BINOP <=
+# BINOP >=
 	movl	-12(%ebp),	%edx
 	cmpl	%edx,	-8(%ebp)
 	movl	$0,	%eax
-	setle	%al
+	setge	%al
 	movl	%eax,	-8(%ebp)
-# BINOP >=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setge	%al
+# BINOP +
+	movl	-4(%ebp),	%eax
+	addl	-8(%ebp),	%eax
 	movl	%eax,	-4(%ebp)
-# BINOP >=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setge	%al
+# BINOP +
+	movl	%edi,	%eax
+	addl	-4(%ebp),	%eax
 	movl	%eax,	%edi
-# BINOP -
-	movl	%esi,	%eax
-	subl	%edi,	%eax
-	movl	%eax,	%esi
-# LD x2
-	movl	global_x2,	%edi
-# LD x0
-	movl	global_x0,	%eax
+# CONST 428
+	movl	$428,	-4(%ebp)
+# CONST 5
+	movl	$5,	-8(%ebp)
+# BINOP *
+	movl	-4(%ebp),	%eax
+	imull	-8(%ebp),	%eax
 	movl	%eax,	-4(%ebp)
-# BINOP >=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	%edi
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-4(%ebp)
-# CONST 317
-	movl	$317,	-8(%ebp)
+# CONST 760
+	movl	$760,	-8(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-12(%ebp)
 # BINOP ==
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
 	movl	$0,	%eax
 	sete	%al
-	movl	%eax,	-4(%ebp)
-# BINOP -
-	movl	%edi,	%eax
-	subl	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-4(%ebp)
-# LD x3
-	movl	global_x3,	%eax
 	movl	%eax,	-8(%ebp)
-# BINOP >
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setg	%al
+# BINOP *
+	movl	-4(%ebp),	%eax
+	imull	-8(%ebp),	%eax
 	movl	%eax,	-4(%ebp)
-# CONST 621
-	movl	$621,	-8(%ebp)
 # LD x0
 	movl	global_x0,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP >
+	movl	%eax,	-8(%ebp)
+# CONST 862
+	movl	$862,	-12(%ebp)
+# BINOP ==
 	movl	-12(%ebp),	%edx
 	cmpl	%edx,	-8(%ebp)
 	movl	$0,	%eax
-	setg	%al
+	sete	%al
 	movl	%eax,	-8(%ebp)
-# BINOP -
-	movl	-4(%ebp),	%eax
-	subl	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
-# BINOP -
-	movl	%edi,	%eax
-	subl	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# CONST 295
-	movl	$295,	-4(%ebp)
-# LD x1
-	movl	global_x1,	%eax
+# CONST 912
+	movl	$912,	-12(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP ==
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-12(%ebp)
+# BINOP <
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setl	%al
 	movl	%eax,	-8(%ebp)
 # BINOP <
 	movl	-8(%ebp),	%edx
@@ -1718,51 +1287,20 @@ main:
 	movl	$0,	%eax
 	setl	%al
 	movl	%eax,	-4(%ebp)
-# CONST 94
-	movl	$94,	-8(%ebp)
-# CONST 375
-	movl	$375,	-12(%ebp)
-# BINOP >=
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	-8(%ebp)
-# BINOP <=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	-4(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-8(%ebp)
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP +
-	movl	-8(%ebp),	%eax
-	addl	-12(%ebp),	%eax
-	movl	%eax,	-8(%ebp)
-# CONST 326
-	movl	$326,	-12(%ebp)
-# CONST 844
-	movl	$844,	-16(%ebp)
 # BINOP !=
-	movl	-16(%ebp),	%edx
-	cmpl	%edx,	-12(%ebp)
+	movl	-4(%ebp),	%edx
+	cmpl	%edx,	%edi
 	movl	$0,	%eax
 	setne	%al
-	movl	%eax,	-12(%ebp)
-# BINOP -
-	movl	-8(%ebp),	%eax
-	subl	-12(%ebp),	%eax
-	movl	%eax,	-8(%ebp)
-# BINOP <=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setle	%al
+	movl	%eax,	%edi
+# BINOP *
+	movl	%esi,	%eax
+	imull	%edi,	%eax
+	movl	%eax,	%esi
+# CONST 908
+	movl	$908,	%edi
+# LD x3
+	movl	global_x3,	%eax
 	movl	%eax,	-4(%ebp)
 # BINOP >
 	movl	-4(%ebp),	%edx
@@ -1770,17 +1308,50 @@ main:
 	movl	$0,	%eax
 	setg	%al
 	movl	%eax,	%edi
-# BINOP +
-	movl	%esi,	%eax
-	addl	%edi,	%eax
-	movl	%eax,	%esi
-# CONST 733
-	movl	$733,	%edi
-# CONST 183
-	movl	$183,	-4(%ebp)
-# BINOP !!
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP ==
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-4(%ebp)
+# BINOP *
+	movl	%edi,	%eax
+	imull	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# CONST 121
+	movl	$121,	-4(%ebp)
+# CONST 841
+	movl	$841,	-8(%ebp)
+# BINOP ==
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-4(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 940
+	movl	$940,	-12(%ebp)
+# BINOP -
+	movl	-8(%ebp),	%eax
+	subl	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP <
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	-4(%ebp)
+# BINOP &&
 	movl	%edi,	%edx
-	orl	-4(%ebp),	%edx
+	imull	-4(%ebp),	%edx
 	cmpl	$0,	%edx
 	movl	$0,	%eax
 	setne	%al
@@ -1788,8 +1359,25 @@ main:
 # LD x0
 	movl	global_x0,	%eax
 	movl	%eax,	-4(%ebp)
-# LD x3
-	movl	global_x3,	%eax
+# CONST 372
+	movl	$372,	-8(%ebp)
+# BINOP >
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP <=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setle	%al
 	movl	%eax,	-8(%ebp)
 # BINOP !!
 	movl	-4(%ebp),	%edx
@@ -1798,16 +1386,65 @@ main:
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	-4(%ebp)
+# CONST 337
+	movl	$337,	-8(%ebp)
+# CONST 71
+	movl	$71,	-12(%ebp)
 # BINOP <=
-	movl	-4(%ebp),	%edx
-	cmpl	%edx,	%edi
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
 	movl	$0,	%eax
 	setle	%al
+	movl	%eax,	-8(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-12(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP +
+	movl	-12(%ebp),	%eax
+	addl	-16(%ebp),	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP <
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	-8(%ebp)
+# BINOP !!
+	movl	-4(%ebp),	%edx
+	orl	-8(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# BINOP *
+	movl	%edi,	%eax
+	imull	-4(%ebp),	%eax
 	movl	%eax,	%edi
-# CONST 166
-	movl	$166,	-4(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-4(%ebp)
 # LD x0
 	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP >=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 765
+	movl	$765,	-12(%ebp)
+# BINOP <
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setl	%al
 	movl	%eax,	-8(%ebp)
 # BINOP ==
 	movl	-8(%ebp),	%edx
@@ -1815,21 +1452,162 @@ main:
 	movl	$0,	%eax
 	sete	%al
 	movl	%eax,	-4(%ebp)
-# CONST 680
-	movl	$680,	-8(%ebp)
-# CONST 869
-	movl	$869,	-12(%ebp)
-# BINOP ==
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-8(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP +
+	movl	-8(%ebp),	%eax
+	addl	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-12(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP +
+	movl	-12(%ebp),	%eax
+	addl	-16(%ebp),	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP >=
 	movl	-12(%ebp),	%edx
 	cmpl	%edx,	-8(%ebp)
 	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-8(%ebp)
+# BINOP <
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 437
+	movl	$437,	-12(%ebp)
+# BINOP *
+	movl	-8(%ebp),	%eax
+	imull	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 644
+	movl	$644,	-12(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP >
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-12(%ebp)
+# BINOP +
+	movl	-8(%ebp),	%eax
+	addl	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-12(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP ==
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
 	sete	%al
+	movl	%eax,	-12(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-16(%ebp)
+# CONST 379
+	movl	$379,	-20(%ebp)
+# BINOP >=
+	movl	-20(%ebp),	%edx
+	cmpl	%edx,	-16(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-16(%ebp)
+# BINOP +
+	movl	-12(%ebp),	%eax
+	addl	-16(%ebp),	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP !!
+	movl	-8(%ebp),	%edx
+	orl	-12(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
 	movl	%eax,	-8(%ebp)
 # BINOP >=
 	movl	-8(%ebp),	%edx
 	cmpl	%edx,	-4(%ebp)
 	movl	$0,	%eax
 	setge	%al
+	movl	%eax,	-4(%ebp)
+# BINOP -
+	movl	%edi,	%eax
+	subl	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# BINOP +
+	movl	%esi,	%eax
+	addl	%edi,	%eax
+	movl	%eax,	%esi
+# CONST 521
+	movl	$521,	%edi
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-4(%ebp)
+# BINOP !!
+	movl	%edi,	%edx
+	orl	-4(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	%edi
+# CONST 878
+	movl	$878,	-4(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP *
+	movl	-4(%ebp),	%eax
+	imull	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# BINOP *
+	movl	%edi,	%eax
+	imull	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP <=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setle	%al
+	movl	%eax,	-4(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-8(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP -
+	movl	-8(%ebp),	%eax
+	subl	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP !=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setne	%al
 	movl	%eax,	-4(%ebp)
 # BINOP !=
 	movl	-4(%ebp),	%edx
@@ -1840,20 +1618,17 @@ main:
 # LD x2
 	movl	global_x2,	%eax
 	movl	%eax,	-4(%ebp)
-# CONST 539
-	movl	$539,	-8(%ebp)
-# BINOP !!
-	movl	-4(%ebp),	%edx
-	orl	-8(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
+# CONST 574
+	movl	$574,	-8(%ebp)
+# BINOP -
+	movl	-4(%ebp),	%eax
+	subl	-8(%ebp),	%eax
 	movl	%eax,	-4(%ebp)
-# CONST 968
-	movl	$968,	-8(%ebp)
-# LD x2
-	movl	global_x2,	%eax
-	movl	%eax,	-12(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 586
+	movl	$586,	-12(%ebp)
 # BINOP !!
 	movl	-8(%ebp),	%edx
 	orl	-12(%ebp),	%edx
@@ -1871,121 +1646,71 @@ main:
 # LD x3
 	movl	global_x3,	%eax
 	movl	%eax,	-12(%ebp)
-# BINOP !=
+# BINOP >
 	movl	-12(%ebp),	%edx
 	cmpl	%edx,	-8(%ebp)
 	movl	$0,	%eax
-	setne	%al
+	setg	%al
 	movl	%eax,	-8(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-12(%ebp)
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-16(%ebp)
-# BINOP !!
-	movl	-12(%ebp),	%edx
-	orl	-16(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	-12(%ebp)
-# BINOP ==
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	-8(%ebp)
-# BINOP <
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	-4(%ebp)
-# BINOP -
-	movl	%edi,	%eax
-	subl	-4(%ebp),	%eax
-	movl	%eax,	%edi
-# CONST 680
-	movl	$680,	-4(%ebp)
-# CONST 407
-	movl	$407,	-8(%ebp)
-# BINOP -
-	movl	-4(%ebp),	%eax
-	subl	-8(%ebp),	%eax
-	movl	%eax,	-4(%ebp)
-# LD x0
-	movl	global_x0,	%eax
-	movl	%eax,	-8(%ebp)
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-12(%ebp)
-# BINOP >=
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	-8(%ebp)
-# BINOP >=
-	movl	-8(%ebp),	%edx
-	cmpl	%edx,	-4(%ebp)
-	movl	$0,	%eax
-	setge	%al
-	movl	%eax,	-4(%ebp)
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-8(%ebp)
-# CONST 148
-	movl	$148,	-12(%ebp)
-# BINOP *
-	movl	-8(%ebp),	%eax
-	imull	-12(%ebp),	%eax
-	movl	%eax,	-8(%ebp)
-# LD x3
-	movl	global_x3,	%eax
-	movl	%eax,	-12(%ebp)
-# CONST 960
-	movl	$960,	-16(%ebp)
-# BINOP <
-	movl	-16(%ebp),	%edx
-	cmpl	%edx,	-12(%ebp)
-	movl	$0,	%eax
-	setl	%al
-	movl	%eax,	-12(%ebp)
-# BINOP ==
-	movl	-12(%ebp),	%edx
-	cmpl	%edx,	-8(%ebp)
-	movl	$0,	%eax
-	sete	%al
-	movl	%eax,	-8(%ebp)
-# BINOP !!
-	movl	-4(%ebp),	%edx
-	orl	-8(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	-4(%ebp)
-# CONST 556
-	movl	$556,	-8(%ebp)
-# CONST 515
-	movl	$515,	-12(%ebp)
-# BINOP !!
-	movl	-8(%ebp),	%edx
-	orl	-12(%ebp),	%edx
-	cmpl	$0,	%edx
-	movl	$0,	%eax
-	setne	%al
-	movl	%eax,	-8(%ebp)
-# CONST 736
-	movl	$736,	-12(%ebp)
-# LD x1
-	movl	global_x1,	%eax
+# CONST 12
+	movl	$12,	-12(%ebp)
+# LD x2
+	movl	global_x2,	%eax
 	movl	%eax,	-16(%ebp)
 # BINOP <=
 	movl	-16(%ebp),	%edx
 	cmpl	%edx,	-12(%ebp)
 	movl	$0,	%eax
 	setle	%al
+	movl	%eax,	-12(%ebp)
+# BINOP >=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-8(%ebp)
+# BINOP >=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-4(%ebp)
+# BINOP -
+	movl	%edi,	%eax
+	subl	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP >=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-4(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 317
+	movl	$317,	-12(%ebp)
+# BINOP ==
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-8(%ebp)
+# BINOP -
+	movl	-4(%ebp),	%eax
+	subl	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-8(%ebp)
+# LD x3
+	movl	global_x3,	%eax
 	movl	%eax,	-12(%ebp)
 # BINOP >
 	movl	-12(%ebp),	%edx
@@ -1993,23 +1718,171 @@ main:
 	movl	$0,	%eax
 	setg	%al
 	movl	%eax,	-8(%ebp)
-# CONST 337
-	movl	$337,	-12(%ebp)
-# LD x2
-	movl	global_x2,	%eax
+# CONST 621
+	movl	$621,	-12(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP >
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-12(%ebp)
+# BINOP -
+	movl	-8(%ebp),	%eax
+	subl	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# BINOP -
+	movl	-4(%ebp),	%eax
+	subl	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# CONST 295
+	movl	$295,	-8(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP <
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	-8(%ebp)
+# CONST 94
+	movl	$94,	-12(%ebp)
+# CONST 375
+	movl	$375,	-16(%ebp)
+# BINOP >=
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-12(%ebp)
+# BINOP <=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setle	%al
+	movl	%eax,	-8(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-12(%ebp)
+# LD x1
+	movl	global_x1,	%eax
 	movl	%eax,	-16(%ebp)
 # BINOP +
 	movl	-12(%ebp),	%eax
 	addl	-16(%ebp),	%eax
 	movl	%eax,	-12(%ebp)
-# CONST 405
-	movl	$405,	-16(%ebp)
-# LD x1
-	movl	global_x1,	%eax
-	movl	%eax,	-20(%ebp)
+# CONST 326
+	movl	$326,	-16(%ebp)
+# CONST 844
+	movl	$844,	-20(%ebp)
+# BINOP !=
+	movl	-20(%ebp),	%edx
+	cmpl	%edx,	-16(%ebp)
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-16(%ebp)
 # BINOP -
-	movl	-16(%ebp),	%eax
-	subl	-20(%ebp),	%eax
+	movl	-12(%ebp),	%eax
+	subl	-16(%ebp),	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP <=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setle	%al
+	movl	%eax,	-8(%ebp)
+# BINOP >
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-4(%ebp)
+# BINOP +
+	movl	%edi,	%eax
+	addl	-4(%ebp),	%eax
+	movl	%eax,	%edi
+# CONST 733
+	movl	$733,	-4(%ebp)
+# CONST 183
+	movl	$183,	-8(%ebp)
+# BINOP !!
+	movl	-4(%ebp),	%edx
+	orl	-8(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-8(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP !!
+	movl	-8(%ebp),	%edx
+	orl	-12(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-8(%ebp)
+# BINOP <=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setle	%al
+	movl	%eax,	-4(%ebp)
+# CONST 166
+	movl	$166,	-8(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-12(%ebp)
+# BINOP ==
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-8(%ebp)
+# CONST 680
+	movl	$680,	-12(%ebp)
+# CONST 869
+	movl	$869,	-16(%ebp)
+# BINOP ==
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-12(%ebp)
+# BINOP >=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-8(%ebp)
+# BINOP !=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-4(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-8(%ebp)
+# CONST 539
+	movl	$539,	-12(%ebp)
+# BINOP !!
+	movl	-8(%ebp),	%edx
+	orl	-12(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-8(%ebp)
+# CONST 968
+	movl	$968,	-12(%ebp)
+# LD x2
+	movl	global_x2,	%eax
 	movl	%eax,	-16(%ebp)
 # BINOP !!
 	movl	-12(%ebp),	%edx
@@ -2018,46 +1891,206 @@ main:
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	-12(%ebp)
+# BINOP *
+	movl	-8(%ebp),	%eax
+	imull	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-12(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP !=
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-12(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-16(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-20(%ebp)
+# BINOP !!
+	movl	-16(%ebp),	%edx
+	orl	-20(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-16(%ebp)
 # BINOP ==
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-12(%ebp)
+# BINOP <
 	movl	-12(%ebp),	%edx
 	cmpl	%edx,	-8(%ebp)
 	movl	$0,	%eax
-	sete	%al
+	setl	%al
 	movl	%eax,	-8(%ebp)
+# BINOP -
+	movl	-4(%ebp),	%eax
+	subl	-8(%ebp),	%eax
+	movl	%eax,	-4(%ebp)
+# CONST 680
+	movl	$680,	-8(%ebp)
+# CONST 407
+	movl	$407,	-12(%ebp)
+# BINOP -
+	movl	-8(%ebp),	%eax
+	subl	-12(%ebp),	%eax
+	movl	%eax,	-8(%ebp)
+# LD x0
+	movl	global_x0,	%eax
+	movl	%eax,	-12(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-16(%ebp)
+# BINOP >=
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-12(%ebp)
+# BINOP >=
+	movl	-12(%ebp),	%edx
+	cmpl	%edx,	-8(%ebp)
+	movl	$0,	%eax
+	setge	%al
+	movl	%eax,	-8(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-12(%ebp)
+# CONST 148
+	movl	$148,	-16(%ebp)
+# BINOP *
+	movl	-12(%ebp),	%eax
+	imull	-16(%ebp),	%eax
+	movl	%eax,	-12(%ebp)
+# LD x3
+	movl	global_x3,	%eax
+	movl	%eax,	-16(%ebp)
+# CONST 960
+	movl	$960,	-20(%ebp)
+# BINOP <
+	movl	-20(%ebp),	%edx
+	cmpl	%edx,	-16(%ebp)
+	movl	$0,	%eax
+	setl	%al
+	movl	%eax,	-16(%ebp)
+# BINOP ==
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-12(%ebp)
 # BINOP !!
-	movl	-4(%ebp),	%edx
-	orl	-8(%ebp),	%edx
+	movl	-8(%ebp),	%edx
+	orl	-12(%ebp),	%edx
 	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-8(%ebp)
+# CONST 556
+	movl	$556,	-12(%ebp)
+# CONST 515
+	movl	$515,	-16(%ebp)
+# BINOP !!
+	movl	-12(%ebp),	%edx
+	orl	-16(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-12(%ebp)
+# CONST 736
+	movl	$736,	-16(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-20(%ebp)
+# BINOP <=
+	movl	-20(%ebp),	%edx
+	cmpl	%edx,	-16(%ebp)
+	movl	$0,	%eax
+	setle	%al
+	movl	%eax,	-16(%ebp)
+# BINOP >
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	setg	%al
+	movl	%eax,	-12(%ebp)
+# CONST 337
+	movl	$337,	-16(%ebp)
+# LD x2
+	movl	global_x2,	%eax
+	movl	%eax,	-20(%ebp)
+# BINOP +
+	movl	-16(%ebp),	%eax
+	addl	-20(%ebp),	%eax
+	movl	%eax,	-16(%ebp)
+# CONST 405
+	movl	$405,	-20(%ebp)
+# LD x1
+	movl	global_x1,	%eax
+	movl	%eax,	-24(%ebp)
+# BINOP -
+	movl	-20(%ebp),	%eax
+	subl	-24(%ebp),	%eax
+	movl	%eax,	-20(%ebp)
+# BINOP !!
+	movl	-16(%ebp),	%edx
+	orl	-20(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-16(%ebp)
+# BINOP ==
+	movl	-16(%ebp),	%edx
+	cmpl	%edx,	-12(%ebp)
+	movl	$0,	%eax
+	sete	%al
+	movl	%eax,	-12(%ebp)
+# BINOP !!
+	movl	-8(%ebp),	%edx
+	orl	-12(%ebp),	%edx
+	cmpl	$0,	%edx
+	movl	$0,	%eax
+	setne	%al
+	movl	%eax,	-8(%ebp)
+# BINOP !=
+	movl	-8(%ebp),	%edx
+	cmpl	%edx,	-4(%ebp)
 	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	-4(%ebp)
-# BINOP !=
+# BINOP <=
 	movl	-4(%ebp),	%edx
 	cmpl	%edx,	%edi
 	movl	$0,	%eax
-	setne	%al
+	setle	%al
 	movl	%eax,	%edi
-# BINOP <=
+# BINOP <
 	movl	%edi,	%edx
 	cmpl	%edx,	%esi
 	movl	$0,	%eax
-	setle	%al
-	movl	%eax,	%esi
-# BINOP <
-	movl	%esi,	%edx
-	cmpl	%edx,	%ecx
-	movl	$0,	%eax
 	setl	%al
-	movl	%eax,	%ecx
+	movl	%eax,	%esi
 # BINOP !!
-	movl	%ebx,	%edx
-	orl	%ecx,	%edx
+	movl	%ecx,	%edx
+	orl	%esi,	%edx
 	cmpl	$0,	%edx
 	movl	$0,	%eax
 	setne	%al
-	movl	%eax,	%ebx
-# ST y
-	movl	%ebx,	global_y
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD y
 	movl	global_y,	%ebx
 # WRITE

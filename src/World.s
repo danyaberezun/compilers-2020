@@ -46,6 +46,8 @@ filler:	.fill	5, 4, 1
 
 # EXTERN ("Lzip") / 
 
+# EXTERN ("LdeepFlatten") / 
+
 # EXTERN ("Lflatten") / 
 
 # EXTERN ("Lfind") / 

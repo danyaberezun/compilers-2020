@@ -18,63 +18,99 @@ main:
 	movl	%eax,	%ebx
 # ST n
 	movl	%ebx,	global_n
+# LDA c
+	leal	global_c,	%eax
+	movl	%eax,	%ebx
 # CONST 1
-	movl	$1,	%ebx
-# ST c
-	movl	%ebx,	global_c
+	movl	$1,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA p
+	leal	global_p,	%eax
+	movl	%eax,	%ebx
 # CONST 2
-	movl	$2,	%ebx
-# ST p
-	movl	%ebx,	global_p
+	movl	$2,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # JMP L1
 	jmp	L1
 # LABEL L0
 L0:
+# LDA cc
+	leal	global_cc,	%eax
+	movl	%eax,	%ebx
 # CONST 1
-	movl	$1,	%ebx
-# ST cc
-	movl	%ebx,	global_cc
+	movl	$1,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # JMP L3
 	jmp	L3
 # LABEL L2
 L2:
+# LDA q
+	leal	global_q,	%eax
+	movl	%eax,	%ebx
 # CONST 2
-	movl	$2,	%ebx
-# ST q
-	movl	%ebx,	global_q
+	movl	$2,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # JMP L5
 	jmp	L5
 # LABEL L4
 L4:
+# LDA cc
+	leal	global_cc,	%eax
+	movl	%eax,	%ebx
 # LD p
-	movl	global_p,	%ebx
+	movl	global_p,	%ecx
 # LD q
-	movl	global_q,	%ecx
+	movl	global_q,	%esi
 # BINOP %
-	movl	%ebx,	%eax
+	movl	%ecx,	%eax
 	cltd
-	idivl	%ecx
-	movl	%edx,	%ebx
+	idivl	%esi
+	movl	%edx,	%ecx
 # CONST 0
-	movl	$0,	%ecx
+	movl	$0,	%esi
 # BINOP !=
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
 	movl	$0,	%eax
 	setne	%al
-	movl	%eax,	%ebx
-# ST cc
-	movl	%ebx,	global_cc
-# LD q
-	movl	global_q,	%ebx
-# CONST 1
-	movl	$1,	%ecx
-# BINOP +
+	movl	%eax,	%ecx
+# STI
 	movl	%ebx,	%eax
-	addl	%ecx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA q
+	leal	global_q,	%eax
 	movl	%eax,	%ebx
-# ST q
-	movl	%ebx,	global_q
+# LD q
+	movl	global_q,	%ecx
+# CONST 1
+	movl	$1,	%esi
+# BINOP +
+	movl	%ecx,	%eax
+	addl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LABEL L5
 L5:
 # LD q
@@ -112,28 +148,47 @@ L5:
 	movl	%ebx,	%eax
 	cmpl	$0,	%eax
 	je	L6
+# LDA cc
+	leal	global_cc,	%eax
+	movl	%eax,	%ebx
 # CONST 0
-	movl	$0,	%ebx
-# ST cc
-	movl	%ebx,	global_cc
+	movl	$0,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # JMP L7
 	jmp	L7
+# DUP
 # LABEL L6
 L6:
+# LDA p
+	leal	global_p,	%eax
+	movl	%eax,	%ebx
 # LD p
-	movl	global_p,	%ebx
+	movl	global_p,	%ecx
+# CONST 1
+	movl	$1,	%esi
+# BINOP +
+	movl	%ecx,	%eax
+	addl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA cc
+	leal	global_cc,	%eax
+	movl	%eax,	%ebx
 # CONST 1
 	movl	$1,	%ecx
-# BINOP +
+# STI
 	movl	%ebx,	%eax
-	addl	%ecx,	%eax
-	movl	%eax,	%ebx
-# ST p
-	movl	%ebx,	global_p
-# CONST 1
-	movl	$1,	%ebx
-# ST cc
-	movl	%ebx,	global_cc
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LABEL L7
 L7:
 # LABEL L3
@@ -144,71 +199,113 @@ L3:
 	movl	%ebx,	%eax
 	cmpl	$0,	%eax
 	jne	L2
-# LD p
-	movl	global_p,	%ebx
-# ST d
-	movl	%ebx,	global_d
-# CONST 0
-	movl	$0,	%ebx
-# ST i
-	movl	%ebx,	global_i
-# LD n
-	movl	global_n,	%ebx
-# LD d
-	movl	global_d,	%ecx
-# BINOP /
-	movl	%ebx,	%eax
-	cltd
-	idivl	%ecx
+# LDA d
+	leal	global_d,	%eax
 	movl	%eax,	%ebx
-# ST q
-	movl	%ebx,	global_q
-# LD n
-	movl	global_n,	%ebx
-# LD d
-	movl	global_d,	%ecx
-# BINOP %
+# LD p
+	movl	global_p,	%ecx
+# STI
 	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA i
+	leal	global_i,	%eax
+	movl	%eax,	%ebx
+# CONST 0
+	movl	$0,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA q
+	leal	global_q,	%eax
+	movl	%eax,	%ebx
+# LD n
+	movl	global_n,	%ecx
+# LD d
+	movl	global_d,	%esi
+# BINOP /
+	movl	%ecx,	%eax
 	cltd
-	idivl	%ecx
-	movl	%edx,	%ebx
-# ST m
-	movl	%ebx,	global_m
+	idivl	%esi
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA m
+	leal	global_m,	%eax
+	movl	%eax,	%ebx
+# LD n
+	movl	global_n,	%ecx
+# LD d
+	movl	global_d,	%esi
+# BINOP %
+	movl	%ecx,	%eax
+	cltd
+	idivl	%esi
+	movl	%edx,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # JMP L9
 	jmp	L9
 # LABEL L8
 L8:
+# LDA i
+	leal	global_i,	%eax
+	movl	%eax,	%ebx
 # LD i
-	movl	global_i,	%ebx
+	movl	global_i,	%ecx
 # CONST 1
-	movl	$1,	%ecx
+	movl	$1,	%esi
 # BINOP +
+	movl	%ecx,	%eax
+	addl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
 	movl	%ebx,	%eax
-	addl	%ecx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA d
+	leal	global_d,	%eax
 	movl	%eax,	%ebx
-# ST i
-	movl	%ebx,	global_i
-# LD d
-	movl	global_d,	%ebx
-# LD p
-	movl	global_p,	%ecx
-# BINOP *
-	movl	%ebx,	%eax
-	imull	%ecx,	%eax
-	movl	%eax,	%ebx
-# ST d
-	movl	%ebx,	global_d
-# LD n
-	movl	global_n,	%ebx
 # LD d
 	movl	global_d,	%ecx
-# BINOP %
+# LD p
+	movl	global_p,	%esi
+# BINOP *
+	movl	%ecx,	%eax
+	imull	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
 	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA m
+	leal	global_m,	%eax
+	movl	%eax,	%ebx
+# LD n
+	movl	global_n,	%ecx
+# LD d
+	movl	global_d,	%esi
+# BINOP %
+	movl	%ecx,	%eax
 	cltd
-	idivl	%ecx
-	movl	%edx,	%ebx
-# ST m
-	movl	%ebx,	global_m
+	idivl	%esi
+	movl	%edx,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD m
 	movl	global_m,	%ebx
 # CONST 0
@@ -223,19 +320,26 @@ L8:
 	movl	%ebx,	%eax
 	cmpl	$0,	%eax
 	je	L10
-# LD n
-	movl	global_n,	%ebx
-# LD d
-	movl	global_d,	%ecx
-# BINOP /
-	movl	%ebx,	%eax
-	cltd
-	idivl	%ecx
+# LDA q
+	leal	global_q,	%eax
 	movl	%eax,	%ebx
-# ST q
-	movl	%ebx,	global_q
+# LD n
+	movl	global_n,	%ecx
+# LD d
+	movl	global_d,	%esi
+# BINOP /
+	movl	%ecx,	%eax
+	cltd
+	idivl	%esi
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # JMP L11
 	jmp	L11
+# DUP
 # LABEL L10
 L10:
 # LABEL L11
@@ -285,46 +389,64 @@ L9:
 	pushl	%ebx
 	call	Lwrite
 	popl	%eax
+# LDA n
+	leal	global_n,	%eax
+	movl	%eax,	%ebx
 # LD n
-	movl	global_n,	%ebx
+	movl	global_n,	%ecx
 # LD d
-	movl	global_d,	%ecx
+	movl	global_d,	%esi
 # LD p
-	movl	global_p,	%esi
+	movl	global_p,	%edi
+# BINOP /
+	movl	%esi,	%eax
+	cltd
+	idivl	%edi
+	movl	%eax,	%esi
 # BINOP /
 	movl	%ecx,	%eax
 	cltd
 	idivl	%esi
 	movl	%eax,	%ecx
-# BINOP /
+# STI
 	movl	%ebx,	%eax
-	cltd
-	idivl	%ecx
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA p
+	leal	global_p,	%eax
 	movl	%eax,	%ebx
-# ST n
-	movl	%ebx,	global_n
 # LD p
-	movl	global_p,	%ebx
+	movl	global_p,	%ecx
 # CONST 1
-	movl	$1,	%ecx
+	movl	$1,	%esi
 # BINOP +
+	movl	%ecx,	%eax
+	addl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
 	movl	%ebx,	%eax
-	addl	%ecx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA c
+	leal	global_c,	%eax
 	movl	%eax,	%ebx
-# ST p
-	movl	%ebx,	global_p
 # LD n
-	movl	global_n,	%ebx
+	movl	global_n,	%ecx
 # CONST 1
-	movl	$1,	%ecx
+	movl	$1,	%esi
 # BINOP !=
-	movl	%ecx,	%edx
-	cmpl	%edx,	%ebx
+	movl	%esi,	%edx
+	cmpl	%edx,	%ecx
 	movl	$0,	%eax
 	setne	%al
-	movl	%eax,	%ebx
-# ST c
-	movl	%ebx,	global_c
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LABEL L1
 L1:
 # LD c

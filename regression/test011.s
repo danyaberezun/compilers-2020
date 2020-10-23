@@ -6,10 +6,16 @@ main:
 	pushl	%ebp
 	movl	%esp,	%ebp
 	subl	$0,	%esp
+# LDA x
+	leal	global_x,	%eax
+	movl	%eax,	%ebx
 # CONST 0
-	movl	$0,	%ebx
-# ST x
-	movl	%ebx,	global_x
+	movl	$0,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD x
 	movl	global_x,	%ebx
 # CJMP z, L0
@@ -24,6 +30,7 @@ main:
 	popl	%eax
 # JMP L1
 	jmp	L1
+# DUP
 # LABEL L0
 L0:
 # CONST 2

@@ -8,42 +8,72 @@ main:
 	pushl	%ebp
 	movl	%esp,	%ebp
 	subl	$0,	%esp
+# LDA n
+	leal	global_n,	%eax
+	movl	%eax,	%ebx
 # CONST 2
-	movl	$2,	%ebx
-# ST n
-	movl	%ebx,	global_n
+	movl	$2,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA k
+	leal	global_k,	%eax
+	movl	%eax,	%ebx
 # CONST 10
-	movl	$10,	%ebx
-# ST k
-	movl	%ebx,	global_k
+	movl	$10,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA res
+	leal	global_res,	%eax
+	movl	%eax,	%ebx
 # CONST 1
-	movl	$1,	%ebx
-# ST res
-	movl	%ebx,	global_res
+	movl	$1,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # JMP L1
 	jmp	L1
 # LABEL L0
 L0:
+# LDA res
+	leal	global_res,	%eax
+	movl	%eax,	%ebx
 # LD res
-	movl	global_res,	%ebx
+	movl	global_res,	%ecx
 # LD n
-	movl	global_n,	%ecx
+	movl	global_n,	%esi
 # BINOP *
+	movl	%ecx,	%eax
+	imull	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
 	movl	%ebx,	%eax
-	imull	%ecx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA k
+	leal	global_k,	%eax
 	movl	%eax,	%ebx
-# ST res
-	movl	%ebx,	global_res
 # LD k
-	movl	global_k,	%ebx
+	movl	global_k,	%ecx
 # CONST 1
-	movl	$1,	%ecx
+	movl	$1,	%esi
 # BINOP -
+	movl	%ecx,	%eax
+	subl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
 	movl	%ebx,	%eax
-	subl	%ecx,	%eax
-	movl	%eax,	%ebx
-# ST k
-	movl	%ebx,	global_k
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LABEL L1
 L1:
 # LD k

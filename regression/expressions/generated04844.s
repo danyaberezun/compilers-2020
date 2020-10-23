@@ -18,28 +18,34 @@ main:
 	movl	%eax,	%ebx
 # ST x1
 	movl	%ebx,	global_x1
+# LDA y
+	leal	global_y,	%eax
+	movl	%eax,	%ebx
 # CONST 17
-	movl	$17,	%ebx
-# LD x0
-	movl	global_x0,	%ecx
-# CONST 34
-	movl	$34,	%esi
-# BINOP -
-	movl	%ecx,	%eax
-	subl	%esi,	%eax
-	movl	%eax,	%ecx
+	movl	$17,	%ecx
 # LD x0
 	movl	global_x0,	%esi
+# CONST 34
+	movl	$34,	%edi
 # BINOP -
-	movl	%ecx,	%eax
-	subl	%esi,	%eax
-	movl	%eax,	%ecx
+	movl	%esi,	%eax
+	subl	%edi,	%eax
+	movl	%eax,	%esi
+# LD x0
+	movl	global_x0,	%edi
+# BINOP -
+	movl	%esi,	%eax
+	subl	%edi,	%eax
+	movl	%eax,	%esi
 # BINOP *
+	movl	%ecx,	%eax
+	imull	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
 	movl	%ebx,	%eax
-	imull	%ecx,	%eax
-	movl	%eax,	%ebx
-# ST y
-	movl	%ebx,	global_y
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD y
 	movl	global_y,	%ebx
 # WRITE

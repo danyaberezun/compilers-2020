@@ -12,34 +12,52 @@ main:
 	movl	%eax,	%ebx
 # ST n
 	movl	%ebx,	global_n
+# LDA f
+	leal	global_f,	%eax
+	movl	%eax,	%ebx
 # CONST 1
-	movl	$1,	%ebx
-# ST f
-	movl	%ebx,	global_f
+	movl	$1,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # JMP L1
 	jmp	L1
 # LABEL L0
 L0:
+# LDA f
+	leal	global_f,	%eax
+	movl	%eax,	%ebx
 # LD f
-	movl	global_f,	%ebx
+	movl	global_f,	%ecx
+# LD n
+	movl	global_n,	%esi
+# BINOP *
+	movl	%ecx,	%eax
+	imull	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
+# LDA n
+	leal	global_n,	%eax
+	movl	%eax,	%ebx
 # LD n
 	movl	global_n,	%ecx
-# BINOP *
-	movl	%ebx,	%eax
-	imull	%ecx,	%eax
-	movl	%eax,	%ebx
-# ST f
-	movl	%ebx,	global_f
-# LD n
-	movl	global_n,	%ebx
 # CONST 1
-	movl	$1,	%ecx
+	movl	$1,	%esi
 # BINOP -
+	movl	%ecx,	%eax
+	subl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
 	movl	%ebx,	%eax
-	subl	%ecx,	%eax
-	movl	%eax,	%ebx
-# ST n
-	movl	%ebx,	global_n
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LABEL L1
 L1:
 # LD n

@@ -57,10 +57,56 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
+fun compznz (x, znz) {
+  case znz of
+    "z" -> x == 0
+  | "nz" -> x != 0
+  esac
+}
+
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, c@[s, st, w@[i, o]], insns) {
+  case insns of
+    {} -> c
+  | BINOP (b)      : p -> 
+    case s of x : y : ss ->
+      eval (env, [evalOp (b, y, x) : ss, st, w], p) 
+    esac
+  | CONST (n)      : p -> eval (env, [n : s, st, w], p)
+  | READ           : p -> 
+    case i of x : it -> 
+      eval (env, [x : s, st, [it, o]], p)
+    esac
+  | WRITE          : p -> 
+    case s of x : ss ->
+      eval (env, [ss, st, [i, x : o]], p) 
+    esac
+  | LD    (x)      : p -> eval (env, [st (x) : s, st, w], p)
+  | ST    (x)      : p -> 
+    case s of y : ss ->
+      eval (env, [ss, (st <- [x, y]), w], p) 
+    esac
+  | LABEL (l)      : p -> eval (env, c, p)
+  | DUP            : p -> eval (env, c, p)
+  | JMP   (l)      : p -> eval (env, c, env.fromLabel (l))
+  | CJMP  (znz, l) : p -> 
+    case s of x : ss ->
+      if compznz (x, znz) 
+      then  eval (env, [ss, st, w], env.fromLabel(l))
+      else  eval (env, [ss, st, w], p)
+      fi
+    esac
+  | LDA (x)        : p -> eval (env, [Ref (x) : s, st, w], p)
+  | STI            : p -> 
+    case s of v : Ref (x) : ss ->
+      eval (env, [v : ss, st <- [x, v], w], p)
+    esac
+  | DROP           : p -> 
+    case s of
+      x : s -> eval (env, [s, st, w], p)
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -98,9 +144,102 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
+fun last (l) {
+  case l of
+    {}     -> [{}]
+  | x : {} -> [{}, x]
+  | x : t  -> case last (t) of [a, b] -> [x : a, b] esac
+  esac
+}
+
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  fun cSM (stmt, env) {
+    case stmt of
+      Var   (x)            -> [LD (x) : {}, env]
+    | Const (n)            -> [CONST (n) : {}, env]
+    | Binop (b, e1, e2)    -> 
+      case cSM (e1, env) of
+        [ins1, env] -> 
+        case cSM (e2, env) of
+          [ins2, env] -> [ins1 +++ ins2 +++ (BINOP (b) : {}), env]
+        esac
+      esac
+    | Ref   (x)            -> [LDA (x) : {}, env]
+    | Ignor (x)            -> 
+      case cSM (x, env) of
+        [ins, env] -> [ins +++ (DROP : {}), env]
+      esac
+    | Assn  (x, expr)      ->
+      case cSM (x, env) of
+        [ins1, env] ->
+        case cSM (expr, env) of
+          [ins2, env] -> [ins1 +++ ins2 +++ (STI : {}), env]
+        esac
+      esac
+    | Read  (x)            -> [{READ, ST (x)}, env]
+    | Write (expr)         -> 
+      case cSM (expr, env) of
+        [ins, env] -> [ins +++ (WRITE : {}), env]
+      esac
+    | Skip                 -> [{}, env]
+    | Seq   (s1, s2)       -> 
+      case cSM (s1, env) of
+        [ins, env] ->
+          case cSM (s2, env) of
+            [ins1, env] -> [ins +++ ins1, env]
+          esac
+      esac
+    | If    (expr, s1, s2) -> 
+      case env.genLabels(2) of
+        [ls2, lfi, env] ->
+          case cSM (s1, env) of
+            [ins, env] ->
+              case cSM (s2, env) of
+                [ins1, env] ->
+                [compileSM (expr)      +++
+                (CJMP ("z", ls2) : {})   +++ 
+                (case last (ins) of
+                    [ins, LABEL (l)] -> 
+                    ins               +++ 
+                    {JMP (l), DUP, LABEL (ls2)} +++
+                    ins1              +++ 
+                    (LABEL (l) : {})
+                  | _                -> 
+                    ins +++
+                    {JMP (lfi), DUP, LABEL (ls2)} +++ 
+                    ins1              +++ 
+                    (LABEL (lfi) : {})
+                esac), env]
+              esac
+          esac
+      esac 
+    | While (expr, s) ->
+      case env.genLabels(2) of
+        [l1, l2, env] ->
+          case cSM (s, env) of
+            [ins, env] -> 
+            [{JMP (l2), LABEL (l1)} +++
+            ins                     +++
+            (LABEL (l2) : {})       +++
+            compileSM (expr)      +++
+            (CJMP ("nz", l1) : {}), env]
+          esac
+      esac
+    | Repeat (s, expr) ->
+      case env.genLabel of
+        [l, env] ->
+          case cSM (s, env) of
+            [ins, env] ->
+              [(LABEL (l) : {})  +++
+              ins                +++
+              compileSM (expr) +++
+              (CJMP ("z", l) : {}), env]
+          esac
+      esac
+  esac
+  }
+  cSM (stmt, initCompEnv ())[0]
 }

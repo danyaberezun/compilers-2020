@@ -7,10 +7,16 @@ main:
 	pushl	%ebp
 	movl	%esp,	%ebp
 	subl	$0,	%esp
+# LDA s
+	leal	global_s,	%eax
+	movl	%eax,	%ebx
 # CONST 0
-	movl	$0,	%ebx
-# ST s
-	movl	%ebx,	global_s
+	movl	$0,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LABEL L0
 L0:
 # READ
@@ -18,16 +24,22 @@ L0:
 	movl	%eax,	%ebx
 # ST n
 	movl	%ebx,	global_n
-# LD s
-	movl	global_s,	%ebx
-# LD n
-	movl	global_n,	%ecx
-# BINOP +
-	movl	%ebx,	%eax
-	addl	%ecx,	%eax
+# LDA s
+	leal	global_s,	%eax
 	movl	%eax,	%ebx
-# ST s
-	movl	%ebx,	global_s
+# LD s
+	movl	global_s,	%ecx
+# LD n
+	movl	global_n,	%esi
+# BINOP +
+	movl	%ecx,	%eax
+	addl	%esi,	%eax
+	movl	%eax,	%ecx
+# STI
+	movl	%ebx,	%eax
+	movl	%ecx,	(%eax)
+	movl	%ecx,	%ebx
+# DROP
 # LD n
 	movl	global_n,	%ebx
 # CONST 0

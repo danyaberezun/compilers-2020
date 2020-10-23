@@ -60,11 +60,15 @@ global_args:	.int	1
 
 # EXTERN ("LshowSMInsn") / 
 
-# EXTERN ("LevalStmt") / 
+# EXTERN ("LevalExpr") / 
+
+# EXTERN ("LevalOp") / 
 
 # EXTERN ("global_lident") / 
 
 # EXTERN ("global_end") / 
+
+# EXTERN ("global_pos") / 
 
 # EXTERN ("global_decimal") / 
 
@@ -131,6 +135,10 @@ global_args:	.int	1
 # EXTERN ("global_rDecimal") / 
 
 # EXTERN ("global_rWhiteSpace") / 
+
+# EXTERN ("LgetLoc") / 
+
+# EXTERN ("Llocated") / 
 
 # EXTERN ("LinitMatcher") / 
 
@@ -243,6 +251,8 @@ global_args:	.int	1
 # EXTERN ("Lunzip") / 
 
 # EXTERN ("Lzip") / 
+
+# EXTERN ("LdeepFlatten") / 
 
 # EXTERN ("Lflatten") / 
 
@@ -423,7 +433,7 @@ _continue:
 	call	initParser
 	call	initMatcher
 	call	initLexer
-	call	initStmt
+	call	initExpr
 	call	initSM
 	call	initX86
 	call	initManifest
@@ -907,12 +917,12 @@ L62:
 # LD (Local (0)) / 
 
 	movl	-4(%ebp),	%esi
-# CALL ("LevalStmt", 2, false) / 
+# CALL ("LevalExpr", 2, false) / 
 
 	pushl	%ebx
 	pushl	%esi
 	pushl	%ecx
-	call	LevalStmt
+	call	LevalExpr
 	addl	$8,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
