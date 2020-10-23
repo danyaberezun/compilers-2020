@@ -7,6 +7,7 @@ import Buffer;
 import Fun;
 import Manifest;
 
+
 -- Assembler language interface
 -- The registers: 
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
@@ -297,6 +298,7 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
+
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
@@ -322,5 +324,6 @@ public fun compileX86 (args, code) {
                     ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
+
   esac
 }
