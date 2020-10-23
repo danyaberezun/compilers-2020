@@ -12,6 +12,7 @@ import State;
 -- expr = Var   (string)             |
 --        Const (int)                |
 --        Binop (string, expr, expr)
+
 public fun evalOp(op, x, y) {
 case op of
     "+" -> x + y
@@ -29,6 +30,7 @@ case op of
   | "<=" -> x <= y
 esac
 }
+
 public fun evalExpr (st, expr) {
 case expr of
   Var (x) -> st(x)
