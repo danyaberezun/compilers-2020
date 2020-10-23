@@ -253,6 +253,7 @@ fun memOpnd (opnd) {
 -- Generates a move between locations, using
 -- intermediate register if needed
 fun move (from, to) {
+  if compare(from, to) == 0 then return emptyBuffer () fi;
   if memOpnd (from) && memOpnd (to)
   then singletonBuffer (Mov (from, eax)) <+ Mov (eax, to)
   else singletonBuffer (Mov (from, to))
@@ -269,8 +270,39 @@ fun suffix (op) {
   | "!=" -> "ne"
   | ">=" -> "ge"
   | ">"  -> "g"
+  | _    -> None
   esac
 }
+
+
+fun binOpKind(op) {
+  case op of
+    "/"  -> DIV (eax)
+  | "%"  -> DIV (edx)
+  | "!!" -> LOG (op)
+  | "&&" -> LOG (op)
+  | _    -> case suffix (op) of 
+              None -> REGULAR (op)
+            | suff -> CMP (suff) 
+            esac
+  esac
+}
+
+
+fun moveIf(x, cond, reg, code) {
+  if cond
+  then [reg, code <+ Mov (x, reg)]
+  else [x, code]
+  fi
+}
+
+fun low(R (n)) { "%" ++ regs[n].substring(2, 1) ++ "l" }
+
+fun toBoolean(x, reg, code) {
+  code <+ Binop ("cmp", L (0), x) <+ Mov (L (0), reg) <+ Set ("nz", reg.low) 
+}
+
+
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
