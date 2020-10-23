@@ -19,6 +19,7 @@ public fun binopOp(op, l, r){
         |">=" -> l >= r
         |"&&" -> l && r
         |"!!" -> l !! r
+        |_    -> failure("Operation %s not found. \n", op)
    esac
 }
 
@@ -37,5 +38,6 @@ public fun evalExpr (st, expr) {
      Var(x) -> st(x)
     |Const(n) -> n
     |Binop(op, l, r) -> binopOp (op, evalExpr (st,l), evalExpr (st, r))
+    | _       -> failure("Expression %s not found. \n", expr)
   esac 
 }

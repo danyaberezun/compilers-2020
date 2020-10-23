@@ -37,6 +37,7 @@ fun eval (c, insns) {
       |WRITE: p -> case s of x : ss -> eval([ss, st, [i, x : o]], p) esac
       |LD(x): p -> eval([st(x) : s, st, w], p)
       |ST(x): p -> case s of y : ss -> eval([s, (st <- [x,y]), w], p) esac
+      | _       -> failure("SM-configuration %s not found. \n", insns[0])    
      esac
     esac
 }
@@ -55,6 +56,7 @@ fun compileExpr (expr) {
      Var(x) -> singleton(LD(x))
     |Const(n) -> singleton(CONST(n))
     |Binop (op, lft, rght) -> compileExpr(lft) +++ compileExpr(rght) +++ singleton(BINOP(op))
+    | _       -> failure("Expression %s not found. \n", expr)
   esac
 }
 
@@ -69,5 +71,6 @@ public fun compileSM (stmt) {
     |Write(expr) -> compileExpr(expr) +++ singleton(WRITE)
     |Seq(s1,s2) ->compileSM(s1) +++ compileSM(s2)
     |Skip -> {}
+    | _       -> failure("Statement %s not found. \n", stmt)
   esac
 }

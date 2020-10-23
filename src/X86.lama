@@ -270,6 +270,7 @@ fun suffix (op) {
   | "!=" -> "ne"
   | ">=" -> "ge"
   | ">"  -> "g"
+  | _    -> op
   esac
 }
 
@@ -316,7 +317,8 @@ fun compile (env, code) {
                       |_    -> [env, code <+ Mov(x, eax) <+ Binop("cmp", eax, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
                                esac
               esac
-            esac     
+            esac
+        | _       -> failure("Codegeneration for instruction %s is not yet implemented.\n", i.string)     
         esac
       }, [env, emptyBuffer ()], code)
   }
@@ -324,24 +326,7 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
-<<<<<<< HEAD
--- A top-level codegeneration function. Takes a stack machine program
--- and returns x86 listing as a string
-public fun compileX86 (code) {
-  case compile (initEnv (), code) of
-    [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
-=======
+
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
@@ -367,6 +352,5 @@ public fun compileX86 (args, code) {
                     ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
->>>>>>> 446de7f73f136a9037c03c5298f28abbbc3c95ea
   esac
 }

@@ -25,6 +25,7 @@ fun eval (c, stmt) {
        |Write(expr) -> [st, [i, evalExpr(st, expr) : o]]
        |Assn(x,e) -> [(st <- [x, evalExpr(st, e)]), [i,o]]
        |Skip -> c
+       | _       -> failure("Statement %s not found. \n", stmt)
      esac
   esac 
 }
