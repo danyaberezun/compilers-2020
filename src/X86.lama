@@ -313,7 +313,7 @@ fun compile (env, code) {
               case env.allocate of
                 [result, env] ->
                   case op.ofCategory of
-                    Arithm -> [env, code.generateArithmCode (op, x, y)]
+                    Arithm -> [env, code.generateBasicBinopCode (op, x, y)]
                   | Div    -> [env, code.generateDivCode (op, x, y)]
                   | Comp   -> [env, code.generateCompCode (op, x, y)]
                   | Logic  -> [env, code.generateLogicCode (op, x, y)]
@@ -346,9 +346,9 @@ fun ofCategory(op) {
   esac
 }
 
-fun generateArithmCode(code, op, src, dst) {
+fun generateBasicBinopCode(code, op, src, dst) {
   if stackOpnd (src) && stackOpnd (dst)
-  then code <+ Mov (src, eax) <+ Binop (op, eax, dst)
+  then code <+ Mov (dst, eax) <+ Binop (op, src, eax) <+ Mov (eax, dst)
   else code <+ Binop(op, src, dst)
   fi
 }
@@ -362,18 +362,16 @@ fun generateDivCode(code, op, src, dst) {
 }
 
 fun generateCompCode(code, op, src, dst) {
-  code <+ Binop ("cmp", src, dst) <+ Mov (L (0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, dst)
+  if stackOpnd (src) && stackOpnd (dst)
+  then code <+ Mov (dst, edx) <+ Binop ("cmp", src, edx)
+  else code <+ Binop ("cmp", src, dst)
+  fi <+ Mov (L (0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, dst)
 }
 
 fun generateLogicCode(code, op, src, dst) {
-  local toCompareWith = case op of
-    "&&" -> L (2)
-  | "!!" -> L (1)
-  esac;
   code.generateCompCode("!=", L (0), src)
       .generateCompCode("!=", L (0), dst)
-      .generateArithmCode("+", src, dst)
-      .generateCompCode(">=", toCompareWith, dst)
+      .generateBasicBinopCode(op, src, dst)
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
