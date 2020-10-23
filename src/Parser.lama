@@ -12,14 +12,56 @@ fun inbr (l, p, r) {
   syntax (-l p -r)
 }
 
--- Primary expression
-local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
-                            lident  @ fun (x) {Var (x)} |
-                            inbr (s ("("), exp, s (")"))),
-      exp = memo $ eta (failure ("expression parsing not implemented\n"));
+fun makeOp(op) { 
+  [s(op), fun(l, op, r) { Binop(op, l, r) }] 
+}
+fun makeOps(assoc, operations) { 
+  [assoc, map(makeOp, operations)] 
+}
 
-local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
-   
+local exprOps = {
+  makeOps(Left, "!!":{}),
+  makeOps(Left, "&&":{}),
+  makeOps(Nona, {"==", "!=", "<=", "<" , ">=", ">" }),
+  makeOps(Left, {"+", "-"}),
+  makeOps(Left, {"*", "/", "%"})
+};
+-- Primary expression
+local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
+                                   x=lident  {Var (x)}               |
+                                   inbr[s("("), exp, s(")")]),
+      exp = memo $ eta expr(exprOps, primary),
+      var = memo $ eta syntax (x=lident { Var (x) });
+
+local 
+  write = memo $ eta syntax (kWrite x=inbr[s("("),    exp, s(")")] { Write (x) }),
+  read = memo $ eta syntax  (kRead  x=inbr[s("("), lident, s(")")] { Read  (x) }),
+  assign = memo $ eta syntax (x=lident s[":="] e=exp { Assn (x, e) }),
+  compose = memo $ eta syntax (s1=stmt0 s[";"] s2=stmt { Seq (s1, s2) }),
+  wwhile = memo $ eta syntax (kWhile e=exp kDo b=stmt kOd { While (e, b) } ),
+  iif = memo $ eta syntax (kIf e=iif0 { e }),
+  iif0 = memo $ eta syntax (e=exp kThen b1=stmt b2=eelse { If(e, b1, b2) }),
+  eelse = memo $ eta syntax (kFi { Skip } |
+                             -kElse stmt -kFi |
+                             -kElif iif0),
+  rrepeat = memo $ eta syntax (kRepeat s=stmt kUntil e=exp { Repeat(s, e) }),
+  ffor = memo $ eta syntax (kFor
+                              init=stmt0 s[","] cond=exp s[","] loop=stmt0
+                              kDo body=stmt kOd { Seq(init, While(cond, Seq(body, loop))) });
+
+local stmt0 = memo $ eta syntax (
+                                read |
+                                wwhile |
+                                rrepeat |
+                                ffor |
+                                iif |
+                                assign |
+                                write |
+                                kSkip { Skip }
+                                );
+local stmt = memo $ eta syntax (compose | stmt0);
 
 -- Public top-level parser
+
+-- public parse = stmt;
 public parse = stmt;
