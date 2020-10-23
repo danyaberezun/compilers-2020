@@ -24,3 +24,4 @@ X86.o: SM.o Manifest.o
 
 clean:
 	rm -Rf *.s *.o *.i *~ *.html *.sm lama-impl
+
