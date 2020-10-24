@@ -143,7 +143,29 @@ local assnParser = memo $ eta syntax (name=lident s[":="] value=exp {Assn (name,
       readParser = memo $ eta syntax (kRead s["("] name=lident s[")"] {Read (name)}),
       writeParser = memo $ eta syntax (kWrite s["("] value=exp s[")"] {Write (value)}),
       skipParser = memo $ eta syntax (kSkip {Skip}),
-      singleStatementParser = memo $ eta (assnParser | readParser | writeParser | skipParser),
+      -- if statement
+      ifParser = memo $ eta syntax (kIf stmt=ifBody {stmt}),
+      ifBody = memo $ eta syntax (cond=exp kThen thn=seqParser els=ifCont {If (cond, thn, els)}), -- thn is possibly scoped
+      ifCont = memo $ eta syntax (kFi {Skip} |
+                                  kElif body=ifBody {body} |
+                                  kElse body=seqParser kFi {body}),
+      -- while statement
+      whileParser = memo $ eta syntax (kWhile cond=exp kDo body=seqParser kOd {While (cond, body)}),
+      -- for statement
+      forParser = memo $ eta syntax (
+        kFor init=singleStatementParser s[","] cond=exp s[","] act=assnParser kDo body=seqParser kOd
+        {Seq(init, While (cond, Seq (body, act)))}
+      ),
+      -- repeat until statement
+      repeatParser = memo $ eta syntax (kRepeat body=seqParser kUntil cond=exp {Repeat (body, cond)}),
+      singleStatementParser = memo $ eta (assnParser |
+                                          readParser |
+                                          writeParser |
+                                          skipParser |
+                                          ifParser |
+                                          whileParser |
+                                          forParser |
+                                          repeatParser),
       seqParser = memo $ eta syntax (stmt=singleStatementParser s[";"] tail=seqParser {Seq (stmt, tail)} |
                                      singleStatementParser);
 
