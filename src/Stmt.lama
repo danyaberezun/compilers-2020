@@ -28,6 +28,22 @@ fun eval (c@[state, world], stmt) {
                             [value, newWorld] -> [state <- [name, value], newWorld]
 			              esac
   | Write (expr)       -> [state, writeWorld (evalExpr (state, expr), world)]
+  | If (expr, stmt1, stmt2) ->
+    if evalExpr (state, expr)
+    then eval (c, stmt1)
+    else eval (c, stmt2)
+    fi
+  | w@While (expr, stmt) ->
+    if evalExpr (state, expr) then eval(eval(c, stmt), w)
+    else c
+    fi
+  | r@Repeat (stmt, expr) ->
+    case eval (c, stmt) of
+      c_@[state_, _] ->
+        if evalExpr (state_, expr) then c_
+        else eval(c_, r)
+        fi
+    esac
   esac
 }
 
