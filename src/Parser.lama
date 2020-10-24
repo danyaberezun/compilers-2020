@@ -18,7 +18,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
       binop = fun (l, op, r) {Binop(op,l,r)},
       ops = {[Left, [s ("!!"), binop] :{}],
              [Left, [s ("&&"), binop] : {}],
-             [Nona, [s ("<") | s (">") | s (">=") |s ("==") | s ("!="), binop] : {}],
+             [Nona, [s ("<") | s (">") | s (">=") |s ("<=") |s ("==") | s ("!="), binop] : {}],
              [Left, [s ("+") | s ("-"), binop] : {}],
              [Left, [s ("*") | s ("/") | s ("%"), binop] : {}]}, 
       exp = memo $ eta expr (ops, primary) (id);
