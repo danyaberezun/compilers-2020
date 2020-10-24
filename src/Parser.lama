@@ -18,7 +18,7 @@ fun flipBinop(l, op, r) {
 local operationTable = {
   [Left, [s ("!!"), flipBinop] : {}],
   [Left, [s ("&&"), flipBinop] : {}],
-  [Nona, [s ("==") | s ("!=") | s ("<") | s ("<=") | s (">") | s (">="), binop] : {}],
+  [Nona, [s ("==") | s ("!=") | s ("<") | s ("<=") | s (">") | s (">="), flipBinop] : {}],
   [Left, [s ("+") | s ("-"), flipBinop] : {}],
   [Left, [s ("*") | s ("/") | s ("%"), flipBinop] : {}]
 };
