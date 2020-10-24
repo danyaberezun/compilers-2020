@@ -5,7 +5,6 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
-import Manifest;
 
 -- Assembler language interface
 -- The registers: 
@@ -275,21 +274,69 @@ fun suffix (op) {
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
+
 fun compile (env, code) {
   fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
+        
           READ ->
             case env.allocate of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
-        | WRITE ->
+            esac  
+                       
+        | WRITE->
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+            
+        | CONST (n) ->
+        	case env.allocate of
+        		[s,env] -> [env, code <+ Mov(L(n),s)]
+        	esac
+  
+        | ST (x) -> 
+        	case env.addGlobal(x).pop of
+        		[s,env] -> [env, code <+> move(s,env.loc(x))]	
+        	esac
+        	
+        | LD (x) ->
+        	case env.allocate of
+        		[s, env] -> [env, code <+> move (env.loc(x), s)]
+        	esac
+        | BINOP (op) ->
+        
+        	case env.pop2 of
+        		[x, y, env] -> 
+        			case env.allocate of
+        				[s,env] ->
+        					case op of
+        						  "+"  -> 
+        						  	if stackOpnd (x) && stackOpnd (y)
+        						  		then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		else [env, code <+ Binop(op,x,y)]
+        						  	fi
+        						| "-"  -> 
+        							if stackOpnd (x) && stackOpnd (y)
+        						  		then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		else [env, code <+ Binop(op,x,y)]
+        						  	fi
+        						| "*"  -> 
+        							if stackOpnd (x) && stackOpnd (y)
+        						  		then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
+        						  		else [env, code <+ Binop(op,x,y)]
+        						  	fi
+        						| "&&" -> [env, Mov (y, ebx) <+ Binop("imull",x, ebx) <+ Binop ("cmp", L(0), ebx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+        						| "!!" -> [env, Mov (y, ebx) <+ Binop("orl",x, ebx) <+ Binop ("cmp", L(0), ebx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+        						| "/"  -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x) <+ Mov (eax, s)]
+        						| "%"  -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x) <+ Mov (edx, s)]
+        						| _    -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
+        					esac
+        			esac
+        	esac	
+        	
         esac
       }, [env, emptyBuffer ()], code)
   }
@@ -297,30 +344,21 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
--- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
--- compiles the program into machine code, and compiles the machine code into an executable
-public fun compileX86 (args, code) {
+-- A top-level codegeneration function. Takes a stack machine program
+-- and returns x86 listing as a string
+public fun compileX86 (code) {
   case compile (initEnv (), code) of
     [env, code] ->
-       local asmFile = args.getBaseName ++ ".s",
-             runtime = case getEnv ("LAMA_RUNTIME") of
-                         #unboxed -> "../runtime/"
-                       | path     -> path
-                       esac ++ "/runtime.o";
-       
-       fwrite (asmFile,
-               map (insnString, 
-                    getBuffer $
-                      singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-                      dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-                      codeSection (
-                        singletonBuffer (Meta ("main:\n")) <+>
-                        prologue (getStackSize (env)) <+>
-                        code <+>
-                        epilogue ()
-                      )
-                    ).stringcat);
-                    
-       system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
+       map (insnString, 
+            getBuffer $
+              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
+              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
+              codeSection (
+                singletonBuffer (Meta ("main:\n")) <+>
+                prologue (getStackSize (env)) <+>
+                code <+>
+                epilogue ()
+              )
+           ).stringcat
   esac
 }
