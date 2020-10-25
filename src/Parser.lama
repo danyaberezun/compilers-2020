@@ -63,5 +63,4 @@ local stmt = memo $ eta syntax (compose | stmt0);
 
 -- Public top-level parser
 
--- public parse = stmt;
 public parse = stmt;

@@ -52,45 +52,62 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
+fun checkJump(cond, val) {
+  case cond of
+	  "z" -> val == 0
+  | "n" -> val != 0
+	esac
+}
+
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
+fun eval (env, c, insns) {
   case c of
     [stack, state, world] -> 
   	case insns of
   	  READ:tail ->
         case readWorld(world) of
-          [a, newWorld] -> eval([a:stack, state, newWorld], tail)
+          [a, newWorld] -> eval(env, [a:stack, state, newWorld], tail)
         esac
-		| LD(x):tail -> eval([state(x):stack, state, world], tail)
-		| CONST(c):tail -> eval([c:stack, state, world], tail)
+		| LD(x):tail -> eval(env, [state(x):stack, state, world], tail)
+		| CONST(c):tail -> eval(env, [c:stack, state, world], tail)
 		| BINOP(op):tail ->
 			case stack of
 			  y:x:stack_tail -> {
 					local res = calculate(op, x, y);
-					eval([res:stack_tail, state, world], tail)
+					eval(env, [res:stack_tail, state, world], tail)
         }
 			| _ -> failure("Not enough arguments in stack for binop!")
 			esac
 		| ST(x):tail ->
 		  case stack of
-			  val:stack_tail -> eval([stack_tail, state <- [x, val], world], tail)
+			  val:stack_tail -> eval(env, [stack_tail, state <- [x, val], world], tail)
 			esac
 		| Var(x):tail ->
-		  eval([state(x):stack, state, world], tail)
+		  eval(env, [state(x):stack, state, world], tail)
 		| WRITE:tail ->
 		  case stack of
 			  val:stack_tail -> {
-          eval([stack_tail, state, writeWorld(val, world)], tail)
+          eval(env, [stack_tail, state, writeWorld(val, world)], tail)
         }
 			| _ -> failure("Not enough arguments in stack for write!")
 			esac
+	  -- TODO: remove this branch later? (hotfix: "WRITE:tail" not matched)
 		| WRITE ->
 		  case stack of
 			  val:stack_tail -> {
-          eval([stack_tail, state, writeWorld(val, world)], {})
+          eval(env, [stack_tail, state, writeWorld(val, world)], {})
         }
 			| _ -> failure("Not enough arguments in stack for write!")
+			esac
+		| LABEL(l):tail -> eval(env, c, tail)
+	  | JMP(l):tail -> eval(env, c, fromLabel(env, l))
+		| CJMP(cond, l):tail ->
+		  case stack of val:stack_tail ->
+				case checkJump(cond, val) of
+					true -> eval(env, [stack_tail, state, world], fromLabel(env, l))
+				| false -> eval(env, [stack_tail, state, world], tail)
+				esac
 			esac
   	| {} -> c
   	| _ -> failure("Can't match insns... %s", insns.string)
@@ -100,7 +117,8 @@ fun eval (c, insns) {
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
-  eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
+  local initEnv = initEvalEnv (insns);
+  eval (initEnv, [{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
 fun cexpr (expr) {
@@ -152,17 +170,59 @@ fun compileExpr (expr) {
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
+  local lblEnv = initCompEnv();
+	local res = compileSM0(stmt, lblEnv)[0];
+	res
+}
+
+public fun compileSM0 (stmt, lblEnv) {
   case stmt of
-    Seq (head, tail) -> toInstr(head) +++ compileSM(tail)
-    | head -> toInstr(head)
+    Seq (head, tail) ->
+			case toInstr(head, lblEnv) of [headSM, lblEnv2] ->
+			  case compileSM0(tail, lblEnv2) of [tailSM, lblEnv3] ->
+			  	[headSM +++ tailSM, lblEnv3]
+			  esac
+			esac
+  | head -> toInstr(head, lblEnv)
   esac
 }
 
--- Returns list from one instruction
-public fun toInstr (head) {
+public fun toInstr(head, env) {
   case head of
-    Read(x) -> READ:ST(x):{}
-    | Assn (z, expr) -> compileExpr(expr) +++ (ST(z):{})
-    | Write (expr) -> compileExpr(expr) +++ (WRITE:{})
+    Read(x) -> [READ:ST(x):{}, env]
+	| Skip -> [{}, env]
+	-- todo: refine later: fix sequences like seq(seq(a,b), c) before compile
+	| Seq(a, b) -> compileSM0(head, env)
+  | Assn (z, expr) -> [compileExpr(expr) +++ (ST(z):{}), env]
+  | Write (expr) -> [compileExpr(expr) +++ (WRITE:{}), env]
+	| While (e, b) ->
+	  case genLabels(env, 2) of [l1, l2, env2] ->
+		  case compileSM0(b, env2) of [compB, env3] -> {
+				local joined = (LABEL(l1):compileExpr(e)) +++ (CJMP("z",l2):{})
+				  +++ compB
+					+++ (JMP(l1):LABEL(l2):{});
+				[joined, env3]
+			} esac
+		esac
+	| If (e, b1, b2) ->
+	  case genLabels(env, 2) of [le, lfi, env2] ->
+			case compileSM0(b1, env2) of [compB1, env3] ->
+			  case compileSM0(b2, env3) of [compB2, env4] -> {
+				  local joined = compileExpr(e) +++ (CJMP("z", le):{}) 
+				                   +++ compB1 +++ (JMP(lfi)
+				  							 :LABEL(le):{})
+				  							   +++ compB2 +++
+				  							 (LABEL(lfi):{});
+				  [joined, env4]
+			  } esac
+		  esac
+		esac
+	| Repeat (s, e) ->
+	  case genLabel(env) of [l, env2] ->
+		  case compileSM0(s, env2) of [compS, env3] -> {
+				local joined = (LABEL(l):{}) +++ compS +++ compileExpr(e) +++ (CJMP("z", l):{});
+				[joined, env3]
+			} esac
+	  esac
   esac
 }
