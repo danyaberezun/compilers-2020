@@ -1,13 +1,8 @@
-regression/*
-src/*.o
-src/*.s
-src/*.i
-src/SM
-src/State
-src/World
-src/Stmt
-src/Expr
-src/Util
-src/X86
-runtime/runtime.o
+*
+!/**/
+!*.*
+regression/**/*.*
+/**/*.o
+/**/*.s
+/**/*.i
  
