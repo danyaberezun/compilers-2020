@@ -33,6 +33,7 @@ public fun evalExpr (st, expr) {
       | "!!" -> evalExpr(st, expr1) !! evalExpr(st, expr2)
     esac
   esac;
-  -- printf ("Expression ""%s"" evaluated to ""%s""\n", expr.string, evaluated.string);
+  local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+  fprintf (stderr, "Expression ""%s"" evaluated to ""%s""\n", expr.string, evaluated.string);
   evaluated
 }

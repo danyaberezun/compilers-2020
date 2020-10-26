@@ -265,7 +265,7 @@ fun memOpnd (opnd) {
 -- intermediate register if needed
 fun move (from, to) {
   if memOpnd (from) && memOpnd (to)
-  then singletonBuffer (Mov (from, eax)) <+ Mov (eax, to)
+  then singletonBuffer (Push(eax)) <+ Mov (from, eax) <+ Mov (eax, to) <+ Pop(eax)
   else singletonBuffer (Mov (from, to))
   fi
 }
@@ -283,8 +283,24 @@ fun suffix (op) {
   esac
 }
 
+-- use this function to abstract memory-memory operations
+fun mkBinopMemToMem(op, s1, s2) {
+  if memOpnd (s1) && memOpnd (s2) then
+      singletonBuffer (Push (eax)) <+
+      Mov(s2, eax) <+
+      Binop(op, s1, eax) <+
+      Mov(eax, s2) <+
+      Pop(eax)
+  else singletonBuffer (Binop(op, s1, s2))
+  fi
+}
+
 fun compileCmpStatement(env, code, op, op1, op2, s) {
-  [env, code <+ Mov (L (0), s) <+ Binop ("cmp", op1, op2) <+ Set (suffix(op), s)]
+  [env, code <+ Push(eax) <+ Mov (L (0), eax) <+> mkBinopMemToMem ("cmp", op1, op2) <+ Set (suffix(op), eax) <+ Mov(eax, s) <+ Pop(eax)]
+}
+
+fun compileLogicStatement(env, code, op, op1, op2, s) {
+  [env, code <+ Push(eax) <+ Mov (L (0), eax) <+> mkBinopMemToMem (op, op1, op2) <+ Set("nz", eax) <+ Mov (eax, s) <+ Pop(eax)]
 }
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
@@ -322,9 +338,11 @@ fun compile (env, code) {
                   | "!=" -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
                   | ">=" -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
                   | ">"  -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
-                  | "/" -> [updupdenv, code <+> move(op2, eax) <+ Cltd <+ IDiv (op1) <+> move (eax, s)]
-                  | "%" -> [updupdenv, code <+> move(op2, eax) <+ Cltd <+ IDiv (op1) <+> move (edx, s)]
-                  | _ -> [updupdenv, code <+ Binop (op, op1, op2) <+> move (op2, s)]
+                  | "/" -> [updupdenv, code <+ Push(eax) <+ Push(edx) <+> move(op2, eax) <+ Cltd <+ IDiv (op1) <+> move (eax, s) <+ Pop(edx) <+ Pop(eax)]
+                  | "%" -> [updupdenv, code <+ Push(eax) <+ Push(edx) <+> move(op2, eax) <+ Cltd <+ IDiv (op1) <+> move (edx, s) <+ Pop(edx) <+ Pop(eax)]
+                  | "!!" -> compileLogicStatement(updupdenv, code, op, op1, op2, s)
+                  | "&&" -> compileLogicStatement(updupdenv, code, op, op1, op2, s)
+                  | _ -> [updupdenv, code <+> mkBinopMemToMem (op, op1, op2) <+> move (op2, s)]
                 esac
               esac
             esac

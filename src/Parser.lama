@@ -12,8 +12,9 @@ fun inbr (l, p, r) {
 }
 
 -- checkpoint debug parser
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
 fun checkpoint(i) {
- syntax(token[""] { printf("Checkpoint %s\n", i.string); i})
+ syntax(token[""] { fprintf(stderr, "Checkpoint %s\n", i.string); i})
 }
 
 local mkBinop = fun(l, op, r) {Binop (op, l, r)};
@@ -24,46 +25,46 @@ fun sCheckpoint(op) {
 -- precedance of operator and their semantics
 local opPrecedanceAndSemantics = {
   [Left,  -- \lor lowest priority
-    singleton([sCheckpoint("!!"), mkBinop])
+    singleton([s("!!"), mkBinop])
   ],
   [Left, -- \land has more priority than \lor
-      singleton([sCheckpoint("&&"), mkBinop])
+      singleton([s("&&"), mkBinop])
   ],
   [Nona, { -- comparisons has more priority, than \land and \lor
-      [sCheckpoint(">"),  mkBinop],
-      [sCheckpoint("<"),  mkBinop],
-      [sCheckpoint(">="), mkBinop],
-      [sCheckpoint("<="), mkBinop],
-      [sCheckpoint("=="), mkBinop],
-      [sCheckpoint("!="), mkBinop]
+      [s(">"),  mkBinop],
+      [s("<"),  mkBinop],
+      [s(">="), mkBinop],
+      [s("<="), mkBinop],
+      [s("=="), mkBinop],
+      [s("!="), mkBinop]
     }],
   [Left, { -- + and - has more priority, than comparisons
-      [sCheckpoint("+"), mkBinop],
-      [sCheckpoint("-"), mkBinop]
+      [s("+"), mkBinop],
+      [s("-"), mkBinop]
     }],
   [Left, { -- * and / has highest priority
-      [sCheckpoint("*"), mkBinop],
-      [sCheckpoint("/"), mkBinop]
+      [s("*"), mkBinop],
+      [s("/"), mkBinop],
+      [s("%"), mkBinop]
     }]
 };
 
 -- Primary expression
-local primary = memo $ eta syntax (checkpoint[5] x=decimal {printf("Parsed primary: %s\n", x.string); Const (stringInt (x))} |
-                                   checkpoint[6] x=lident  {printf("Parsed primary: %s\n", x.string); Var (x)}               |
-                                   checkpoint[7] res=inbr[s("("), exp, s(")")] {  printf("Parsed primary: %s\n", res.string); res }),
-      --exp = expr(opPrecedanceAndSemantics, primary);
-      exp = syntax (-checkpoint[8] expr[opPrecedanceAndSemantics, primary]);
+local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
+                                   x=lident  {Var (x)}               |
+                                   res=inbr[s("("), exp, s(")")]),
+      exp = expr(opPrecedanceAndSemantics, primary);
 
 local stmt = memo $ eta syntax (
-                                checkpoint[1] kRead x=inbr[s("("), lident, s(")")]  {  printf("Parsed read: %s\n", x.string); Read  (x)      } |
-                                checkpoint[2] kWrite y=inbr[s("("), exp, s(")")]    {  printf("Parsed write: %s\n", y.string);  Write (y)    } |
-                                checkpoint[3] x=lident checkpoint["3.1"] s[":="]  checkpoint["3.2"] y=exp                {  printf("Parsed assn: %s := %s\n", x.string, y.string);   Assn  (x, y)   } |
-                                checkpoint[4] kSkip                                 {  printf("Parsed skip\n"); Skip           }
+                                kRead x=inbr[s("("), lident, s(")")]  {  Read  (x)      } |
+                                kWrite y=inbr[s("("), exp, s(")")]    {  Write (y)      } |
+                                x=lident s[":="] y=exp                {  Assn  (x, y)   } |
+                                kSkip                                 {  Skip           }
                                 );
-local sequenceParser  =  memo $ eta syntax (checkpoint[0] s1=stmt s[";"] s2=sequenceParser { printf("Parsed: Seq(%s, %s)\n", s1.string, s2.string); Seq   (s1, s2) }
+local sequenceParser  =  memo $ eta syntax (s1=stmt s[";"] s2=sequenceParser { Seq   (s1, s2) }
                                             | stmt);
 
 
 -- Public top-level parser
-public parse = sequenceParser;
+public parse = sequenceParser; -- syntax (s=sequenceParser {fprintf(stderr, "Parsed: %s\n", s.string); s});
 
