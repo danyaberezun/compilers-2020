@@ -21,13 +21,14 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
       exp = memo $ eta syntax (l=primary op=binop r=primary {Binop (op, l, r)} |
                                primary);
 
-local stmt = memo $ eta syntax (token["read"] x=inbr[s("("), lident, s(")")]  { Read  (x)      } |
-                                 token["write"] y=exp                         { Write (y)      } |
-                                 x=lident token[":="] y=exp                   { Assn  (x, y)   } |
-                                 token["skip"]                                { Skip           } ),
-      seq  =  eta syntax (s1=stmt token[";"] s2=seq { Seq   (s1, s2) });
-   
+local stmt = memo $ eta syntax (token["read"] x=inbr[s("("), lident, s(")")]  {  printf("Parsed read: %s\n", x.string); Read  (x)      } |
+                                token["write"] y=exp                         {  printf("Parsed write: %s\n", y.string);  Write (y)      } |
+                                x=lident token[":="] y=exp                   {  printf("Parsed assn: %s := %s\n", x.string, y.string);   Assn  (x, y)   } |
+                                token["skip"]                                {  printf("Parsed skip\n"); Skip           } );
+local sequenceParser  =  memo $ eta syntax (stmt | s1=stmt token[";"] s2=sequenceParser { printf("Parsed: %s\n", s1.string); Seq   (s1, s2) });
+-- local seq  = syntax (s1=stmt token[";"]);
+
 
 -- Public top-level parser
-public parse = eta syntax (stmt | seq);
+public parse = sequenceParser;
              
