@@ -270,7 +270,6 @@ fun suffix (op) {
   | "!=" -> "ne"
   | ">=" -> "ge"
   | ">"  -> "g"
-  | _    -> op
   esac
 }
 
@@ -309,16 +308,21 @@ fun compile (env, code) {
                   [s, env] -> case op of
                       "+"   -> [env, code <+ Mov(y, eax) <+ Binop("+", x, eax) <+ Mov(eax, s)]
                       |"-"  -> [env, code <+ Mov(y, eax) <+ Binop("-", x, eax) <+ Mov(eax, s)]
-                      |"*"  -> [env, code <+ Mov(y, eax) <+ Binop("*", x, eax) <+ Mov(eax, s)]
-                      |"&&" -> [env, code <+ Mov (y, edx) <+ Binop ("*", x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
-                      |"!!" -> [env, code <+ Mov (y, edx) <+ Binop ("!!", x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+                      |"*"  -> if stackOpnd(y)
+                               then [env, code <+ Mov(y, eax) <+ Binop("*", x, eax) <+ Mov(eax, s)]
+                               else [env, code <+ Binop("*", x, y) <+ Mov(y, s)]
+                               fi              
                       |"/"  -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
                       |"%"  -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
+                      |"&&" -> if stackOpnd(y)
+                               then [env, code <+ Mov (y, edx) <+ Binop ("*", x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), edx) <+ Set (suffix("!="), "%dl") <+ Mov (edx, s)]
+                               else [env, code <+ Binop("*", x, y) <+ Binop ("cmp", L (0), y) <+ Mov (L (0), edx) <+ Set (suffix("!="), "%dl") <+ Mov (edx, s)]
+                               fi
+                      |"!!" -> [env, code <+ Mov (y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), edx) <+ Set (suffix("!="), "%dl") <+ Mov (x, eax) <+ Binop ("cmp", L (0), eax) <+ Mov (L(0), eax) <+ Set (suffix("!="), "%al") <+ Binop ("!!", eax, edx) <+ Mov (edx, s)]
                       |_    -> [env, code <+ Mov(x, eax) <+ Binop("cmp", eax, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
                                esac
               esac
             esac
-        | _       -> failure("Codegeneration for instruction %s is not yet implemented.\n", i.string)     
         esac
       }, [env, emptyBuffer ()], code)
   }
