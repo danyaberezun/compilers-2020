@@ -1,4 +1,4 @@
--- Parser 
+-- Parser
 
 import Ostap;
 import Lexer;
@@ -13,21 +13,21 @@ fun inbr (l, p, r) {
 
 -- checkpoint debug parser
 fun checkpoint(i) {
- syntax(token[""] { printf("Checkpoint %s\n", i.string) })
+ syntax(token[""] { printf("Checkpoint %s\n", i.string); i})
 }
 
 local mkBinop = fun(l, op, r) {Binop (op, l, r)};
 fun sCheckpoint(op) {
- syntax(checkpoint[op] s[op])
+ syntax(-checkpoint[op] s[op])
 }
 
 -- precedance of operator and their semantics
 local opPrecedanceAndSemantics = {
   [Left,  -- \lor lowest priority
-    [sCheckpoint("!!"), mkBinop]:{}
+    singleton([sCheckpoint("!!"), mkBinop])
   ],
   [Left, -- \land has more priority than \lor
-      [sCheckpoint("&&"), mkBinop]:{}
+      singleton([sCheckpoint("&&"), mkBinop])
   ],
   [Nona, { -- comparisons has more priority, than \land and \lor
       [sCheckpoint(">"),  mkBinop],
@@ -52,7 +52,7 @@ local primary = memo $ eta syntax (checkpoint[5] x=decimal {printf("Parsed prima
                                    checkpoint[6] x=lident  {printf("Parsed primary: %s\n", x.string); Var (x)}               |
                                    checkpoint[7] res=inbr[s("("), exp, s(")")] {  printf("Parsed primary: %s\n", res.string); res }),
       --exp = expr(opPrecedanceAndSemantics, primary);
-      exp = syntax (checkpoint[8] expr[opPrecedanceAndSemantics, primary]);
+      exp = syntax (-checkpoint[8] expr[opPrecedanceAndSemantics, primary]);
 
 local stmt = memo $ eta syntax (
                                 checkpoint[1] kRead x=inbr[s("("), lident, s(")")]  {  printf("Parsed read: %s\n", x.string); Read  (x)      } |
@@ -66,4 +66,4 @@ local sequenceParser  =  memo $ eta syntax (checkpoint[0] s1=stmt s[";"] s2=sequ
 
 -- Public top-level parser
 public parse = sequenceParser;
-             
+
