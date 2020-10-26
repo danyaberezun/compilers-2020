@@ -319,7 +319,7 @@ fun compile (env, code) {
                                else [env, code <+ Binop("*", x, y) <+ Binop ("cmp", L (0), y) <+ Mov (L (0), edx) <+ Set (suffix("!="), "%dl") <+ Mov (edx, s)]
                                fi
                       |"!!" -> [env, code <+ Mov (y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), edx) <+ Set (suffix("!="), "%dl") <+ Mov (x, eax) <+ Binop ("cmp", L (0), eax) <+ Mov (L(0), eax) <+ Set (suffix("!="), "%al") <+ Binop ("!!", eax, edx) <+ Mov (edx, s)]
-                      |_    -> [env, code <+ Mov(x, eax) <+ Binop("cmp", eax, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                      |_    -> [env, code <+ Mov(x, eax) <+ Binop("cmp", eax, y) <+ Mov(L(0), eax) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
                                esac
               esac
             esac
