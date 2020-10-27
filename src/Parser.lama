@@ -22,7 +22,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
              [Nona, [s ("<") | s (">") | s ("<=") | s (">=") | s ("==") | s ("!="), binOpop] : {}],
              [Left, [s ("+") | s ("-"), binOpop] : {}],
              [Left, [s ("*") | s ("/") | s ("%"), binOpop] : {}]},
-      exp = memo $ eta expr (oper, primary) (id);
+      exp = memo $ eta expr (oper, primary) ;
 
 local stmt = memo $ eta syntax (
   kWrite x=inbr[s("("), exp, s(")")]    {Write (x)}   |
