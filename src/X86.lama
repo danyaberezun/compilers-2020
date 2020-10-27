@@ -5,10 +5,7 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
-<<<<<<< HEAD
 import Manifest;
-=======
->>>>>>> A02-straight-line-x86
 
 -- Assembler language interface
 -- The registers: 
@@ -292,9 +289,7 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-<<<<<<< HEAD
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
-=======
         | CONST (n) ->
             case env.allocate of
               [s, env] -> [env, code <+ Mov (L (n), s)]
@@ -315,15 +310,14 @@ fun compile (env, code) {
 					  "+" -> [env, code <+ Mov (y, eax) <+ Binop("+", x, eax) <+ Mov (eax, s)]
 					| "-" -> [env, code <+ Mov (y, eax) <+ Binop("-", x, eax) <+ Mov (eax, s)]
 					| "*" -> [env, code <+ Mov (y, eax) <+ Binop("*", x, eax) <+ Mov (eax, s)]
-					| "&&" -> [env, code <+  Mov (y, edx) <+ Binop ("imull", x, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
-					| "!!" -> [env, code <+ Mov (y, edx) <+ Binop ("orl", x, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+					| "&&" -> [env, code <+  Mov (y, edx) <+ Binop ("*", x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+					| "!!" -> [env, code <+  Mov (y, edx) <+ Binop ("!!", x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
 					| "/" -> [env, code <+ Mov (y, eax) <+ Cltd  <+ IDiv (x)  <+ Mov (eax, s)]
 					| "%" -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x) <+ Mov (edx, s)]
-					| _ -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
+					| _ -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y)<+ Mov(L(0), eax)  <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
 					esac
               esac
            esac
->>>>>>> A02-straight-line-x86
         esac
       }, [env, emptyBuffer ()], code)
   }
@@ -331,7 +325,6 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
-<<<<<<< HEAD
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
@@ -357,7 +350,7 @@ public fun compileX86 (args, code) {
                     ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
-=======
+
 -- A top-level codegeneration function. Takes a stack machine program
 -- and returns x86 listing as a string
 public fun compileX86 (code) {
@@ -374,6 +367,5 @@ public fun compileX86 (code) {
                 epilogue ()
               )
            ).stringcat
->>>>>>> A02-straight-line-x86
   esac
 }
