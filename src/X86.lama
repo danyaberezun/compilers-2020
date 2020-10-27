@@ -38,7 +38,7 @@ local wordSize = 4;
 --   Binop (string, opnd, opnd) -- makes a binary operation; note, the first operand   
 --                                 designates x86 operator, not the source language one
 --   IDiv  (opnd)               -- x86 integer division, see instruction set reference 
---   Cltd                       -- see instruction set reference           
+--   Cltd                       -- see instruction set reference: https://docs.oracle.com/cd/E19455-01/806-3773/instructionset-49/index.html
 --   Set   (string, string)     -- sets a value from flags; the first operand is the   
 --                                 suffix, which determines the value being set, the
 --                                 the second --- (sub)register name 
@@ -50,6 +50,12 @@ local wordSize = 4;
                                                                
 -- Machine instruction printer
 fun insnString (insn) {
+
+  fun opString (op) {
+    case op of
+      "shr"   -> "shr" -- may be useful further??
+    esac
+  }
   
   fun binopString (op) {
     case op of
@@ -60,6 +66,7 @@ fun insnString (insn) {
     | "!!"  -> "orl" 
     | "^"   -> "xorl"
     | "cmp" -> "cmpl"
+    | "test"-> "test"
     esac
   }
 
@@ -71,11 +78,12 @@ fun insnString (insn) {
     | L (i) -> sprintf ("$%d", i)
     esac
   }
-  
+
   case insn of
     Cltd               -> "\tcltd\n"
   | Set   (suf, s)     -> sprintf ("\tset%s\t%s\n", suf, s)
   | IDiv  (s1)         -> sprintf ("\tidivl\t%s\n", opndString (s1))
+  | Op (op, s)         -> sprintf ("\t%s\t%s\n", opString (op), opndString (s))
   | Binop (op, s1, s2) -> sprintf ("\t%s\t%s,\t%s\n", binopString (op), opndString (s1), opndString (s2))
   | Mov   (s1, s2)     -> sprintf ("\tmovl\t%s,\t%s\n", opndString (s1), opndString (s2))
   | Push  (s)          -> sprintf ("\tpushl\t%s\n", opndString (s))
@@ -117,7 +125,7 @@ fun makeEnv (stack, stackSlots, globals) {
     of [x, n] -> [x, makeEnv (x : stack, if n > stackSlots then n else stackSlots fi, globals)]esac
   }
 
-  -- Pushes an item on the symbolic state; returns an updated envirtonment
+  -- Pushes an item on the symbolic state; returns an updated environment
   fun push (y) {
     makeEnv (y : stack, stackSlots, globals)
   }
@@ -255,7 +263,7 @@ fun memOpnd (opnd) {
 -- intermediate register if needed
 fun move (from, to) {
   if memOpnd (from) && memOpnd (to)
-  then singletonBuffer (Mov (from, eax)) <+ Mov (eax, to)
+  then singletonBuffer (Push(eax)) <+ Mov (from, eax) <+ Mov (eax, to) <+ Pop(eax)
   else singletonBuffer (Mov (from, to))
   fi
 }
@@ -273,6 +281,31 @@ fun suffix (op) {
   esac
 }
 
+-- use this function to abstract memory-memory operations
+fun mkBinopMemToMem(op, s1, s2) {
+  if memOpnd (s1) && memOpnd (s2) then
+      singletonBuffer (Push (eax)) <+
+      Mov(s2, eax) <+
+      Binop(op, s1, eax) <+
+      Mov(eax, s2) <+
+      Pop(eax)
+  else singletonBuffer (Binop(op, s1, s2))
+  fi
+}
+
+fun compileCmpStatement(env, code, op, op1, op2, s) {
+  [env, code <+ Push(eax) <+ Binop ("^", eax, eax) <+> mkBinopMemToMem ("cmp", op1, op2) <+ Set (suffix(op), "%al") <+ Mov(eax, s) <+ Pop(eax)]
+}
+
+fun compileLogicStatement(env, code, op, op1, op2, s) {
+  [env, code <+ Push(eax)
+             -- complains about operands size, so I test each operand against itself and check zero flag
+             <+ Mov(op1, eax) <+ Binop("test", eax, eax) <+ Mov(L(0), eax) <+ Set ("nz", "%al") <+ Mov (eax, op1) -- cannot move to s here, because s==op2 :(
+             <+ Mov(op2, eax) <+ Binop("test", eax, eax) <+ Mov(L(0), eax) <+ Set ("nz", "%al")
+             <+> mkBinopMemToMem (op, op1, eax) <+ Mov (eax, s)
+             <+ Pop(eax)]
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -280,21 +313,52 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+        -- printf ("now generated: %s\ngenerating code for: %s\n", scode.string, i.string);
         case i of
           READ ->
             case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
+              [s, env] -> [env, code <+ Call ("Lread") <+> move (eax, s)]
             esac             
         | WRITE ->
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
+            esac
+        | LD (name@_) ->
+            case env.allocate of
+              [s, updenv] -> [updenv.addGlobal(name), code <+> move(env.loc(name), s)]
+            esac
+        | ST (name@_) ->
+            case env.pop of
+              [s, updenv] -> [updenv.addGlobal(name), code  <+> move (s, env.loc(name))]
+            esac
+        | BINOP (op@_) ->
+            case env.pop2 of
+              [op1, op2, updenv] -> case updenv.allocate of
+                [s, updupdenv] -> case op of
+                    "<"  -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | "<=" -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | "==" -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | "!=" -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | ">=" -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | ">"  -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | "/" -> [updupdenv, code <+ Push(eax) <+ Push(edx) <+> move(op2, eax) <+ Cltd <+ IDiv (op1) <+> move (eax, s) <+ Pop(edx) <+ Pop(eax)]
+                  | "%" -> [updupdenv, code <+ Push(eax) <+ Push(edx) <+> move(op2, eax) <+ Cltd <+ IDiv (op1) <+> move (edx, s) <+ Pop(edx) <+ Pop(eax)]
+                  | "!!" -> compileLogicStatement(updupdenv, code, op, op1, op2, s)
+                  | "&&" -> compileLogicStatement(updupdenv, code, op, op1, op2, s)
+                  | _ -> [updupdenv, code <+> mkBinopMemToMem (op, op1, op2) <+> move (op2, s)]
+                esac
+              esac
+            esac
+        | CONST (val@_) ->
+            case env.allocate of
+              [s, updenv] -> [updenv, code <+ Mov (L (val), s)]
             esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
   }
 
-  compile (env, code) 
+  compile (env, code)
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
@@ -302,14 +366,15 @@ fun compile (env, code) {
 public fun compileX86 (args, code) {
   case compile (initEnv (), code) of
     [env, code] ->
+       -- printf ("CODE: %s", code.string);
        local asmFile = args.getBaseName ++ ".s",
              runtime = case getEnv ("LAMA_RUNTIME") of
                          #unboxed -> "../runtime/"
                        | path     -> path
                        esac ++ "/runtime.o";
-       
+
        fwrite (asmFile,
-               map (insnString, 
+               map (insnString,
                     getBuffer $
                       singletonBuffer (Meta ("\t.global\tmain\n")) <+>
                       dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
@@ -320,7 +385,7 @@ public fun compileX86 (args, code) {
                         epilogue ()
                       )
                     ).stringcat);
-                    
+
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }
