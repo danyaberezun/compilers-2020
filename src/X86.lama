@@ -10,7 +10,6 @@ import Manifest;
 -- Assembler language interface
 -- The registers: 
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
-local byteregs = ["%bl", "%cl", "%si", "%di", "%al", "%dl", "%bp", "%sp"];
 
 -- We can not freely operate with all register; only with 4 by now
 local nRegs = regs.length - 5;
@@ -51,6 +50,12 @@ local wordSize = 4;
                                                                
 -- Machine instruction printer
 fun insnString (insn) {
+
+  fun opString (op) {
+    case op of
+      "shr"   -> "shr" -- may be useful further??
+    esac
+  }
   
   fun binopString (op) {
     case op of
@@ -61,6 +66,7 @@ fun insnString (insn) {
     | "!!"  -> "orl" 
     | "^"   -> "xorl"
     | "cmp" -> "cmpl"
+    | "test"-> "test"
     esac
   }
 
@@ -73,19 +79,11 @@ fun insnString (insn) {
     esac
   }
 
-  fun opndAsByte(opnd) {
-    case opnd of
-      R (i) -> byteregs [i]
-    | S (i) -> sprintf ("-%d(%%ebp)", (i+1) * wordSize)
-    | M (x) -> x
-    | L (i) -> sprintf ("$%d", i)
-    esac
-  }
-
   case insn of
     Cltd               -> "\tcltd\n"
-  | Set   (suf, s)     -> sprintf ("\tset%s\t%s\n", suf, opndAsByte(s))
+  | Set   (suf, s)     -> sprintf ("\tset%s\t%s\n", suf, s)
   | IDiv  (s1)         -> sprintf ("\tidivl\t%s\n", opndString (s1))
+  | Op (op, s)         -> sprintf ("\t%s\t%s\n", opString (op), opndString (s))
   | Binop (op, s1, s2) -> sprintf ("\t%s\t%s,\t%s\n", binopString (op), opndString (s1), opndString (s2))
   | Mov   (s1, s2)     -> sprintf ("\tmovl\t%s,\t%s\n", opndString (s1), opndString (s2))
   | Push  (s)          -> sprintf ("\tpushl\t%s\n", opndString (s))
@@ -296,11 +294,16 @@ fun mkBinopMemToMem(op, s1, s2) {
 }
 
 fun compileCmpStatement(env, code, op, op1, op2, s) {
-  [env, code <+ Push(eax) <+ Mov (L (0), eax) <+> mkBinopMemToMem ("cmp", op1, op2) <+ Set (suffix(op), eax) <+ Mov(eax, s) <+ Pop(eax)]
+  [env, code <+ Push(eax) <+ Binop ("^", eax, eax) <+> mkBinopMemToMem ("cmp", op1, op2) <+ Set (suffix(op), "%al") <+ Mov(eax, s) <+ Pop(eax)]
 }
 
 fun compileLogicStatement(env, code, op, op1, op2, s) {
-  [env, code <+ Push(eax) <+ Mov (L (0), eax) <+> mkBinopMemToMem (op, op1, op2) <+ Set("nz", eax) <+ Mov (eax, s) <+ Pop(eax)]
+  [env, code <+ Push(eax)
+             -- complains about operands size, so I test each operand against itself and check zero flag
+             <+ Mov(op1, eax) <+ Binop("test", eax, eax) <+ Mov(L(0), eax) <+ Set ("nz", "%al") <+ Mov (eax, op1) -- cannot move to s here, because s==op2 :(
+             <+ Mov(op2, eax) <+ Binop("test", eax, eax) <+ Mov(L(0), eax) <+ Set ("nz", "%al")
+             <+> mkBinopMemToMem (op, op1, eax) <+ Mov (eax, s)
+             <+ Pop(eax)]
 }
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
