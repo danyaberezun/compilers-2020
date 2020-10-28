@@ -329,8 +329,16 @@ fun compile (env, code) {
         						  		then [env, code <+ Mov (y, eax) <+ Binop(op, x, eax) <+ Mov (eax, s)]
         						  		else [env, code <+ Binop(op,x,y)]
         						  	fi
-        						| "&&" -> [env, Mov (y, ebx) <+ Binop("imull",x, ebx) <+ Binop ("cmp", L(0), ebx)<+ Mov(L(0),eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
-        						| "!!" -> [env, Mov (y, ebx) <+ Binop("orl",x, ebx) <+ Binop ("cmp", L(0), ebx) <+ Mov(L(0),eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+        						  | "&&" -> 	
+        						  	if stackOpnd(y)
+                                         				then [env, code <+ Mov (y, edx) <+ Binop("*", x, edx) <+ Binop("cmp", L(0), edx)
+                                         					<+ Mov(L(0), edx) <+ Set(suffix("!="), "%dl") <+ Mov(edx, s)]
+                                         				else [env, code <+ Binop("*", x, y) <+ Binop("cmp", L(0), y)
+                                         					<+ Mov(L(0), edx) <+ Set(suffix("!="), "%dl") <+ Mov(edx, s)]
+                                         			fi
+        						| "!!" -> [env, code <+ Mov (y, edx) <+ Binop("cmp", L(0), edx) <+ Mov(L(0), edx)
+                                         				<+ Set(suffix("!="), "%dl") <+ Mov(x, eax) <+ Binop("cmp", L(0), eax)
+                                         				<+ Mov(L(0), eax) <+ Set(suffix("!="), "%al") <+ Binop(op, eax, edx) <+ Mov(edx, s)]
         						| "/"  -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x) <+ Mov (eax, s)]
         						| "%"  -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x) <+ Mov (edx, s)]
         						| _    -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y) <+ Mov(L(0),eax) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
