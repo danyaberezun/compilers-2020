@@ -26,8 +26,26 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (conf@[st, env, wrld], insns) {
+  case insns of 
+      {} -> conf
+  | x:xs -> {
+
+      conf := 
+        case x of 
+          BINOP (op) -> case st of 
+                          y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, wrld]
+                        esac
+        |  READ      -> case readWorld (wrld) of [z, wrld] -> [z:st, env, wrld] esac
+        | WRITE      -> case st of z:st -> [st, env, writeWorld (z, wrld)] esac
+        |    ST (x)  -> case st of z:st -> [st, env <- [x, z], wrld] esac
+        |    LD (x)  -> [env(x):st, env, wrld]
+        | CONST (c)  -> [c:st, env, wrld]
+        esac;
+
+      eval (conf, xs)
+    }
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -39,12 +57,22 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+    Const (c)        -> CONST (c) :{}
+  |   Var (x)        -> LD (x) :{}
+  | Binop (op, l, r) -> compileExpr (l) +++ compileExpr (r) +++ (BINOP (op) :{})
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of
+    Skip           -> {}
+  | Read  (x)      -> {READ, ST (x)}
+  | Write (e)      -> compileExpr (e) +++ (WRITE :{})
+  |  Assn (x, e)   -> compileExpr (e) +++ (ST (x) :{})
+  |   Seq (e1, e2) -> compileSM (e1) +++ compileSM (e2)
+  esac
 }
