@@ -32,4 +32,3 @@ local stmt = memo $ eta syntax (
 
 -- Public top-level parser
 public parse = stmt;
-             
