@@ -16,20 +16,26 @@ import World;
 --        Read   (string)           |
 --        Write  (expr)             |
 
-fun eval (c, stmt) {
+
+fun eval (c, stmt) 
+{
   case stmt of
-    Assn (name, expr) -> return [c[0] <- [name, evalExpr(c[0], expr)] , c[1]]
-  | Seq (stmt1, stmt2) -> eval(eval(c, stmt1), stmt2)
-  | Skip -> return c
-  | Read (name) -> 
-	local read_result;
-	read_result := readWorld(c[1]);
-	return [c[0] <- [name, read_result[0]], read_result[1]]
-  | Write (expr) -> return [c[0], writeWorld(evalExpr(c[0], expr), c[1])]
+    Assn (x, expr)    -> return [ c[0] <- [x, evalExpr(c[0], expr)], c[1]]
+  | Seq (st1, st2)     -> return eval(eval(c, st1), st2)
+  | Skip               -> return c
+  | Read (x)           ->
+                          local result;
+                          result := readWorld(c[1]);
+                          return [c[0] <- [x, result[0]], result[1]]
+  | Write (expr)       -> return [c[0], writeWorld(evalExpr(c[0], expr), c[1])]  
   esac
 }
 
 -- Evaluates a program with a given input and returns an output
-public fun evalStmt (input, stmt) {
+
+
+public fun evalStmt (input, stmt) 
+{
   eval ([emptyState, createWorld (input)], stmt).snd.getOutput
 }
+
