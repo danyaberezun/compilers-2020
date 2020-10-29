@@ -23,7 +23,7 @@ binop = fun (l, op, r){
               [Left, [s("*") | s("/") | s("%"), binop] : {}],
               [Left, [s("+") | s("-"), binop] : {}],
               [Nona, [s("<") | s(">") | s(">=") | s("<=") | s("==") | s("!="), binop] : {}]},
-  exp = memo $ eta expr(ops, primary);
+  exp = memo $ eta expr(oper, primary);
       
 local stmt = memo $ eta syntax (
   x = kSkip {Skip} |
