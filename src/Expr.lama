@@ -6,6 +6,7 @@ import State;
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
+<<<<<<< HEAD
 
 public fun binop(op, l, r) {
     case op of
@@ -24,6 +25,14 @@ public fun binop(op, l, r) {
 		| "!!" -> l !! r
     esac
 }
+=======
+--
+-- An expression is represented by a data structure of the following shape:
+--
+-- expr = Var   (string)             |
+--        Const (int)                |
+--        Binop (string, expr, expr)
+>>>>>>> 446de7f73f136a9037c03c5298f28abbbc3c95ea
 
 public fun evalExpr (st, expr) {
 	case expr of

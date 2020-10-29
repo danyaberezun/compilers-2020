@@ -4,6 +4,14 @@ import List;
 import World;
 import State;
 import Expr;
+<<<<<<< HEAD
+=======
+import Buffer;
+import Fun;
+
+-- Stack code printer. Takes a list of SM instructions, return its
+-- string representation.
+>>>>>>> 446de7f73f136a9037c03c5298f28abbbc3c95ea
 public fun showSMInsn (i) {
   case i of
     READ      -> sprintf ("READ")

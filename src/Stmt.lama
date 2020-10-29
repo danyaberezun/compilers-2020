@@ -15,6 +15,10 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
+<<<<<<< HEAD
+=======
+
+>>>>>>> 446de7f73f136a9037c03c5298f28abbbc3c95ea
 fun eval (c, stmt) {
 	case stmt of
 	
