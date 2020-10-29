@@ -4,11 +4,7 @@ import List;
 import World;
 import State;
 import Expr;
-import Buffer;
-import Fun;
 
--- Stack code printer. Takes a list of SM instructions, return its
--- string representation.
 public fun showSMInsn (i) {
   case i of
     READ      -> sprintf ("READ")
@@ -26,10 +22,28 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
-}
 
+fun eval (c@[st, env, wrld], instructions) {
+  case instructions of 
+      {} -> c
+  | instr:left -> {
+
+      c := 
+        case instr of 
+          BINOP (op) -> case st of 
+                          y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, wrld]
+                        esac
+        |  READ      -> case readWorld (wrld) of [z, wrld] -> [z:st, env, wrld] esac
+        | WRITE      -> case st of z:st -> [st, env, writeWorld (z, wrld)] esac
+        |    ST (x)  -> case st of z:st -> [st, env <- [x, z], wrld] esac
+        |    LD (x)  -> [env(x):st, env, wrld]
+        | CONST (c)  -> [c:st, env, wrld]
+        esac;
+
+      eval (c, left)
+    }
+  esac
+}
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
@@ -38,13 +52,27 @@ public fun evalSM (input, insns) {
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
+
+-- NOTICE ORDER!!!
+
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+case expr of
+    Var (x) -> return singleton(LD(x))
+    | Const (x) -> return singleton(CONST(x))
+    | Binop (op, frst, scnd) -> return compileExpr(frst) +++ compileExpr(scnd) +++singleton(BINOP(op))
+esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
+
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of
+    Assn (name, expr) -> return compileExpr(expr) +++ singleton(ST(name))
+  | Seq (stmt1, stmt2) -> return compileSM(stmt1) +++ compileSM(stmt2)
+  | Skip -> {}
+  | Read (name) -> return singleton(READ) +++ singleton(ST(name))
+  | Write (expr) -> return compileExpr(expr) +++ singleton(WRITE)
+  esac
 }
