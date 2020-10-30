@@ -21,15 +21,14 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
              [Nona, [s("<") | s(">") | s(">=") | s("<=") | s("==") | s("!="), binop] : {}],
              [Left, [s("+") | s("-"), binop] : {}],
              [Left, [s("*") | s("/") | s("%"), binop] : {}]},
-       exp = memo $ eta expr(ops, primary);
-       local stmt = memo $ eta syntax (
+      exp = memo $ eta expr(ops, primary);
+local stmt = memo $ eta syntax (
        kWrite x = inbr[s("("), exp, s(")")] {Write(x)} |
        kRead x = inbr[s("("), lident, s(")")] {Read(x)} |
        x = lident s[":="] y = exp {Assn(x, y)} |
        x = stmt s[";"] y = stmt end {Seq(x, y)} |
        kSkip {Skip});
-   
+      
 
 -- Public top-level parser
 public parse = stmt;
-             
