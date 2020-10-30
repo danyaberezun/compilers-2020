@@ -1,20 +1,11 @@
-TESTS=$(sort $(basename $(wildcard test*.lama)))
-LOGS=$(TESTS:=.log)
+.PHONY: all 
 
-LAMAC=lamac
-RM=rm -rf
-
-.PHONY: check $(TESTS)
-
-check: $(TESTS)
-
-$(TESTS): %: %.lama
-	@echo $@
-	cpp -P -D PROGRAM_BODY="`tr -d '\n' < $<`" Embedding.meta > tmp.lama
-	$(LAMAC) -I ../src -o $@ tmp.lama
-	$(RM) tmp.lama
-	cat $@.input | ./$@ -i > $@.log && diff $@.log orig/$@.log
-	cat $@.input | ./$@ -s > $@.log && diff $@.log orig/$@.log
+all:
+	make -C src 
+	make -C regression
 
 clean:
-	$(RM) *.s *.i *~ $(LOGS) $(TESTS)
+	make clean -C src
+	make clean -C regression
+
+

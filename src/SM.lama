@@ -6,76 +6,59 @@ import State;
 import Expr;
 import Util;
 
+fun computeExpr (oper, s1, s2) {
+  case oper of
+     "+"  -> s1 + s2
+  |  "*"  -> s1 * s2
+  |  "-"  -> s1 - s2
+  |  "/"  -> s1 / s2
+  |  "%"  -> s1 % s2
+  |  "==" -> s1 == s2
+  |  "!=" -> s1 != s2
+  |  "<"  -> s1 < s2
+  |  "<=" -> s1 <= s2
+  |  ">"  -> s1 > s2
+  |  ">=" -> s1 >= s2
+  |  "&&" -> s1 && s2
+  |  "!!" -> s1 !! s2
+  esac
+}
+
+fun evalStep (c, insns) {
+    case insns[0] of
+      READ           -> local reader = readWorld(c[2]); [singleton(reader[0]) +++ c[0], c[1], reader[1]]
+      |  WRITE       -> [c[0][1], c[1], writeWorld(c[0][0], c[2])]
+      |  BINOP(s1) -> [singleton(computeExpr(s1,c[0][1][0],c[0][0])) +++ c[0][1][1], c[1], c[2]]
+      |  CONST(s1) -> [singleton(s1) +++ c[0], c[1], c[2]]
+      |  LD(s1)    -> [singleton(c[1](s1)) +++ c[0], c[1], c[2]]
+      |  ST(s1)    -> [c[0][1], c[1] <- [s1, c[0][0]], c[2]]
+    esac
+}
+
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c, insns) {
-	dbg2("eval! insns: %s, stack: %s", insns, c[0]);
-  case c of
-    [stack, state, world] -> 
-  	case insns of
-  	  Read:tail ->
-        dbg("Read");
-        case readWorld(world) of
-          [a, newWorld] -> eval([a:stack, state, newWorld], tail)
-        esac
-		| LD(x):tail ->
-		  dbg1("load: %s", x);
-			eval([state(x):stack, state, world], tail)
-		| Const(c):tail ->
-		  dbg1("const: %s", c);
-			eval([c:stack, state, world], tail)
-		| Binop(op):tail ->
-		  dbg1("Binop: %s", op);
-			case stack of
-			  y:x:stack_tail ->
-				  -- dbg2("x: %s, y: %s", x, y);
-					local res = calculate(op, x, y);
-					eval([res:stack_tail, state, world], tail)
-			| _ -> failure("Not enough arguments in stack for binop!")
-			esac
-		| ST(x):tail ->
-		  case stack of
-			  val:stack_tail ->
-		      dbg2("Store: %s <- %s", x, val);
-					eval([stack_tail, state <- [x, val], world], tail)
-			esac
-		| Var(x):tail ->
-		  eval([state(x):stack, state, world], tail)
-		| Write:tail ->
-		  case stack of
-			  val:stack_tail ->
-		      dbg1("write: %s", val);
-					eval([stack_tail, state, writeWorld(val, world)], tail)
-			| _ -> failure("Not enough arguments in stack for write!")
-			esac
-  	| {} -> c
-  	| _ ->
-		  failure("Can't match insns... %s", insns)
-  	esac
-	esac
+  while size(insns) > 0 do
+    c := evalStep(c, insns);
+    insns := insns[1]
+  od;
+  c
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
-  dbg("\n================================");
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
-}
-
-fun cexpr (expr) {
-  case expr of
-    Binop (op, a, b) -> cexpr(a) +++ cexpr(b) +++ (Binop(op):{})
-    | Var(x) -> LD(x):{}
-    | Const(c) -> Const(c):{}
-  esac
 }
 
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  local res = cexpr(expr);
-	dbg2("compileExpr %s >>> %s", expr, res);
-	res
+  case expr of
+   Var(s1)           -> singleton(LD(s1))
+   | Const(s1)       -> singleton(CONST(s1))
+   | Binop(s1,s2,s3) -> compileExpr(s2) +++ compileExpr(s3) +++ singleton(BINOP(s1))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
@@ -83,16 +66,9 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
   case stmt of
-    Seq (head, tail) -> dbg("Seq!!!"); toInstr(head) +++ compileSM(tail)
-    | head -> toInstr(head)
-  esac
-}
-
--- Returns list from one instruction
-public fun toInstr (head) {
-  case head of
-    Read(x) -> Read:ST(x):{}
-    | Assn (z, expr) -> compileExpr(expr) +++ (ST(z):{})
-    | Write (expr) -> compileExpr(expr) +++ (Write:{})
+   Seq(s1,s2)        -> compileSM(s1) +++ compileSM(s2)
+   | Write(s1)       -> compileExpr(s1) +++ singleton(WRITE)
+   | Read(s1)        -> singleton(READ) +++ singleton(ST(s1))
+   | Assn(s1,s2)     -> compileExpr(s2) +++ singleton(ST(s1))
   esac
 }

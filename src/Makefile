@@ -6,11 +6,11 @@ LAMAC=lamac
 
 all: $(ALL)
 
-Expr.o: State.o Util.o
+Expr.o: State.o
 
-Stmt.o: State.o Expr.o World.o Util.o
+Stmt.o: State.o Expr.o World.o
 
-SM.o: State.o World.o Util.o
+SM.o: State.o World.o Util.o Expr.o
 
 %.o: %.lama
 	$(LAMAC) -I . -c $<
@@ -20,4 +20,5 @@ variate:
 
 clean:
 	rm -Rf *.s *.o *.i *~ *.html *.sm lama-impl
+
 

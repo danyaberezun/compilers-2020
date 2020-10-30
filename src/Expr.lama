@@ -2,18 +2,28 @@
 
 import List;
 import State;
-import Util;
+
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
 public fun evalExpr (st, expr) {
-  dbg2("Expr#evalExpr: state=%s, expr=%s", st, expr);
-  return case expr of
-    Binop (op, a, b) ->
-		  local x = evalExpr(st, a);
-			local y = evalExpr(st, b);
-			calculate(op, x, y)
-    | Var(x) -> st(x)
-    | Const(c) -> c
+  case expr of
+     Var(s1) -> st(s1)
+  |  Binop(s1,s2,s3)   -> case s1 of
+       "+"   -> (evalExpr(st, s2) + evalExpr(st, s3))
+    |  "*"  -> (evalExpr(st, s2) * evalExpr(st, s3))
+    |  "-"  -> (evalExpr(st, s2) - evalExpr(st, s3))
+    |  "/"  -> (evalExpr(st, s2) / evalExpr(st, s3))
+    |  "%"  -> (evalExpr(st, s2) % evalExpr(st, s3))
+    |  "==" -> (evalExpr(st, s2) == evalExpr(st, s3))
+    |  "!=" -> (evalExpr(st, s2) != evalExpr(st, s3))
+    |  "<"  -> (evalExpr(st, s2) < evalExpr(st, s3))
+    |  "<=" -> (evalExpr(st, s2) <= evalExpr(st, s3))
+    |  ">"  -> (evalExpr(st, s2) > evalExpr(st, s3))
+    |  ">=" -> (evalExpr(st, s2) == evalExpr(st, s3))
+    |  "&&" -> (evalExpr(st, s2) && evalExpr(st, s3))
+    |  "!!" -> (evalExpr(st, s2) !! evalExpr(st, s3))
+    esac
+  |  Const(s1)  -> s1
   esac
 }
