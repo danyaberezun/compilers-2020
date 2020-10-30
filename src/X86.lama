@@ -301,18 +301,53 @@ fun compile (env, code) {
             case env.addGlobal(x).pop of
               [s, env] -> [env, code <+> move(s, env.loc(x))]
             esac
-        | BINOP(op) ->
+        | BINOP (op) ->
             case env.pop2 of
-                [y, x, env] -> case op of
-                                  "+"  -> [env.allocate[1], code <+ Binop("+", y, x) ]
-                                | "-"  -> [env.allocate[1], code <+ Binop("-", y, x) ]
-                                | "*"  -> [env.allocate[1], code <+ Binop("*", y, x) ]
-                                | "&&" -> [env.allocate[1], code <+ Binop("&&", y, x)]
-                                | "!!" -> [env.allocate[1], code <+ Binop("!!", y, x)]
-                                | "/"  -> [env.allocate[1], code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, x)]
-                                | "%"  -> [env.allocate[1], code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, x)]
-                                | _    -> [env.allocate[1], code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-                               esac
+              [x, y, env] -> 
+                  case env.allocate of
+                    [s, env] ->   
+                        case op of
+                                 "+" -> [env, code <+ Mov (y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s)]
+                               | "-" -> [env, code <+ Mov (y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s) ]
+                               | "*" -> if stackOpnd(y)
+                                        then [env, code <+ Mov (y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s)]
+                                        else [env, code <+ Binop(op, x, y) <+ Mov(y, s)]
+                                        fi
+                               | "/" -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
+                               | "&&" -> if stackOpnd(y)
+                                         then [env, code 
+                                               <+ Mov(y, edx)
+                                               <+ Binop("*", x, edx)
+                                               <+ Binop("cmp", L(0), edx)
+                                               <+ Mov(L(0), edx)
+                                               <+ Set(suffix("!="), "%dl")
+                                               <+ Mov(edx, s)]
+                                         else [env, code
+                                               <+ Binop("*", x, y)
+                                               <+ Binop("cmp", L(0), y)
+                                               <+ Mov(L(0), edx)
+                                               <+ Set(suffix("!="), "%dl")
+                                               <+ Mov(edx, s)]
+                                         fi
+                               | "!!" -> [env, code
+                                          <+ Mov (y, edx)
+                                          <+ Binop("cmp", L(0), edx) 
+                                          <+ Mov(L(0), edx)
+                                          <+ Set(suffix("!="), "%dl")
+                                          <+ Mov(x, eax)
+                                          <+ Binop("cmp", L(0), eax)
+                                          <+ Mov(L(0), eax)
+                                          <+ Set(suffix("!="), "%al")
+                                          <+ Binop(op, eax, edx)
+                                          <+ Mov(edx, s)]
+                               | "%" -> [env, code <+ Mov (y, eax) <+Cltd <+ IDiv(x) <+ Mov(edx, s) ]
+                               | _ -> [env, code <+ Mov (x, eax)
+                                       <+ Binop("cmp", eax, y)
+                                       <+ Mov(L(0), eax) 
+                                       <+ Set(suffix(op), "%al") 
+                                       <+ Mov(eax, s)]
+                        esac
+                  esac
             esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
