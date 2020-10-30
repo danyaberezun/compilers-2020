@@ -30,7 +30,7 @@ fun eval (c, insns) {
   case c of [s, st, w@[in, out]] ->
         case insns of
              {} -> c
-            |BINOP(bin): p -> case s of r : l : ss -> eval([operation(bin, l, r): ss, st, w], p) esac
+            |BINOP(bin): p -> case s of r : l : ss -> eval([operB(bin, l, r): ss, st, w], p) esac
             |CONST(n): p-> eval([n : s, st, w], p)
             |READ: p -> case in of elem : i -> eval([elem: s, st, [i, out]], p) esac
             |WRITE: p-> case s of elem : ss -> eval([ss, st, [in, elem : out]], p) esac
