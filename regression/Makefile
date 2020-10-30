@@ -1,3 +1,4 @@
+  
 TESTS=$(sort $(basename $(wildcard test*.lama)))
 LOGS=$(TESTS:=.log)
 
