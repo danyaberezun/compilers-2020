@@ -1,4 +1,4 @@
-  
+
 -- Parser 
 
 import Ostap;
@@ -31,7 +31,8 @@ local stmt = memo $ eta syntax (
   x=lident s[":="] y=exp                {Assn (x, y)} |
   x1=stmt s[";"] x2=stmt end            {Seq (x1, x2)}
 );
-   
+
 
 -- Public top-level parser
 public parse = stmt;
+
