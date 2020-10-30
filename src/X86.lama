@@ -308,9 +308,9 @@ fun compile (env, code) {
                 [s, env] -> case op of
                   "+" -> [env, code <+ Mov (y, eax) <+ Binop("+", x, eax) <+ Mov (eax, s)]
                 | "-" -> [env, code <+ Mov (y, eax) <+ Binop("-", x, eax) <+ Mov (eax, s)]
-                | "*" -> [env, code <+ Mov (y, eax) <+ Binop("*", x, eax) <+ Mov (eax, s)]
-                | "&&"  -> [env, code <+ Mov(y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s)]
-                | "!!"  -> [env, code <+ Mov(y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s)]
+                | "*" -> [env, code <+ Mov (y, eax) <+ Binop("*", x, eax) <+ Mov (eax, s)]		
+		| "&&" -> [env, code <+  Mov (y, edx) <+ Binop ("*", x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+		| "!!" -> [env, code <+  Mov (y, edx) <+ Binop ("!!", x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
                 | "/" -> [env, code <+ Mov (y, eax) <+ Cltd  <+ IDiv (x)  <+ Mov (eax, s)]
                 | "%" -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x) <+ Mov (edx, s)]
                 | _ -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
