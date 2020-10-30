@@ -1,0 +1,98 @@
+-- Stack machine.
+
+import List;
+import World;
+import State;
+import Expr;
+import Util;
+
+-- Stack machine interpreter. Takes an SM-configuration and a program,
+-- returns a final configuration
+fun eval (c, insns) {
+	dbg2("eval! insns: %s, stack: %s", insns, c[0]);
+  case c of
+    [stack, state, world] -> 
+  	case insns of
+  	  Read:tail ->
+        dbg("Read");
+        case readWorld(world) of
+          [a, newWorld] -> eval([a:stack, state, newWorld], tail)
+        esac
+		| LD(x):tail ->
+		  dbg1("load: %s", x);
+			eval([state(x):stack, state, world], tail)
+		| Const(c):tail ->
+		  dbg1("const: %s", c);
+			eval([c:stack, state, world], tail)
+		| Binop(op):tail ->
+		  dbg1("Binop: %s", op);
+			case stack of
+			  y:x:stack_tail ->
+				  -- dbg2("x: %s, y: %s", x, y);
+					local res = calculate(op, x, y);
+					eval([res:stack_tail, state, world], tail)
+			| _ -> failure("Not enough arguments in stack for binop!")
+			esac
+		| ST(x):tail ->
+		  case stack of
+			  val:stack_tail ->
+		      dbg2("Store: %s <- %s", x, val);
+					eval([stack_tail, state <- [x, val], world], tail)
+			esac
+		| Var(x):tail ->
+		  eval([state(x):stack, state, world], tail)
+		| Write:tail ->
+		  case stack of
+			  val:stack_tail ->
+		      dbg1("write: %s", val);
+					eval([stack_tail, state, writeWorld(val, world)], tail)
+			| _ -> failure("Not enough arguments in stack for write!")
+			esac
+  	| {} -> c
+  	| _ ->
+		  failure("Can't match insns... %s", insns)
+  	esac
+	esac
+}
+
+-- Runs a stack machine for a given input and a given program, returns an output
+public fun evalSM (input, insns) {
+  dbg("\n================================");
+  eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
+}
+
+fun cexpr (expr) {
+  case expr of
+    Binop (op, a, b) -> cexpr(a) +++ cexpr(b) +++ (Binop(op):{})
+    | Var(x) -> LD(x):{}
+    | Const(c) -> Const(c):{}
+  esac
+}
+
+-- Compiles an expression into a stack machine code.
+-- Takes an expression, returns a list (of, possibly, lists)
+-- of stack machine instructions
+fun compileExpr (expr) {
+  local res = cexpr(expr);
+	dbg2("compileExpr %s >>> %s", expr, res);
+	res
+}
+
+-- Compiles a statement into a stack machine code.
+-- Takes a statement, returns a list of stack machine
+-- instructions.
+public fun compileSM (stmt) {
+  case stmt of
+    Seq (head, tail) -> dbg("Seq!!!"); toInstr(head) +++ compileSM(tail)
+    | head -> toInstr(head)
+  esac
+}
+
+-- Returns list from one instruction
+public fun toInstr (head) {
+  case head of
+    Read(x) -> Read:ST(x):{}
+    | Assn (z, expr) -> compileExpr(expr) +++ (ST(z):{})
+    | Write (expr) -> compileExpr(expr) +++ (Write:{})
+  esac
+}

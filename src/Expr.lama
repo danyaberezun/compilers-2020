@@ -1,0 +1,19 @@
+-- Expression evaluator
+
+import List;
+import State;
+import Util;
+
+-- The evaluator itself: takes a state and an expression,
+-- returns integer value
+public fun evalExpr (st, expr) {
+  dbg2("Expr#evalExpr: state=%s, expr=%s", st, expr);
+  return case expr of
+    Binop (op, a, b) ->
+		  local x = evalExpr(st, a);
+			local y = evalExpr(st, b);
+			calculate(op, x, y)
+    | Var(x) -> st(x)
+    | Const(c) -> c
+  esac
+}

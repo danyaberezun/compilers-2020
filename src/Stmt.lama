@@ -1,0 +1,46 @@
+-- Statement evaluator.
+
+import State;
+import Expr;
+import World;
+import Collection;
+import List;
+import Util;
+
+-- Evaluates a statement "stmt" in a configuration "c".
+-- A configuration is a pair of a state "s" and a world "w".
+-- Returns a final configuration (if any)
+fun eval (c, stmt) {
+  dbg2("Stmt#eval: \n\tconfiguration=%s, \n\tstmt=%s", c, stmt);
+  case stmt of
+    Seq (head, tail) -> eval(evalCommand(c, head), tail)
+    | head -> evalCommand(c, head)
+  esac
+}
+
+fun evalCommand(c, head) {
+  return 
+    case c of
+      [state, world] -> 
+        case head of
+          Read(x) ->
+            case readWorld(world) of
+              [a, newWorld] ->   [state <- [x, a], newWorld]
+            esac
+        | Assn (z, expr) ->
+				  local res = evalExpr(state, expr);
+					dbg1("result of eval: %s", res);
+					[state <- [z, res], world]
+        | Write (expr) -> 
+          local res = evalExpr(state, expr);
+          [state, writeWorld(res, world)]
+        | _ -> failure("Can't parse command")
+        esac
+    esac
+}
+
+-- Evaluates a program with a given input and returns an output
+public fun evalStmt (input, stmt) {
+  dbg1("empty state: %s", emptyState);
+  eval ([emptyState, createWorld (input)], stmt).snd.getOutput
+}

@@ -1,0 +1,64 @@
+-- Various utilities.
+import List;
+
+-- Flattens lists of lists of S-expressions of arbitrary depth.
+public fun deepFlatten (l) {
+  local res = [0, {}], curr = [res];
+
+  fun append (x) {
+    local new = x : {};
+    
+    curr [0][1] := new;
+    curr [0] := new    
+  }
+
+  fun traverse (l) {
+    case l of
+      _ : _ -> iter (traverse, l)
+    | {}    -> skip
+    | _     -> append (l)
+    esac
+  }
+  
+  traverse (l);
+  
+  res [1]
+}
+
+local dbg_mode = false;
+local debug_fname = "/tmp/lama-debug.log";
+public fun dbg(m) { varargDbg(m, {}) }
+public fun dbg1(m, a) { varargDbg(m, {a}) }
+public fun dbg2(m, a, b) { varargDbg(m, {a, b}) }
+public fun dbg3(m, a, b, c) { varargDbg(m, {a, b, c}) }
+fun stringify (arg) { arg.string }
+public fun varargDbg(m, args) {
+  local sargs = map(stringify, args);
+  if dbg_mode == true then
+    local pnt = fopen(debug_fname, "a");
+    case sargs of
+	    a:b:c -> fprintf(pnt, m, a, b, c)
+	  | a:b -> fprintf(pnt, m, a, b)
+	  | a -> fprintf(pnt, m, a)
+		| _ -> fprintf(pnt, m)
+	  esac;
+	  fprintf(pnt, "\n");
+	  fclose(pnt)
+	fi
+}
+
+public fun calculate(op, x, y) {
+  case op of
+    "*"  -> x * y
+  | "+"  -> x + y
+  | "-"  -> x - y
+  | "/"  -> x / y
+  | "%"  -> x % y
+  | "<"  -> x < y
+  | "<=" -> x <= y
+  | "==" -> x == y
+  | "!=" -> x != y
+  | ">"  -> x > y
+  | ">=" -> x >= y
+  esac
+}
