@@ -290,8 +290,6 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-<<<<<<< HEAD
-=======
                     | LD (x) -> 
             case env.addGlobal(x).allocate of 
               [s, env] -> [ env, code <+> move(env.loc(x), s) ]
@@ -327,7 +325,6 @@ fun compile (env, code) {
                   esac
                 esac
         | SKIP -> [ env, code ]
->>>>>>> A02-straight-line-x86
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
@@ -336,7 +333,6 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
-<<<<<<< HEAD
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
@@ -362,23 +358,5 @@ public fun compileX86 (args, code) {
                     ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
-=======
--- A top-level codegeneration function. Takes a stack machine program
--- and returns x86 listing as a string
-public fun compileX86 (code) {
-  case compile (initEnv (), code) of
-    [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
->>>>>>> A02-straight-line-x86
   esac
 }
