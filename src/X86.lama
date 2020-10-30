@@ -307,12 +307,14 @@ fun compile (env, code) {
                   [s, env] -> case op of
                     "+" -> [env, code <+ Mov(y, eax) <+ Binop("+", x, eax) <+ Mov(eax, s)]
                     | "%" -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
-                    | "&&" -> [env, code <+ Mov(y, ebx) <+ Binop("imull", x, ebx) <+ Binop("cmp", L(0), ebx)<+ Set("ne", "%al") <+ Mov(ebx, s)]
-                    | "!!" -> [env, code <+ Mov(y, ebx) <+ Binop("orl", x, ebx) <+ Binop("cmp", L(0), ebx) <+ Set("ne", "%al") <+ Mov(ebx, s)]
+
                     | "-" -> [env, code <+ Mov(y, eax) <+ Binop("-", x, eax) <+ Mov(eax, s)]
                     | "*" -> [env, code <+ Mov(y, eax) <+ Binop("*", x, eax) <+ Mov(eax, s)]
                     | "/" -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
                     | _ -> [env, code <+ Mov(x, eax) <+ Binop("cmp", eax, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                  esac
+                esac
+              esac
         esac 
       }, [env, emptyBuffer ()], code)
   }
