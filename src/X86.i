@@ -2,7 +2,7 @@ I,Std;
 I,SM;
 I,Collection;
 I,List;
+I,Manifest;
 I,Buffer;
 I,Fun;
-I,Manifest;
 F,compileX86;

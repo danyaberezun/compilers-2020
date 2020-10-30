@@ -72,14 +72,6 @@ filler:	.fill	15, 4, 1
 
 # PUBLIC ("LcompileSM") / 
 
-# EXTERN ("Lfix") / 
-
-# EXTERN ("Li__Infix_35") / 
-
-# EXTERN ("Li__Infix_36") / 
-
-# EXTERN ("Lid") / 
-
 # EXTERN ("LgetBuffer") / 
 
 # EXTERN ("Li__Infix_6043") / 
@@ -100,9 +92,23 @@ filler:	.fill	15, 4, 1
 
 # EXTERN ("LevalOp") / 
 
+# EXTERN ("LemptyState") / 
+
+# EXTERN ("LgetGlobal") / 
+
+# EXTERN ("LleaveFunction") / 
+
+# EXTERN ("LenterFunction") / 
+
+# EXTERN ("LaddName") / 
+
+# EXTERN ("LleaveScope") / 
+
+# EXTERN ("LenterScope") / 
+
 # EXTERN ("Li__Infix_6045") / 
 
-# EXTERN ("LemptyState") / 
+# EXTERN ("Llookup") / 
 
 # EXTERN ("LgetOutput") / 
 
@@ -372,7 +378,6 @@ _continue:
 	call	initState
 	call	initExpr
 	call	initBuffer
-	call	initFun
 # SLABEL ("L1") / 
 
 L1:
@@ -439,11 +444,11 @@ L4:
 
 L7:
 
-# LINE (244) / 
+# LINE (243) / 
 
-	.stabn 68,0,244,0
+	.stabn 68,0,243,0
 
-	.stabn 68,0,244,.L0-LcompileSM
+	.stabn 68,0,243,.L0-LcompileSM
 
 .L0:
 
@@ -759,11 +764,11 @@ L14:
 
 L17:
 
-# LINE (160) / 
+# LINE (159) / 
 
-	.stabn 68,0,160,0
+	.stabn 68,0,159,0
 
-	.stabn 68,0,160,.L1-LcSM_3
+	.stabn 68,0,159,.L1-LcSM_3
 
 .L1:
 
@@ -859,9 +864,9 @@ L22:
 
 L26:
 
-# LINE (161) / 
+# LINE (160) / 
 
-	.stabn 68,0,161,.L2-LcSM_3
+	.stabn 68,0,160,.L2-LcSM_3
 
 .L2:
 
@@ -1005,9 +1010,9 @@ L34:
 
 L38:
 
-# LINE (162) / 
+# LINE (161) / 
 
-	.stabn 68,0,162,.L3-LcSM_3
+	.stabn 68,0,161,.L3-LcSM_3
 
 .L3:
 
@@ -1229,9 +1234,9 @@ L46:
 
 L50:
 
-# LINE (164) / 
+# LINE (163) / 
 
-	.stabn 68,0,164,.L4-LcSM_3
+	.stabn 68,0,163,.L4-LcSM_3
 
 .L4:
 
@@ -1374,9 +1379,9 @@ L56:
 
 L60:
 
-# LINE (166) / 
+# LINE (165) / 
 
-	.stabn 68,0,166,.L5-LcSM_3
+	.stabn 68,0,165,.L5-LcSM_3
 
 .L5:
 
@@ -1519,9 +1524,9 @@ L66:
 
 L70:
 
-# LINE (167) / 
+# LINE (166) / 
 
-	.stabn 68,0,167,.L6-LcSM_3
+	.stabn 68,0,166,.L6-LcSM_3
 
 .L6:
 
@@ -1600,10 +1605,10 @@ L69:
 
 L62:
 
-# FAIL ((166, 14), true) / 
+# FAIL ((165, 14), true) / 
 
 	pushl	$29
-	pushl	$333
+	pushl	$331
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -1626,10 +1631,10 @@ L59:
 
 L52:
 
-# FAIL ((164, 12), true) / 
+# FAIL ((163, 12), true) / 
 
 	pushl	$25
-	pushl	$329
+	pushl	$327
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -1741,9 +1746,9 @@ L82:
 
 L86:
 
-# LINE (170) / 
+# LINE (169) / 
 
-	.stabn 68,0,170,.L7-LcSM_3
+	.stabn 68,0,169,.L7-LcSM_3
 
 .L7:
 
@@ -1887,9 +1892,9 @@ L94:
 
 L98:
 
-# LINE (172) / 
+# LINE (171) / 
 
-	.stabn 68,0,172,.L8-LcSM_3
+	.stabn 68,0,171,.L8-LcSM_3
 
 .L8:
 
@@ -2032,9 +2037,9 @@ L104:
 
 L108:
 
-# LINE (173) / 
+# LINE (172) / 
 
-	.stabn 68,0,173,.L9-LcSM_3
+	.stabn 68,0,172,.L9-LcSM_3
 
 .L9:
 
@@ -2099,10 +2104,10 @@ L107:
 
 L100:
 
-# FAIL ((172, 12), true) / 
+# FAIL ((171, 12), true) / 
 
 	pushl	$25
-	pushl	$345
+	pushl	$343
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -2253,9 +2258,9 @@ L118:
 
 L122:
 
-# LINE (176) / 
+# LINE (175) / 
 
-	.stabn 68,0,176,.L10-LcSM_3
+	.stabn 68,0,175,.L10-LcSM_3
 
 .L10:
 
@@ -2398,9 +2403,9 @@ L128:
 
 L132:
 
-# LINE (178) / 
+# LINE (177) / 
 
-	.stabn 68,0,178,.L11-LcSM_3
+	.stabn 68,0,177,.L11-LcSM_3
 
 .L11:
 
@@ -2543,9 +2548,9 @@ L138:
 
 L142:
 
-# LINE (179) / 
+# LINE (178) / 
 
-	.stabn 68,0,179,.L12-LcSM_3
+	.stabn 68,0,178,.L12-LcSM_3
 
 .L12:
 
@@ -2620,10 +2625,10 @@ L141:
 
 L134:
 
-# FAIL ((178, 14), true) / 
+# FAIL ((177, 14), true) / 
 
 	pushl	$29
-	pushl	$357
+	pushl	$355
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -2646,10 +2651,10 @@ L131:
 
 L124:
 
-# FAIL ((176, 12), true) / 
+# FAIL ((175, 12), true) / 
 
 	pushl	$25
-	pushl	$353
+	pushl	$351
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -2769,9 +2774,9 @@ L158:
 	call	Bsexp
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (182) / 
+# LINE (181) / 
 
-	.stabn 68,0,182,.L13-LcSM_3
+	.stabn 68,0,181,.L13-LcSM_3
 
 .L13:
 
@@ -2929,9 +2934,9 @@ L169:
 
 L173:
 
-# LINE (184) / 
+# LINE (183) / 
 
-	.stabn 68,0,184,.L14-LcSM_3
+	.stabn 68,0,183,.L14-LcSM_3
 
 .L14:
 
@@ -3074,9 +3079,9 @@ L179:
 
 L183:
 
-# LINE (185) / 
+# LINE (184) / 
 
-	.stabn 68,0,185,.L15-LcSM_3
+	.stabn 68,0,184,.L15-LcSM_3
 
 .L15:
 
@@ -3141,10 +3146,10 @@ L182:
 
 L175:
 
-# FAIL ((184, 12), true) / 
+# FAIL ((183, 12), true) / 
 
 	pushl	$25
-	pushl	$369
+	pushl	$367
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -3220,9 +3225,9 @@ L197:
 # CONST (0) / 
 
 	movl	$1,	%ebx
-# LINE (187) / 
+# LINE (186) / 
 
-	.stabn 68,0,187,.L16-LcSM_3
+	.stabn 68,0,186,.L16-LcSM_3
 
 .L16:
 
@@ -3380,9 +3385,9 @@ L202:
 
 L206:
 
-# LINE (189) / 
+# LINE (188) / 
 
-	.stabn 68,0,189,.L17-LcSM_3
+	.stabn 68,0,188,.L17-LcSM_3
 
 .L17:
 
@@ -3525,9 +3530,9 @@ L212:
 
 L216:
 
-# LINE (191) / 
+# LINE (190) / 
 
-	.stabn 68,0,191,.L18-LcSM_3
+	.stabn 68,0,190,.L18-LcSM_3
 
 .L18:
 
@@ -3670,9 +3675,9 @@ L222:
 
 L226:
 
-# LINE (192) / 
+# LINE (191) / 
 
-	.stabn 68,0,192,.L19-LcSM_3
+	.stabn 68,0,191,.L19-LcSM_3
 
 .L19:
 
@@ -3715,10 +3720,10 @@ L225:
 
 L218:
 
-# FAIL ((191, 16), true) / 
+# FAIL ((190, 16), true) / 
 
 	pushl	$33
-	pushl	$383
+	pushl	$381
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -3741,10 +3746,10 @@ L215:
 
 L208:
 
-# FAIL ((189, 12), true) / 
+# FAIL ((188, 12), true) / 
 
 	pushl	$25
-	pushl	$379
+	pushl	$377
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -3934,9 +3939,9 @@ L233:
 
 L237:
 
-# LINE (196) / 
+# LINE (195) / 
 
-	.stabn 68,0,196,.L20-LcSM_3
+	.stabn 68,0,195,.L20-LcSM_3
 
 .L20:
 
@@ -4118,9 +4123,9 @@ L243:
 
 L247:
 
-# LINE (198) / 
+# LINE (197) / 
 
-	.stabn 68,0,198,.L21-LcSM_3
+	.stabn 68,0,197,.L21-LcSM_3
 
 .L21:
 
@@ -4263,9 +4268,9 @@ L253:
 
 L257:
 
-# LINE (200) / 
+# LINE (199) / 
 
-	.stabn 68,0,200,.L22-LcSM_3
+	.stabn 68,0,199,.L22-LcSM_3
 
 .L22:
 
@@ -4408,9 +4413,9 @@ L263:
 
 L267:
 
-# LINE (202) / 
+# LINE (201) / 
 
-	.stabn 68,0,202,.L23-LcSM_3
+	.stabn 68,0,201,.L23-LcSM_3
 
 .L23:
 
@@ -4432,9 +4437,9 @@ L267:
 	addl	$4,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (203) / 
+# LINE (202) / 
 
-	.stabn 68,0,203,.L24-LcSM_3
+	.stabn 68,0,202,.L24-LcSM_3
 
 .L24:
 
@@ -4475,9 +4480,9 @@ L267:
 	call	Li__Infix_434343
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (204) / 
+# LINE (203) / 
 
-	.stabn 68,0,204,.L25-LcSM_3
+	.stabn 68,0,203,.L25-LcSM_3
 
 .L25:
 
@@ -4704,18 +4709,18 @@ L286:
 
 L290:
 
-# LINE (206) / 
+# LINE (205) / 
 
-	.stabn 68,0,206,.L26-LcSM_3
+	.stabn 68,0,205,.L26-LcSM_3
 
 .L26:
 
 # LD (Local (11)) / 
 
 	movl	-48(%ebp),	%ecx
-# LINE (207) / 
+# LINE (206) / 
 
-	.stabn 68,0,207,.L27-LcSM_3
+	.stabn 68,0,206,.L27-LcSM_3
 
 .L27:
 
@@ -4830,9 +4835,9 @@ L290:
 	addl	$8,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (208) / 
+# LINE (207) / 
 
-	.stabn 68,0,208,.L28-LcSM_3
+	.stabn 68,0,207,.L28-LcSM_3
 
 .L28:
 
@@ -4848,9 +4853,9 @@ L290:
 	addl	$8,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (209) / 
+# LINE (208) / 
 
-	.stabn 68,0,209,.L29-LcSM_3
+	.stabn 68,0,208,.L29-LcSM_3
 
 .L29:
 
@@ -4926,18 +4931,18 @@ L283:
 
 L312:
 
-# LINE (211) / 
+# LINE (210) / 
 
-	.stabn 68,0,211,.L30-LcSM_3
+	.stabn 68,0,210,.L30-LcSM_3
 
 .L30:
 
 # LD (Local (7)) / 
 
 	movl	-32(%ebp),	%ecx
-# LINE (212) / 
+# LINE (211) / 
 
-	.stabn 68,0,212,.L31-LcSM_3
+	.stabn 68,0,211,.L31-LcSM_3
 
 .L31:
 
@@ -5052,9 +5057,9 @@ L312:
 	addl	$8,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (213) / 
+# LINE (212) / 
 
-	.stabn 68,0,213,.L32-LcSM_3
+	.stabn 68,0,212,.L32-LcSM_3
 
 .L32:
 
@@ -5070,9 +5075,9 @@ L312:
 	addl	$8,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (214) / 
+# LINE (213) / 
 
-	.stabn 68,0,214,.L33-LcSM_3
+	.stabn 68,0,213,.L33-LcSM_3
 
 .L33:
 
@@ -5140,9 +5145,9 @@ L271:
 	call	Li__Infix_434343
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (215) / 
+# LINE (214) / 
 
-	.stabn 68,0,215,.L34-LcSM_3
+	.stabn 68,0,214,.L34-LcSM_3
 
 .L34:
 
@@ -5172,10 +5177,10 @@ L266:
 
 L259:
 
-# FAIL ((200, 20), true) / 
+# FAIL ((199, 20), true) / 
 
 	pushl	$41
-	pushl	$401
+	pushl	$399
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -5198,10 +5203,10 @@ L256:
 
 L249:
 
-# FAIL ((198, 16), true) / 
+# FAIL ((197, 16), true) / 
 
 	pushl	$33
-	pushl	$397
+	pushl	$395
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -5224,10 +5229,10 @@ L246:
 
 L239:
 
-# FAIL ((196, 12), true) / 
+# FAIL ((195, 12), true) / 
 
 	pushl	$25
-	pushl	$393
+	pushl	$391
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -5378,9 +5383,9 @@ L333:
 
 L337:
 
-# LINE (220) / 
+# LINE (219) / 
 
-	.stabn 68,0,220,.L35-LcSM_3
+	.stabn 68,0,219,.L35-LcSM_3
 
 .L35:
 
@@ -5562,9 +5567,9 @@ L343:
 
 L347:
 
-# LINE (222) / 
+# LINE (221) / 
 
-	.stabn 68,0,222,.L36-LcSM_3
+	.stabn 68,0,221,.L36-LcSM_3
 
 .L36:
 
@@ -5707,9 +5712,9 @@ L353:
 
 L357:
 
-# LINE (224) / 
+# LINE (223) / 
 
-	.stabn 68,0,224,.L37-LcSM_3
+	.stabn 68,0,223,.L37-LcSM_3
 
 .L37:
 
@@ -5764,9 +5769,9 @@ L357:
 	call	Bsexp
 	addl	$16,	%esp
 	movl	%eax,	%ebx
-# LINE (225) / 
+# LINE (224) / 
 
-	.stabn 68,0,225,.L38-LcSM_3
+	.stabn 68,0,224,.L38-LcSM_3
 
 .L38:
 
@@ -5780,9 +5785,9 @@ L357:
 	call	Li__Infix_434343
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (226) / 
+# LINE (225) / 
 
-	.stabn 68,0,226,.L39-LcSM_3
+	.stabn 68,0,225,.L39-LcSM_3
 
 .L39:
 
@@ -5822,9 +5827,9 @@ L357:
 	call	Li__Infix_434343
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (227) / 
+# LINE (226) / 
 
-	.stabn 68,0,227,.L40-LcSM_3
+	.stabn 68,0,226,.L40-LcSM_3
 
 .L40:
 
@@ -5855,9 +5860,9 @@ L357:
 	addl	$4,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (228) / 
+# LINE (227) / 
 
-	.stabn 68,0,228,.L41-LcSM_3
+	.stabn 68,0,227,.L41-LcSM_3
 
 .L41:
 
@@ -5924,10 +5929,10 @@ L356:
 
 L349:
 
-# FAIL ((222, 16), true) / 
+# FAIL ((221, 16), true) / 
 
 	pushl	$33
-	pushl	$445
+	pushl	$443
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -5950,10 +5955,10 @@ L346:
 
 L339:
 
-# FAIL ((220, 12), true) / 
+# FAIL ((219, 12), true) / 
 
 	pushl	$25
-	pushl	$441
+	pushl	$439
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -6104,9 +6109,9 @@ L383:
 
 L387:
 
-# LINE (232) / 
+# LINE (231) / 
 
-	.stabn 68,0,232,.L42-LcSM_3
+	.stabn 68,0,231,.L42-LcSM_3
 
 .L42:
 
@@ -6245,9 +6250,9 @@ L392:
 
 L396:
 
-# LINE (234) / 
+# LINE (233) / 
 
-	.stabn 68,0,234,.L43-LcSM_3
+	.stabn 68,0,233,.L43-LcSM_3
 
 .L43:
 
@@ -6390,9 +6395,9 @@ L402:
 
 L406:
 
-# LINE (236) / 
+# LINE (235) / 
 
-	.stabn 68,0,236,.L44-LcSM_3
+	.stabn 68,0,235,.L44-LcSM_3
 
 .L44:
 
@@ -6421,9 +6426,9 @@ L406:
 	call	Bsexp
 	addl	$16,	%esp
 	movl	%eax,	%ebx
-# LINE (237) / 
+# LINE (236) / 
 
-	.stabn 68,0,237,.L45-LcSM_3
+	.stabn 68,0,236,.L45-LcSM_3
 
 .L45:
 
@@ -6437,9 +6442,9 @@ L406:
 	call	Li__Infix_434343
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (238) / 
+# LINE (237) / 
 
-	.stabn 68,0,238,.L46-LcSM_3
+	.stabn 68,0,237,.L46-LcSM_3
 
 .L46:
 
@@ -6470,9 +6475,9 @@ L406:
 	addl	$4,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (239) / 
+# LINE (238) / 
 
-	.stabn 68,0,239,.L47-LcSM_3
+	.stabn 68,0,238,.L47-LcSM_3
 
 .L47:
 
@@ -6539,10 +6544,10 @@ L405:
 
 L398:
 
-# FAIL ((234, 16), true) / 
+# FAIL ((233, 16), true) / 
 
 	pushl	$33
-	pushl	$469
+	pushl	$467
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -6565,10 +6570,10 @@ L395:
 
 L389:
 
-# FAIL ((232, 12), true) / 
+# FAIL ((231, 12), true) / 
 
 	pushl	$25
-	pushl	$465
+	pushl	$463
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -6591,10 +6596,10 @@ L386:
 
 L19:
 
-# FAIL ((160, 10), true) / 
+# FAIL ((159, 10), true) / 
 
 	pushl	$21
-	pushl	$321
+	pushl	$319
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -6691,11 +6696,11 @@ L424:
 
 L427:
 
-# LINE (148) / 
+# LINE (147) / 
 
-	.stabn 68,0,148,0
+	.stabn 68,0,147,0
 
-	.stabn 68,0,148,.L48-Llast
+	.stabn 68,0,147,.L48-Llast
 
 .L48:
 
@@ -6881,9 +6886,9 @@ L442:
 # CONST (0) / 
 
 	movl	$1,	%ebx
-# LINE (150) / 
+# LINE (149) / 
 
-	.stabn 68,0,150,.L49-Llast
+	.stabn 68,0,149,.L49-Llast
 
 .L49:
 
@@ -7041,9 +7046,9 @@ L446:
 
 L450:
 
-# LINE (151) / 
+# LINE (150) / 
 
-	.stabn 68,0,151,.L50-Llast
+	.stabn 68,0,150,.L50-Llast
 
 .L50:
 
@@ -7224,10 +7229,10 @@ L458:
 
 L452:
 
-# FAIL ((151, 20), true) / 
+# FAIL ((150, 20), true) / 
 
 	pushl	$41
-	pushl	$303
+	pushl	$301
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -7250,10 +7255,10 @@ L449:
 
 L429:
 
-# FAIL ((148, 8), true) / 
+# FAIL ((147, 8), true) / 
 
 	pushl	$17
-	pushl	$297
+	pushl	$295
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -7330,11 +7335,11 @@ L465:
 
 L468:
 
-# LINE (144) / 
+# LINE (143) / 
 
-	.stabn 68,0,144,0
+	.stabn 68,0,143,0
 
-	.stabn 68,0,144,.L51-LgenLabels
+	.stabn 68,0,143,.L51-LgenLabels
 
 .L51:
 
@@ -7430,11 +7435,11 @@ L473:
 
 L476:
 
-# LINE (136) / 
+# LINE (135) / 
 
-	.stabn 68,0,136,0
+	.stabn 68,0,135,0
 
-	.stabn 68,0,136,.L52-Linner_77
+	.stabn 68,0,135,.L52-Linner_77
 
 .L52:
 
@@ -7461,9 +7466,9 @@ L476:
 
 L482:
 
-# LINE (137) / 
+# LINE (136) / 
 
-	.stabn 68,0,137,.L53-Linner_77
+	.stabn 68,0,136,.L53-Linner_77
 
 .L53:
 
@@ -7491,9 +7496,9 @@ L479:
 
 L485:
 
-# LINE (138) / 
+# LINE (137) / 
 
-	.stabn 68,0,138,.L54-Linner_77
+	.stabn 68,0,137,.L54-Linner_77
 
 .L54:
 
@@ -7632,9 +7637,9 @@ L490:
 
 L494:
 
-# LINE (139) / 
+# LINE (138) / 
 
-	.stabn 68,0,139,.L55-Linner_77
+	.stabn 68,0,138,.L55-Linner_77
 
 .L55:
 
@@ -7688,10 +7693,10 @@ L493:
 
 L487:
 
-# FAIL ((138, 15), true) / 
+# FAIL ((137, 15), true) / 
 
 	pushl	$31
-	pushl	$277
+	pushl	$275
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -7770,11 +7775,11 @@ L502:
 
 L505:
 
-# LINE (130) / 
+# LINE (129) / 
 
-	.stabn 68,0,130,0
+	.stabn 68,0,129,0
 
-	.stabn 68,0,130,.L56-LgenLabel
+	.stabn 68,0,129,.L56-LgenLabel
 
 .L56:
 
@@ -7860,11 +7865,11 @@ L510:
 
 L513:
 
-# LINE (125) / 
+# LINE (124) / 
 
-	.stabn 68,0,125,0
+	.stabn 68,0,124,0
 
-	.stabn 68,0,125,.L57-LinitCompEnv
+	.stabn 68,0,124,.L57-LinitCompEnv
 
 .L57:
 
@@ -8019,11 +8024,11 @@ L522:
 
 L525:
 
-# LINE (120) / 
+# LINE (119) / 
 
-	.stabn 68,0,120,0
+	.stabn 68,0,119,0
 
-	.stabn 68,0,120,.L58-Llambda_0_89
+	.stabn 68,0,119,.L58-Llambda_0_89
 
 .L58:
 
@@ -8144,11 +8149,11 @@ L534:
 
 L537:
 
-# LINE (114) / 
+# LINE (113) / 
 
-	.stabn 68,0,114,0
+	.stabn 68,0,113,0
 
-	.stabn 68,0,114,.L59-LevalSM
+	.stabn 68,0,113,.L59-LevalSM
 
 .L59:
 
@@ -8780,11 +8785,11 @@ L557:
 
 L561:
 
-# LINE (70) / 
+# LINE (69) / 
 
-	.stabn 68,0,70,0
+	.stabn 68,0,69,0
 
-	.stabn 68,0,70,.L60-Leval
+	.stabn 68,0,69,.L60-Leval
 
 .L60:
 
@@ -8820,9 +8825,9 @@ L566:
 
 L568:
 
-# LINE (71) / 
+# LINE (70) / 
 
-	.stabn 68,0,71,.L61-Leval
+	.stabn 68,0,70,.L61-Leval
 
 .L61:
 
@@ -9042,9 +9047,9 @@ L573:
 
 L577:
 
-# LINE (73) / 
+# LINE (72) / 
 
-	.stabn 68,0,73,.L62-Leval
+	.stabn 68,0,72,.L62-Leval
 
 .L62:
 
@@ -9302,9 +9307,9 @@ L583:
 
 L587:
 
-# LINE (74) / 
+# LINE (73) / 
 
-	.stabn 68,0,74,.L63-Leval
+	.stabn 68,0,73,.L63-Leval
 
 .L63:
 
@@ -9388,10 +9393,10 @@ L586:
 
 L579:
 
-# FAIL ((73, 10), true) / 
+# FAIL ((72, 10), true) / 
 
 	pushl	$21
-	pushl	$147
+	pushl	$145
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -9612,9 +9617,9 @@ L603:
 
 L607:
 
-# LINE (76) / 
+# LINE (75) / 
 
-	.stabn 68,0,76,.L64-Leval
+	.stabn 68,0,75,.L64-Leval
 
 .L64:
 
@@ -9827,9 +9832,9 @@ L620:
 
 L624:
 
-# LINE (78) / 
+# LINE (77) / 
 
-	.stabn 68,0,78,.L65-Leval
+	.stabn 68,0,77,.L65-Leval
 
 .L65:
 
@@ -9964,9 +9969,9 @@ L628:
 
 L632:
 
-# LINE (79) / 
+# LINE (78) / 
 
-	.stabn 68,0,79,.L66-Leval
+	.stabn 68,0,78,.L66-Leval
 
 .L66:
 
@@ -10052,10 +10057,10 @@ L631:
 
 L626:
 
-# FAIL ((78, 10), true) / 
+# FAIL ((77, 10), true) / 
 
 	pushl	$21
-	pushl	$157
+	pushl	$155
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -10223,9 +10228,9 @@ L647:
 
 L651:
 
-# LINE (82) / 
+# LINE (81) / 
 
-	.stabn 68,0,82,.L67-Leval
+	.stabn 68,0,81,.L67-Leval
 
 .L67:
 
@@ -10360,9 +10365,9 @@ L655:
 
 L659:
 
-# LINE (83) / 
+# LINE (82) / 
 
-	.stabn 68,0,83,.L68-Leval
+	.stabn 68,0,82,.L68-Leval
 
 .L68:
 
@@ -10455,10 +10460,10 @@ L658:
 
 L653:
 
-# FAIL ((82, 10), true) / 
+# FAIL ((81, 10), true) / 
 
 	pushl	$21
-	pushl	$165
+	pushl	$163
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -10679,9 +10684,9 @@ L674:
 
 L678:
 
-# LINE (85) / 
+# LINE (84) / 
 
-	.stabn 68,0,85,.L69-Leval
+	.stabn 68,0,84,.L69-Leval
 
 .L69:
 
@@ -10961,9 +10966,9 @@ L693:
 
 L697:
 
-# LINE (87) / 
+# LINE (86) / 
 
-	.stabn 68,0,87,.L70-Leval
+	.stabn 68,0,86,.L70-Leval
 
 .L70:
 
@@ -11098,9 +11103,9 @@ L701:
 
 L705:
 
-# LINE (88) / 
+# LINE (87) / 
 
-	.stabn 68,0,88,.L71-Leval
+	.stabn 68,0,87,.L71-Leval
 
 .L71:
 
@@ -11185,10 +11190,10 @@ L704:
 
 L699:
 
-# FAIL ((87, 10), true) / 
+# FAIL ((86, 10), true) / 
 
 	pushl	$21
-	pushl	$175
+	pushl	$173
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -11409,9 +11414,9 @@ L720:
 
 L724:
 
-# LINE (90) / 
+# LINE (89) / 
 
-	.stabn 68,0,90,.L72-Leval
+	.stabn 68,0,89,.L72-Leval
 
 .L72:
 
@@ -11592,9 +11597,9 @@ L732:
 
 L736:
 
-# LINE (91) / 
+# LINE (90) / 
 
-	.stabn 68,0,91,.L73-Leval
+	.stabn 68,0,90,.L73-Leval
 
 .L73:
 
@@ -11828,9 +11833,9 @@ L744:
 
 L748:
 
-# LINE (92) / 
+# LINE (91) / 
 
-	.stabn 68,0,92,.L74-Leval
+	.stabn 68,0,91,.L74-Leval
 
 .L74:
 
@@ -12131,9 +12136,9 @@ L758:
 
 L762:
 
-# LINE (94) / 
+# LINE (93) / 
 
-	.stabn 68,0,94,.L75-Leval
+	.stabn 68,0,93,.L75-Leval
 
 .L75:
 
@@ -12268,9 +12273,9 @@ L766:
 
 L770:
 
-# LINE (95) / 
+# LINE (94) / 
 
-	.stabn 68,0,95,.L76-Leval
+	.stabn 68,0,94,.L76-Leval
 
 .L76:
 
@@ -12296,9 +12301,9 @@ L770:
 
 L776:
 
-# LINE (96) / 
+# LINE (95) / 
 
-	.stabn 68,0,96,.L77-Leval
+	.stabn 68,0,95,.L77-Leval
 
 .L77:
 
@@ -12365,9 +12370,9 @@ L773:
 
 L786:
 
-# LINE (97) / 
+# LINE (96) / 
 
-	.stabn 68,0,97,.L78-Leval
+	.stabn 68,0,96,.L78-Leval
 
 .L78:
 
@@ -12427,10 +12432,10 @@ L769:
 
 L764:
 
-# FAIL ((94, 10), true) / 
+# FAIL ((93, 10), true) / 
 
 	pushl	$21
-	pushl	$189
+	pushl	$187
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -12651,9 +12656,9 @@ L797:
 
 L801:
 
-# LINE (100) / 
+# LINE (99) / 
 
-	.stabn 68,0,100,.L79-Leval
+	.stabn 68,0,99,.L79-Leval
 
 .L79:
 
@@ -12877,9 +12882,9 @@ L815:
 
 L819:
 
-# LINE (102) / 
+# LINE (101) / 
 
-	.stabn 68,0,102,.L80-Leval
+	.stabn 68,0,101,.L80-Leval
 
 .L80:
 
@@ -13211,9 +13216,9 @@ L827:
 
 L831:
 
-# LINE (103) / 
+# LINE (102) / 
 
-	.stabn 68,0,103,.L81-Leval
+	.stabn 68,0,102,.L81-Leval
 
 .L81:
 
@@ -13313,10 +13318,10 @@ L830:
 
 L821:
 
-# FAIL ((102, 10), true) / 
+# FAIL ((101, 10), true) / 
 
 	pushl	$21
-	pushl	$205
+	pushl	$203
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -13484,9 +13489,9 @@ L847:
 
 L851:
 
-# LINE (106) / 
+# LINE (105) / 
 
-	.stabn 68,0,106,.L82-Leval
+	.stabn 68,0,105,.L82-Leval
 
 .L82:
 
@@ -13621,9 +13626,9 @@ L855:
 
 L859:
 
-# LINE (107) / 
+# LINE (106) / 
 
-	.stabn 68,0,107,.L83-Leval
+	.stabn 68,0,106,.L83-Leval
 
 .L83:
 
@@ -13676,10 +13681,10 @@ L858:
 
 L853:
 
-# FAIL ((106, 10), true) / 
+# FAIL ((105, 10), true) / 
 
 	pushl	$21
-	pushl	$213
+	pushl	$211
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -13702,10 +13707,10 @@ L850:
 
 L563:
 
-# FAIL ((70, 8), true) / 
+# FAIL ((69, 8), true) / 
 
 	pushl	$17
-	pushl	$141
+	pushl	$139
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -13728,10 +13733,10 @@ L560:
 
 L553:
 
-# FAIL ((69, 44), true) / 
+# FAIL ((68, 44), true) / 
 
 	pushl	$89
-	pushl	$139
+	pushl	$137
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -13804,11 +13809,11 @@ L867:
 
 L870:
 
-# LINE (61) / 
+# LINE (60) / 
 
-	.stabn 68,0,61,0
+	.stabn 68,0,60,0
 
-	.stabn 68,0,61,.L84-Lcompznz
+	.stabn 68,0,60,.L84-Lcompznz
 
 .L84:
 
@@ -13853,9 +13858,9 @@ L875:
 
 L877:
 
-# LINE (62) / 
+# LINE (61) / 
 
-	.stabn 68,0,62,.L85-Lcompznz
+	.stabn 68,0,61,.L85-Lcompznz
 
 .L85:
 
@@ -13926,9 +13931,9 @@ L874:
 
 L883:
 
-# LINE (63) / 
+# LINE (62) / 
 
-	.stabn 68,0,63,.L86-Lcompznz
+	.stabn 68,0,62,.L86-Lcompznz
 
 .L86:
 
@@ -13961,10 +13966,10 @@ L882:
 
 L872:
 
-# FAIL ((61, 8), true) / 
+# FAIL ((60, 8), true) / 
 
 	pushl	$17
-	pushl	$123
+	pushl	$121
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -14041,11 +14046,11 @@ L887:
 
 L890:
 
-# LINE (57) / 
+# LINE (56) / 
 
-	.stabn 68,0,57,0
+	.stabn 68,0,56,0
 
-	.stabn 68,0,57,.L87-LfromLabel
+	.stabn 68,0,56,.L87-LfromLabel
 
 .L87:
 
@@ -14143,20 +14148,20 @@ L896:
 
 L899:
 
-# LINE (39) / 
+# LINE (38) / 
 
-	.stabn 68,0,39,0
+	.stabn 68,0,38,0
 
-	.stabn 68,0,39,.L88-LinitEvalEnv
+	.stabn 68,0,38,.L88-LinitEvalEnv
 
 .L88:
 
 # LDA (Local (0)) / 
 
 	leal	-4(%ebp),	%ebx
-# LINE (40) / 
+# LINE (39) / 
 
-	.stabn 68,0,40,.L89-LinitEvalEnv
+	.stabn 68,0,39,.L89-LinitEvalEnv
 
 .L89:
 
@@ -14177,9 +14182,9 @@ L899:
 	addl	$4,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (48) / 
+# LINE (47) / 
 
-	.stabn 68,0,48,.L90-LinitEvalEnv
+	.stabn 68,0,47,.L90-LinitEvalEnv
 
 .L90:
 
@@ -14235,9 +14240,9 @@ L899:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (50) / 
+# LINE (49) / 
 
-	.stabn 68,0,50,.L91-LinitEvalEnv
+	.stabn 68,0,49,.L91-LinitEvalEnv
 
 .L91:
 
@@ -14328,11 +14333,11 @@ L912:
 
 L915:
 
-# LINE (51) / 
+# LINE (50) / 
 
-	.stabn 68,0,51,0
+	.stabn 68,0,50,0
 
-	.stabn 68,0,51,.L92-Llambda_2_150
+	.stabn 68,0,50,.L92-Llambda_2_150
 
 .L92:
 
@@ -14464,10 +14469,10 @@ L924:
 
 L917:
 
-# FAIL ((51, 11), true) / 
+# FAIL ((50, 11), true) / 
 
 	pushl	$23
-	pushl	$103
+	pushl	$101
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -14774,11 +14779,11 @@ L937:
 
 L941:
 
-# LINE (42) / 
+# LINE (41) / 
 
-	.stabn 68,0,42,0
+	.stabn 68,0,41,0
 
-	.stabn 68,0,42,.L93-Llambda_3_156
+	.stabn 68,0,41,.L93-Llambda_3_156
 
 .L93:
 
@@ -14814,9 +14819,9 @@ L946:
 
 L948:
 
-# LINE (43) / 
+# LINE (42) / 
 
-	.stabn 68,0,43,.L94-Llambda_3_156
+	.stabn 68,0,42,.L94-Llambda_3_156
 
 .L94:
 
@@ -15276,10 +15281,10 @@ L969:
 
 L943:
 
-# FAIL ((42, 18), true) / 
+# FAIL ((41, 18), true) / 
 
 	pushl	$37
-	pushl	$85
+	pushl	$83
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -15302,10 +15307,10 @@ L940:
 
 L935:
 
-# FAIL ((41, 11), true) / 
+# FAIL ((40, 11), true) / 
 
 	pushl	$23
-	pushl	$83
+	pushl	$81
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure
@@ -15377,11 +15382,11 @@ L976:
 
 L979:
 
-# LINE (34) / 
+# LINE (33) / 
 
-	.stabn 68,0,34,0
+	.stabn 68,0,33,0
 
-	.stabn 68,0,34,.L95-LshowSM
+	.stabn 68,0,33,.L95-LshowSM
 
 .L95:
 
@@ -15609,11 +15614,11 @@ L992:
 
 L995:
 
-# LINE (16) / 
+# LINE (15) / 
 
-	.stabn 68,0,16,0
+	.stabn 68,0,15,0
 
-	.stabn 68,0,16,.L96-LshowSMInsn
+	.stabn 68,0,15,.L96-LshowSMInsn
 
 .L96:
 
@@ -15853,9 +15858,9 @@ L1014:
 
 L1018:
 
-# LINE (19) / 
+# LINE (18) / 
 
-	.stabn 68,0,19,.L97-LshowSMInsn
+	.stabn 68,0,18,.L97-LshowSMInsn
 
 .L97:
 
@@ -15980,9 +15985,9 @@ L1023:
 
 L1027:
 
-# LINE (20) / 
+# LINE (19) / 
 
-	.stabn 68,0,20,.L98-LshowSMInsn
+	.stabn 68,0,19,.L98-LshowSMInsn
 
 .L98:
 
@@ -16107,9 +16112,9 @@ L1032:
 
 L1036:
 
-# LINE (21) / 
+# LINE (20) / 
 
-	.stabn 68,0,21,.L99-LshowSMInsn
+	.stabn 68,0,20,.L99-LshowSMInsn
 
 .L99:
 
@@ -16234,9 +16239,9 @@ L1041:
 
 L1045:
 
-# LINE (22) / 
+# LINE (21) / 
 
-	.stabn 68,0,22,.L100-LshowSMInsn
+	.stabn 68,0,21,.L100-LshowSMInsn
 
 .L100:
 
@@ -16433,9 +16438,9 @@ L1057:
 
 L1061:
 
-# LINE (24) / 
+# LINE (23) / 
 
-	.stabn 68,0,24,.L101-LshowSMInsn
+	.stabn 68,0,23,.L101-LshowSMInsn
 
 .L101:
 
@@ -16560,9 +16565,9 @@ L1066:
 
 L1070:
 
-# LINE (25) / 
+# LINE (24) / 
 
-	.stabn 68,0,25,.L102-LshowSMInsn
+	.stabn 68,0,24,.L102-LshowSMInsn
 
 .L102:
 
@@ -16687,9 +16692,9 @@ L1075:
 
 L1079:
 
-# LINE (26) / 
+# LINE (25) / 
 
-	.stabn 68,0,26,.L103-LshowSMInsn
+	.stabn 68,0,25,.L103-LshowSMInsn
 
 .L103:
 
@@ -16853,9 +16858,9 @@ L1084:
 
 L1088:
 
-# LINE (27) / 
+# LINE (26) / 
 
-	.stabn 68,0,27,.L104-LshowSMInsn
+	.stabn 68,0,26,.L104-LshowSMInsn
 
 .L104:
 
@@ -17039,10 +17044,10 @@ L1103:
 
 L997:
 
-# FAIL ((16, 8), true) / 
+# FAIL ((15, 8), true) / 
 
 	pushl	$17
-	pushl	$33
+	pushl	$31
 	pushl	$string_0
 	pushl	%ebx
 	call	Bmatch_failure

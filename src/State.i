@@ -1,4 +1,15 @@
 I,Std;
-F,emptyState;
+I,Collection;
+I,List;
+I,Lexer;
+I,Parser;
+F,lookup;
 F,i__Infix_6045;
+F,enterScope;
+F,leaveScope;
+F,addName;
+F,enterFunction;
+F,leaveFunction;
+F,getGlobal;
+F,emptyState;
 N,"<-",A,":=";

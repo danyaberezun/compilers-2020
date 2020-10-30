@@ -1,8 +1,9 @@
 -- Expression evaluator
-
 import List;
 import State;
 import World;
+import Lexer;
+import Parser;
 
 -- As association map which maps "\otimes" into "\oplus"
 local ops = {
@@ -35,7 +36,7 @@ public fun evalOp (op, l, r) {
 --
 -- A expression is represented by a data structure of the following shape:
 --
--- expr = Assn   (expr, expr)         |
+-- expr = Assn   (string, expr)       |
 --        Seq    (expr, expr)         |
 --        Skip                        |
 --        Read   (string)             |
@@ -47,8 +48,44 @@ public fun evalOp (op, l, r) {
 --        Ref    (string)             |
 --        Const  (int)                |
 --        Binop  (string, expr, expr) |
+--        Scope  (def list, expr)     |
+--        Call   (string, expr list)  |
 --        Ignore (expr)
+--
+-- A definition is either a local variable definition or a function
+-- definition:
+--
+-- def = Local (string list)                |
+--       Fun   (string, string list, expr)
 
+-- Helper function: checks that given name designates a regular variable in
+-- a given state
+fun checkVar (state, name) {
+  case state.lookup (name) of
+    Var (_) -> skip
+  | _       -> error (sprintf ("the name ""%s"" does not designate a variable", name), getLoc (name))
+  esac
+}
+
+-- Helper function: checks that given name designates a function in
+-- a given state
+fun checkFun (state, name) {
+  case state.lookup (name) of
+    Fun (_, _) -> skip
+  | _          -> error (sprintf ("the name ""%s"" does not designate a function", name), getLoc (name))
+  esac
+}
+
+-- Helper function: adds a bunch of regular variables current scope
+fun addNames (state, names) {
+  foldl (fun (s, name) {s.addName (name, Var (0))}, state, names)
+}
+
+-- Helper function: adds a function in current scope
+fun addFunction (state, name, args, body) {
+  state.addName (name, Fun (args, body))
+}
+                                        
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values
 fun evalList (c, exprs) {
@@ -63,10 +100,25 @@ fun evalList (c, exprs) {
   esac
 }
 
+fun evalDef (c@[s, w], def_list) {
+  case def_list of
+    {}                            -> c
+  | Local (names)            : dt -> evalDef ([addNames    (s, names), w],            dt)
+  | Fun   (name, args, body) : dt -> evalDef ([addFunction (s, name, args, body), w], dt) 
+  esac
+}
+
+fun assignNames (c@[s, w], names, values) {
+  case names of
+    {}        -> c
+  | name : nt -> case values of val : vt -> assignNames ([s.addName(name, val), w], nt, vt) esac
+  esac
+}
+
 fun eval (c@[s, w], expr) {
   case expr of
     Const (z)         -> [c, z]
-  | Var   (x)         -> [c, s (x)]
+  | Var   (x)         -> [c, s.lookup(x, 0)]
   | Ref   (x)         -> [c, Ref (x)]
   | Binop (op, l, r)  -> 
     case evalList (c, {l, r}) of
@@ -91,18 +143,33 @@ fun eval (c@[s, w], expr) {
     case eval (c, e) of
       [c, v] -> if v then eval (eval (c, st)[0], While (e, st)) else [c, None] fi
     esac
-  | Repeat (st, e)    ->
+  | Repeat (st, e)      ->
     case eval (eval (c, st)[0], e) of
       [c, v] -> if v then [c, None] else eval (c, Repeat (st, e)) fi
     esac
-  | Ignor (e)       -> [eval (c, e)[0], None]
+  | Scope (def_list, e) ->
+    case eval (evalDef ([s.enterScope, w], def_list), e) of
+      [[s, w], v] -> [[s.leaveScope, w], v]
+    esac
+  | Call (func, e_list) -> 
+    case s.lookup(func, 0) of 
+      Fun (args, body) ->
+      case evalList (c, e_list) of
+        [[s, w], vl] ->
+        case eval (assignNames ([s.enterFunction, w], args, vl), body) of
+          [[s0, w0], v] -> [[leaveFunction (s, getGlobal (s0)), w0], v]
+        esac
+      esac
+    esac
+  | Ignor (e)         -> [eval (c, e)[0], None]
   esac
 }
 
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
-  case eval ([emptyState, createWorld (input)], expr) of
-    [c, _] -> c.snd.getOutput
+  case eval ([emptyState (), createWorld (input)], expr) of
+    [c, _] ->  c.snd.getOutput
   esac
 }
+

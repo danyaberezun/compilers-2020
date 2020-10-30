@@ -6,4 +6,5 @@ I,Fun;
 F,getMode;
 F,getInFile;
 F,dumpSM;
+F,dumpAST;
 F,getBaseName;
