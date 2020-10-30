@@ -8,6 +8,22 @@ import Expr;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
+
+public fun showSMInsn (i) {
+  case i of
+    READ      -> sprintf ("READ")
+  | WRITE     -> sprintf ("WRITE")
+  | BINOP (s) -> sprintf ("BINOP %s", s)
+  | LD    (x) -> sprintf ("LD %s", x)
+  | ST    (x) -> sprintf ("ST %s", x)
+  | CONST (n) -> sprintf ("CONST %d", n)
+  esac
+}
+
+public fun showSM (prg) {
+  map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
+}
+
 fun eval (c@[st, state, w], insns) {
 	case insns of
 		  READ : p -> local world = readWorld(w); eval([world[0] : st, state, world[1]], p)
