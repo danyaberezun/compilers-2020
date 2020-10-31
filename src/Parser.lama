@@ -15,45 +15,33 @@ fun inbr (l, p, r) {
 local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
                                    x=lident  {Var (x)}               |
                                    inbr[s("("), exp, s(")")]),
-<<<<<<< HEAD
-      product = memo $ eta syntax (
-        primary |
-        l=product op=(s["*"] | s["/"] | s["%"]) r=primary {Binop(op, l, r)}
-      ),
-      sum = memo $ eta syntax (
-        product |
-        l=sum op=(s["+"] | s["-"]) r=product {Binop(op, l, r)}
-      ),
-      comp = memo $ eta syntax (
-        sum |
-        l=sum op=(s["<"] | s[">"] | s["=="] | s["!="] | s["<="] | s[">="]) r=sum
-          {Binop(op, l, r)}
-      ),
-      conj = memo $ eta syntax (
-        comp |
-        l=conj op=s["&&"] r=comp {Binop(op, l, r)}
-      ),
-      disj = memo $ eta syntax (
-        conj |
-        l=disj op=s["!!"] r=conj {Binop(op, l, r)}
-      ),
-      exp = memo $ eta syntax (
-        disj
-    );
+      exp = memo $ eta (expr(binaryOperators, primary));
 
-local stmt = memo $ eta syntax (
-        kRead x=inbr[s("("), lident, s(")")] {Read(x)} |
-        kWrite e=inbr[s("("), exp, s(")")] {Write(e)} |
-        x=lident s[":="] e=exp {Assn(x, e)} |
-        s1=stmt s[";"] s2=stmt end {Seq(s1, s2)}
-    );
-=======
-      exp = memo $ eta (failure ("expression parsing not implemented\n"));
+local binaryOperators = asBinopLevelDescriptor.map(
+  {[Left, singleton ("!!")],
+   [Left, singleton ("&&")],
+   [Nona, {"==", "!=", "<", "<=", ">=", ">"}],
+   [Left, {"+", "-"}],
+   [Left, {"*", "/", "%"}]}
+);
 
-local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
->>>>>>> 446de7f73f136a9037c03c5298f28abbbc3c95ea
-   
+fun asBinopLevelDescriptor([assoc, operatorList]) {
+  [assoc, map (fun (op) { [s(op), binop] }, operatorList)]
+}
+
+fun binop (l, op, r) {
+  Binop (op, l, r)
+}
+
+local stmt = memo $ eta (seqParser |> bypass(end));
+
+local assnParser = memo $ eta syntax (name=lident s[":="] value=exp {Assn (name, value)}),
+      readParser = memo $ eta syntax (kRead s["("] name=lident s[")"] {Read (name)}),
+      writeParser = memo $ eta syntax (kWrite s["("] value=exp s[")"] {Write (value)}),
+      skipParser = memo $ eta syntax (kSkip {Skip}),
+      singleStatementParser = memo $ eta (assnParser | readParser | writeParser | skipParser),
+      seqParser = memo $ eta syntax (stmt=singleStatementParser s[";"] tail=seqParser {Seq (stmt, tail)} |
+                                     singleStatementParser);
 
 -- Public top-level parser
 public parse = stmt;
-             

@@ -1,17 +1,14 @@
--- Stack machine.
+-- Stack maSchine.
 
 import List;
 import World;
 import State;
 import Expr;
-<<<<<<< HEAD
-=======
 import Buffer;
 import Fun;
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
->>>>>>> 446de7f73f136a9037c03c5298f28abbbc3c95ea
 public fun showSMInsn (i) {
   case i of
     READ      -> sprintf ("READ")
@@ -29,20 +26,28 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
--- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-fun eval (c@[st, state, w], insns) {
-	case insns of
+fun eval (c, insns) {
+  foldl (evalInstruction, c, insns)
+}
 
-		  {} -> [st, state, w]
-		| BINOP(op) : s -> eval([binop(op, st[1][0], st[0]) : st[1][1], state, w], s)
-		| CONST(n)  : s -> eval([n : st, state, w], s)
-		| READ      : s -> local world_ = readWorld(w); eval([world_[0] : st, state, world_[1]], s)
-		| WRITE     : s -> eval([st[1], state, writeWorld(st[0], w)], s)
-		| LD(x)     : s -> eval([state(x) : st, state, w], s)
-		| ST(x)     : s -> eval([st[1], state <- [x, st[0]], w], s)
 
-	esac
-  
+fun evalInstruction ([stack, state, world], instruction) {
+  case instruction of
+    CONST (val)  -> [val:stack, state, world]
+  | LD (name)    -> [state(name):stack, state, world]
+  | ST (name)    -> case stack of
+                      x:stackTail -> [stackTail, state <- [name, x], world]
+                    esac
+  | BINOP (op)   -> case stack of
+                      x:y:stackTail -> [evalOp (op, y, x):stackTail, state, world]
+                    esac
+  | READ         -> case readWorld (world) of
+                     [value, newWorld] -> [value:stack, state, newWorld]
+                    esac
+  | WRITE        -> case stack of
+                     value:stackTail -> [stackTail, state, writeWorld (value, world)]
+                    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -54,26 +59,22 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-    case expr of
-
-		  Const (n) 	  ->  singleton(CONST(n))
-		| Var (x) 		  ->  singleton(LD(x))
-		| Binop(op, l, r) ->  compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op)) 
-	  
-    esac
+  case expr of
+    Const (val)             -> singleton (CONST (val))
+  | Var (name)              -> singleton (LD (name))
+  | Binop (op, left, right) -> compileExpr (left) +++ compileExpr (right) +++ singleton (BINOP (op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-    case stmt of
-  	
-		  Assn(x, e) 		-> compileExpr(e) +++ singleton(ST(x))
-		| Write(x)	 		-> compileExpr(x) +++ singleton(WRITE)
-		| Read(x) 	 		-> singleton(READ) +++ singleton(ST(x))
-		| Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2)
-		| Skip 				-> {}
-
+  case stmt of
+    Assn (name, expr)   -> compileExpr (expr) +++ singleton (ST (name))
+  | Seq  (stmt1, stmt2) -> compileSM (stmt1) +++ compileSM (stmt2)
+  | Skip                -> {}
+  | Read (name)         -> {READ, ST (name)}
+  | Write (expr)        -> compileExpr (expr) +++ singleton (WRITE)
   esac
 }
