@@ -59,10 +59,6 @@ public fun evalOp (op, l, r) {
 -- def = Local (string list)                |
 --       Fun   (string, string list, expr)
 
-fun lookup(state, name) {
-  failure("lookup not implemented")
-}
-
 -- Helper function: checks that given name designates a regular variable in
 -- a given state
 fun checkVar (state, name) {
@@ -81,9 +77,6 @@ fun checkFun (state, name) {
   esac
 }
 
-fun addName(state, name, value) {
-  failure("addName not implemented\n")
-}
 
 -- Helper function: adds a bunch of regular variables current scope
 fun addNames (state, names) {
@@ -110,7 +103,7 @@ fun evalList (c, exprs) {
 }
 
 fun eval (c@[s, w], expr) {
-  -- failure("%s\n", expr.string);
+  -- printf("%s\n", expr.string);
   case expr of
     Assn (dest, exp) -> case evalList(c, {exp, dest}) of
       [[s, w], val:ref:_] -> [[s <- [ref, val], w], val]
@@ -134,11 +127,36 @@ fun eval (c@[s, w], expr) {
     Repeat (body, cond) -> case evalList(c, {body, cond}) of
       [c, _:val:_] -> if val then [c, Void] else eval(c, expr) fi
     esac |
-    Var (name) -> [c, s(name)] |
+    Var (name) -> [c, lookup(s, name)] |
     Ref (name) -> [c, name] |
     Const (val) -> [c, val] |
     Binop (op, exp1, exp2) -> case evalList(c, {exp1, exp2}) of
       [c, val1:val2:_] -> [c, evalOp(op, val1, val2)]
+    esac |
+    Scope (defs, expr) -> case
+      foldl(fun (s, def) {
+        case def of
+          Local (names) -> addNames(s, names) |
+          Fun (names, args, body) -> addFunction(s, names, args, body)
+        esac
+      }, enterScope(s), defs)
+    of
+      s -> case eval([s, w], expr) of
+        [[s, w], val] -> [[leaveScope(s), w], val]
+      esac
+    esac |
+    Call (name, args) -> case evalList(c, args) of
+      [[s, w], vals] -> case lookup(s, name) of
+        Fun (args, body) -> case 
+          foldl(fun (s, [name, value]) {
+              addName(s, name, value)
+            }, enterFunction(s), zip(args, vals))
+        of
+          fs -> case eval([fs, w], body) of
+            [[fs, w], res] -> [[leaveFunction(s, getGlobal(fs)), w], res]
+          esac
+        esac
+      esac
     esac |
     Ignore (exp) -> [eval(c, exp)[0], Void]
   esac
@@ -147,7 +165,7 @@ fun eval (c@[s, w], expr) {
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
-  case eval ([emptyState, createWorld (input)], expr) of
+  case eval ([emptyState(), createWorld (input)], expr) of
     [c, _] -> c.snd.getOutput
   esac
 }
