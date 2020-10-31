@@ -6,41 +6,36 @@ import State;
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
-<<<<<<< HEAD
-
-public fun binop(op, l, r) {
-    case op of
-		  "+" -> l + r 
-		| "-" -> l - r 
-		| "*" -> l * r 
-		| "/" -> l / r 
-		| "%" -> l % r
-		| "==" -> l == r 
-		| "!=" -> l != r 
-		| "<" -> l < r 
-		| ">" -> l > r 
-		| "<=" -> l <= r 
-		| ">=" -> l >= r 
-		| "&&" -> l && r 
-		| "!!" -> l !! r
-    esac
-}
-=======
 --
 -- An expression is represented by a data structure of the following shape:
 --
 -- expr = Var   (string)             |
 --        Const (int)                |
 --        Binop (string, expr, expr)
->>>>>>> 446de7f73f136a9037c03c5298f28abbbc3c95ea
 
 public fun evalExpr (st, expr) {
-	case expr of
-	
-		  Var (x)	-> return st(x)
-		| Binop (op, l, r) ->return binop(op, evalExpr(st, l), evalExpr(st, r))
-		| Const (n)	->return n
-		
-	
-	esac
+  case expr of
+    Var (name)              -> st (name)
+  | Const (val)             -> val
+  | Binop (op, left, right) -> evalOp (op, evalExpr (st, left), evalExpr (st, right))
+  esac
+}
+
+
+public fun evalOp (op, left, right) {
+  case op of
+    "+"  -> left + right
+  | "-"  -> left - right
+  | "*"  -> left * right
+  | "/"  -> left / right
+  | "%"  -> left % right
+  | "==" -> left == right
+  | "!=" -> left != right
+  | "<"  -> left < right
+  | "<=" -> left <= right
+  | ">"  -> left > right
+  | ">=" -> left >= right
+  | "&&" -> left && right
+  | "!!" -> left !! right
+  esac
 }
