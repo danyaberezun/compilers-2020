@@ -306,24 +306,18 @@ fun compile (env, code) {
             	[y, x, env] -> case env.allocate of
               	  [s, env] -> case op of
               	  
-			 "/"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, x)]
-			| "%"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, x)]
+			 "/"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, s)]
+			| "%"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, s)]
 			
 			| "+"  -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
 			| "-"  -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
 			| "*"  -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
-			| "&&" -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
-			| "!!" -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
-			
-			
-			| "<"    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-			| "<="    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-			| "=="    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-			| "!="    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-			| ">="    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-			| ">"    -> [env, code <+ Binop("cmp", y, x) <+ Set(suffix(op), "%al") <+ Mov(eax, x)]
-	      esac
-             esac
+			| "&&" -> [env, code <+  Mov (x, edx) <+ Binop ("*", y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+                
+                	| "!!" -> [env, code <+  Mov (x, edx) <+ Binop ("!!", y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+			| _ 	-> [env, code <+ Mov(y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+	      		esac
+             	esac
             esac
         esac
       }, [env, emptyBuffer ()], code)
