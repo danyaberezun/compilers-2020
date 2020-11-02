@@ -1,4 +1,4 @@
--- Parser 
+-- Parser
 
 import Ostap;
 import Lexer;
@@ -12,14 +12,68 @@ fun inbr (l, p, r) {
   syntax (-l p -r)
 }
 
--- Primary expression
-local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
-                            lident  @ fun (x) {Var (x)} |
-                            inbr (s ("("), exp, s (")"))),
-      exp = memo $ eta (failure ("expression parsing not implemented\n"));
+-- checkpoint debug parser
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+fun checkpoint(i) {
+ syntax(token[""] { fprintf(stderr, "Checkpoint %s\n", i.string); i})
+}
 
-local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
-   
+local mkBinop = fun(l, op, r) {Binop (op, l, r)};
+fun sCheckpoint(op) {
+ syntax(-checkpoint[op] s[op])
+}
+
+-- precedance of operator and their semantics
+local opPrecedanceAndSemantics = {
+  [Left,  -- \lor lowest priority
+    singleton([s("!!"), mkBinop])
+  ],
+  [Left, -- \land has more priority than \lor
+      singleton([s("&&"), mkBinop])
+  ],
+  [Nona, { -- comparisons has more priority, than \land and \lor
+      [s(">"),  mkBinop],
+      [s("<"),  mkBinop],
+      [s(">="), mkBinop],
+      [s("<="), mkBinop],
+      [s("=="), mkBinop],
+      [s("!="), mkBinop]
+    }],
+  [Left, { -- + and - has more priority, than comparisons
+      [s("+"), mkBinop],
+      [s("-"), mkBinop]
+    }],
+  [Left, { -- * and / has highest priority
+      [s("*"), mkBinop],
+      [s("/"), mkBinop],
+      [s("%"), mkBinop]
+    }]
+};
+
+-- Primary expression
+local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
+                                   x=lident {Var (x)}               |
+                                   res=inbr[s("("), exp, s(")")]),
+      exp = expr(opPrecedanceAndSemantics, primary);
+
+local stmt = memo $ eta syntax (
+                                kRead x=inbr[s("("), lident, s(")")]         {  Read  (x)         } |
+                                kWrite y=inbr[s("("), exp, s(")")]           {  Write (y)         } |
+                                x=lident s[":="] y=exp                       {  Assn  (x, y)      } |
+                                kSkip                                        {  Skip              } |
+                                kIf cond=exp kThen s1=seqq s2=ifTailParser   {  If (cond, s1, s2) } |
+                                kWhile cond=exp kDo s=seqq kOd               {  While (cond, s)   } |
+                                kRepeat s=seqq kUntil cond=exp               {  Repeat (s, cond)  } |
+                                kFor e1=seqq s[","] e2=exp s[","] e3=seqq kDo s=seqq kOd
+                                   { Seq (e1, While(e2, Seq(s, e3))) }
+                                ),
+       ifTailParser = memo $ eta syntax(-kFi                                         {  Skip             } |
+                                        -kElse seqq -kFi                                                   |
+                                        kElif cond=exp kThen s1=seqq s2=ifTailParser {  If (cond, s1, s2) }
+                                        ),
+       seqq  =  memo $ eta syntax (stmt | s1=stmt s[";"] s2=seqq { Seq   (s1, s2) });
+
 
 -- Public top-level parser
-public parse = stmt;
+public parse = seqq; -- syntax (s=seqq {fprintf(stderr, "Parsed: %s\n", s.string); s});
+
