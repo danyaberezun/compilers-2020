@@ -7,6 +7,7 @@ import Fun;
 import Matcher;
 import Ref;
 import Collection;
+import Debug;
 
 -- Signals an error; takes an error message and location info
 fun error (msg, loc) {
@@ -52,86 +53,105 @@ fun binop (op) {
   ]
 }
 
-local primary  = memo $ eta syntax (
-                                    -- decimal constant
-                                    loc=pos x=decimal                                 {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
+local
+  primary  = memo $ eta syntax 
+    (
+    -- decimal constant
+    loc=pos x=decimal { fun (a) {assertValue (a, Const (stringInt (x)), loc)}} |
+  
+    -- identifier
+    x=lident { fun (a) {
+		  dibg2("identifier: %s, attr: %s", x, a);
+      case a of
+        Ref  -> Ref (x)
+      | Void -> Ignore (Var (x))
+      | _    -> Var (x)
+      esac
+    }} |
 
-                                    -- identifier
-                                    x=lident                                          {fun (a) {
-                                                                                         case a of
-                                                                                           Ref  -> Ref (x)
-                                                                                         | Void -> Ignore (Var (x))
-                                                                                         | _    -> Var (x)
-                                                                                         esac
-                                                                                      }} |
-                                    $(failure ("the rest of primary parsing in not implemented\n"))),
-      basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
-                                                        fun (l, loc, r) {
-                                                          fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
-                                                        }])],
-                                    [Left , map (binop, singleton ("!!"))],
-                                    [Left , map (binop, singleton ("&&"))],
-                                    [Nona , map (binop, {"==", "!=", "<", ">", "<=", ">="})],
-                                    [Left , map (binop, {"+", "-"})],
-                                    [Left , map (binop, {"*", "/", "%"})]
-                                   },
-                                   primary)),
-      exp      = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
+		-- read
+		loc=pos kRead x=inbr[s("("), lident, s(")")] { fun (a) {
+		  dibg2("read(%s), attr: %s", x, a);
+      assertVoid(a, Read (x), loc)
+		}} |
 
-fun makeOp(op) { 
-  [s(op), fun(l, op, r) { Binop(op, l, r) }] 
-}
-fun makeOps(assoc, operations) { 
-  [assoc, map(makeOp, operations)] 
-}
+		-- write
+		loc=pos kWrite x=inbr[s("("), exp, s(")")] { fun (a) {
+      local res = Write (x (Val));
+      dibg3("write!!!!!! x=%s, res=%s, a: %s", x (Val), res, a);
+      assertVoid(a, res, loc)
+    }} |
 
-local exprOps = {
-  makeOps(Left, "!!":{}),
-  makeOps(Left, "&&":{}),
-  makeOps(Nona, {"==", "!=", "<=", "<" , ">=", ">" }),
-  makeOps(Left, {"+", "-"}),
-  makeOps(Left, {"*", "/", "%"})
-};
--- Primary expression
--- local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
---                                    x=lident  {Var (x)}               |
---                                    inbr[s("("), exp, s(")")]),
-local expp = memo $ eta expr(exprOps, primary),
-      var = memo $ eta syntax (x=lident { Var (x) });
+    -- while
+    loc=pos kWhile cond=basic kDo body=exp kOd { fun (a) {
+      dibg2("while!! cond: %s, body: %s", cond, body);
+      assertVoid(a, While (cond (Val), body (Void)), loc)
+    }} |
 
-local 
-  write = memo $ eta syntax (kWrite x=inbr[s("("),    expp, s(")")] { Write (x) }),
-  read = memo $ eta syntax  (kRead  x=inbr[s("("), lident, s(")")] { Read  (x) }),
-  assign = memo $ eta syntax (x=lident s[":="] e=expp { Assn (x, e) }),
-  compose = memo $ eta syntax (s1=stmt0 s[";"] s2=stmt { Seq (s1, s2) }),
-  wwhile = memo $ eta syntax (kWhile e=expp kDo b=stmt kOd { While (e, b) } ),
-  iif = memo $ eta syntax (kIf e=iif0 { e }),
-  iif0 = memo $ eta syntax (e=expp kThen b1=stmt b2=eelse { If(e, b1, b2) }),
-  eelse = memo $ eta syntax (kFi { Skip } |
-                             -kElse stmt -kFi |
-                             -kElif iif0),
-  rrepeat = memo $ eta syntax (kRepeat s=stmt kUntil e=expp { Repeat(s, e) }),
-  ffor = memo $ eta syntax (kFor
-                              init=stmt0 s[","] cond=expp s[","] loop=stmt0
-                              kDo body=stmt kOd { Seq(init, While(cond, Seq(body, loop))) });
+    -- repeat
+		loc=pos kRepeat body=exp kUntil cond=inbr[s("("), basic, s(")")] { fun (a) {
+      dibg2("repeat!! body: %s, cond: %s", body, cond);
+			assertVoid(a, Repeat(body (Void), cond(Val)), loc)
+		}} |
 
-local stmt0 = memo $ eta syntax (
-                                read |
-                                wwhile |
-                                rrepeat |
-                                ffor |
-                                iif |
-                                assign |
-                                write |
-                                kSkip { Skip }
-                                );
-local stmt = memo $ eta syntax (compose | stmt0);
+    -- if
+    iif |
+
+    -- in brackets
+    loc=pos x=inbr[s("("), exp, s(")")] { fun (a) {
+      dibg1("in brackets!!! x=%s", x);
+      x (a)
+    }} |
+		-- skip
+		kSkip { fun (a) { Skip }} |
+
+    -- for
+		kFor init=basic s[","] cond=basic s[","] loop=basic kDo body=exp kOd { fun (a) {
+		  local xx = dibg5("for(%s, %s, %s) { %s }, attr: %s", init, cond, loop, body, a);
+			-- todo maybe loop is (Val)?
+		  local res = Seq(init (Val), While(cond (Val), Seq(body (Void), loop (Void))));
+			dibg1("for, res: %s", res);
+			res
+    }}
+    ),
+  iif = memo $ eta syntax (kIf e=iif0 { fun (a) {
+	  dibg2("if: %s, attr: %s", e (a), a);
+		e (a)
+	}}),
+  iif0 = memo $ eta syntax (loc=pos e=basic kThen b1=exp b2=eelse { fun (a) {
+	  local xx = dibg4("iif0! %s, %s, %s", e, b1, b2);
+		local xxx = dibg1("iif0! attr: %s", a);
+    local res = If(e (Val), b1 (a), b2 (a));
+		dibg1("iif0! res: %s", res);
+		res
+  }}),
+  eelse = memo $ eta syntax (kFi { fun (a) { dibg("skip!"); Skip } } |
+                             -kElse x=exp -kFi { dibg1("kelse, %s", x); x } |
+                             -kElif x=iif0 { x }
+                             ),
+  basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
+                         fun (l, loc, r) {
+                           fun (a) {
+                             dibg3("assign-1 %s := %s, attr: %s", l, r, a);
+                             -- dibg2("assign-2 %s, %s", l (Ref), r (Val));
+                             assertValue (a, Assn (l (Ref), r (Val)), loc)
+                           }
+                         }])],
+     [Left , map (binop, singleton ("!!"))],
+     [Left , map (binop, singleton ("&&"))],
+     [Nona , map (binop, {"==", "!=", "<", ">", "<=", ">="})],
+     [Left , map (binop, {"+", "-"})],
+     [Left , map (binop, {"*", "/", "%"})]
+    },
+    primary)),
+  exp      = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {
+	  dibg3("seq! %s, %s, attr: %s", s1, s2, a);
+	  dibg1("seq-2: %s", Seq (s1 (Void), s2 (a)));
+	  Seq (s1 (Void), s2 (a))
+	}});
 
 -- Public top-level parser
-
-
-
--- Public top-level parser
-public parse = syntax (s=exp {s (Void)});
-
--- public parse = stmt;
+public parse = memo $ eta syntax (s=exp {
+  dibg1("parsed: %s\n", s (Void));
+  s (Void)
+});

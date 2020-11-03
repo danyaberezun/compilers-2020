@@ -3,6 +3,7 @@
 import List;
 import State;
 import World;
+import Debug;
 
 -- As association map which maps "\otimes" into "\oplus"
 local ops = {
@@ -63,8 +64,64 @@ fun evalList (c, exprs) {
   esac
 }
 
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+fun dbgIt(msg, expr) {
+  -- dbg1(msg, expr);
+  expr
+}
+
+fun eval (c@[s, w@[inp, outp]], expr) {
+  dbg2("eval expr: %s, config: %s", expr, c);
+  case expr of
+    Assn (z0, v) ->
+		  case eval(c, z0) of [nc, Ref (z)] ->
+			  case eval(nc, v) of [[ns, nw], val] ->
+				  dbgIt("assn, res: %s", [[ns <- [z, val], nw], val])
+				esac
+			esac
+  | Seq (head, tail) ->
+    case eval(c, head) of [nc, val] ->
+      case eval(nc, tail) of [nnc, val2] -> [nnc, val2] esac
+    esac
+  | Skip -> [c, Void]
+  | Read (x) -> case readWorld(w) of [a, nw] -> dbgIt("read, res: %s", [[s <- [x,a], nw], Void]) esac
+  | Write (x) -> {
+	  dibg1("write! %s", 1);
+	  case eval(c, x) of [[ns, nw], val] -> [[ns, writeWorld(val, nw)], Void] esac
+	}
+  | If (cond, ifb, elseb) ->
+    case eval(c, cond) of [nc, isCond] ->
+      eval(nc, if isCond then ifb else elseb fi)
+    esac
+  | w@While (cond, body) ->
+    case eval(c, cond) of [nc, isCond] ->
+      case isCond of
+        true -> eval(eval(nc, body)[0], w)
+      | false -> [nc, Void]
+      esac
+    esac
+  | r@Repeat (body, cond) ->
+	  case eval(c, body) of [nc, _] ->
+      case eval(nc, cond) of [nnc, isCond] ->
+				case isCond of
+          true -> [nnc, Void]
+        | false -> eval(nnc, r)
+        esac
+			esac
+    esac
+  | Var (x) -> {
+	  dbg1("here var! %s", x);
+	  dbg1("here var-2! %s", s(x));
+	  [c, s(x)]
+	}
+  | Ref (z) -> [c, Ref (z)]
+  | Const (const) -> [c, const]
+  | Binop (op, a, b) ->
+    case eval(c, a) of [nc, aa] ->
+      case eval(nc, b) of [nnc, bb] -> [nnc, evalOp(op, aa, bb)] esac
+    esac
+  | Ignore (expr) -> case eval(c, expr) of [nc, val] -> [nc, Void] esac
+  | wat -> failure("Can't parse command: %s\n", wat.string)
+  esac    
 }
 
 
@@ -72,26 +129,6 @@ fun eval (c@[s, w], expr) {
 public fun evalExpr (input, expr) {
   case eval ([emptyState, createWorld (input)], expr) of
     [c, _] -> c.snd.getOutput
-  esac
-}
-
--- The evaluator itself: takes a state and an expression,
--- returns integer value
---
--- An expression is represented by a data structure of the following shape:
---
--- expr = Var   (string)             |
---        Const (int)                |
---        Binop (string, expr, expr)
-
-public fun evalExprOld (st, expr) {
-  case expr of
-    Binop (op, a, b) ->
-		  local x = evalExpr(st, a);
-			local y = evalExpr(st, b);
-			calculate(op, x, y)
-    | Var(x) -> st(x)
-    | Const(c) -> c
   esac
 }
 
