@@ -321,15 +321,15 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-        | LD (name@_) ->
+        | LD (name) ->
             case env.allocate of
               [s, updenv] -> [updenv.addGlobal(name), code <+> move(env.loc(name), s)]
             esac
-        | ST (name@_) ->
+        | ST (name) ->
             case env.pop of
               [s, updenv] -> [updenv.addGlobal(name), code  <+> move (s, env.loc(name))]
             esac
-        | BINOP (op@_) ->
+        | BINOP (op) ->
             case env.pop2 of
               [op1, op2, updenv] -> case updenv.allocate of
                 [s, updupdenv] -> case op of
@@ -347,9 +347,15 @@ fun compile (env, code) {
                 esac
               esac
             esac
-        | CONST (val@_) ->
+        | CONST (val) ->
             case env.allocate of
               [s, updenv] -> [updenv, code <+ Mov (L (val), s)]
+            esac
+        | LABEL (label)    -> [env, code <+ Label(label)]
+        | JMP (label)      -> [env, code <+ Jmp  (label)]
+        | CJMP (znz, label) ->
+            case env.pop of
+              [zv, env2] -> [env, code <+ Mov(zv, eax) <+ Binop("test", eax, eax) <+ CJmp  (case znz of Z -> "z" | NZ -> "nz" esac, label)]
             esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
