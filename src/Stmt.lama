@@ -15,12 +15,24 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
---        if     (expr, stmt, stmt) |
+--        If     (expr, stmt, stmt) |
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
 
-fun eval (c, stmt) {
-  failure ("Stmt eval not implemented\n")
+fun eval (c@[s, w], stmt) {
+    case stmt of
+    Seq(stmt1, stmt2) -> eval(eval(c, stmt1), stmt2) |
+    Read(x) -> fun (s, x, [n, w]) { [s <- [x, n], w] } (s, x, readWorld(w)) |
+    Write(e) -> [s, writeWorld(evalExpr(s, e), w)] |
+    Assn(x, e) -> [s <- [x, evalExpr(s, e)], w] |
+    If (e, st1, st2) -> if evalExpr(s, e) then eval(c, st1) else eval(c, st2) fi |
+    w@While (e, st) -> if evalExpr(s, e) then eval(eval(c, st), w) else c fi |
+    r@Repeat (st, e) ->
+    case eval(c, st) of
+        c@[s, w] -> if evalExpr(s, e) then c else eval(c, r) fi
+    esac |
+    Skip -> c
+    esac
 }
 
 -- Evaluates a program with a given input and returns an output

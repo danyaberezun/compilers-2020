@@ -2,7 +2,7 @@
 
 -- Empty state (undefined everywhere)
 public fun emptyState (x) {
-  failure ("undefined variable ""%s""\n", x)
+  0
 }
 
 -- Putting a binding into a state
