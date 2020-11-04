@@ -15,6 +15,10 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
+--        if     (expr, stmt, stmt) |
+--        While  (expr, stmt)       |
+--        Repeat (stmt, expr)
+
 fun eval (c@[map, world@[input, output]], stmt) {
 case stmt of 
 	Assn (x, e) -> [map <- [x, evalExpr (map, e)], world]
