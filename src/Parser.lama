@@ -13,13 +13,58 @@ fun inbr (l, p, r) {
 }
 
 -- Primary expression
-local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
-                            lident  @ fun (x) {Var (x)} |
-                            inbr (s ("("), exp, s (")"))),
-      exp = memo $ eta (failure ("expression parsing not implemented\n"));
+local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
+                                   x=lident  {Var (x)}               |
+                                   inbr[s("("), exp, s(")")]),
+      exp = memo $ eta (expr(binaryOperators, primary));
 
-local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
-   
+local binaryOperators = asBinopLevelDescriptor.map(
+  {[Left, singleton ("!!")],
+   [Left, singleton ("&&")],
+   [Nona, {"==", "!=", "<", "<=", ">=", ">"}],
+   [Left, {"+", "-"}],
+   [Left, {"*", "/", "%"}]}
+);
+
+fun asBinopLevelDescriptor([assoc, operatorList]) {
+  [assoc, map (fun (op) { [s(op), binop] }, operatorList)]
+}
+
+fun binop (l, op, r) {
+  Binop (op, l, r)
+}
+
+local stmt = memo $ eta (seqParser |> bypass(end));
+
+local assnParser = memo $ eta syntax (name=lident s[":="] value=exp {Assn (name, value)}),
+      readParser = memo $ eta syntax (kRead s["("] name=lident s[")"] {Read (name)}),
+      writeParser = memo $ eta syntax (kWrite s["("] value=exp s[")"] {Write (value)}),
+      skipParser = memo $ eta syntax (kSkip {Skip}),
+      -- if statement
+      ifParser = memo $ eta syntax (kIf stmt=ifBody {stmt}),
+      ifBody = memo $ eta syntax (cond=exp kThen thn=seqParser els=ifCont {If (cond, thn, els)}), -- thn is possibly scoped
+      ifCont = memo $ eta syntax (kFi {Skip} |
+                                  kElif body=ifBody {body} |
+                                  kElse body=seqParser kFi {body}),
+      -- while statement
+      whileParser = memo $ eta syntax (kWhile cond=exp kDo body=seqParser kOd {While (cond, body)}),
+      -- for statement
+      forParser = memo $ eta syntax (
+        kFor init=singleStatementParser s[","] cond=exp s[","] act=assnParser kDo body=seqParser kOd
+        {Seq(init, While (cond, Seq (body, act)))}
+      ),
+      -- repeat until statement
+      repeatParser = memo $ eta syntax (kRepeat body=seqParser kUntil cond=exp {Repeat (body, cond)}),
+      singleStatementParser = memo $ eta (assnParser |
+                                          readParser |
+                                          writeParser |
+                                          skipParser |
+                                          ifParser |
+                                          whileParser |
+                                          forParser |
+                                          repeatParser),
+      seqParser = memo $ eta syntax (stmt=singleStatementParser s[";"] tail=seqParser {Seq (stmt, tail)} |
+                                     singleStatementParser);
 
 -- Public top-level parser
 public parse = stmt;
