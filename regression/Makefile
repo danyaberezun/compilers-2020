@@ -10,22 +10,13 @@ check: $(TESTS) expr_tests
 
 $(TESTS): %: %.lama
 	@echo $@
-<<<<<<< HEAD
-	cpp -P -D PROGRAM_BODY="`tr -d '\n' < $<`" Embedding.meta > tmp.lama
-	$(LAMAC) -I ../src -o $@ tmp.lama -ds
-	$(RM) tmp.lama
-	cat $@.input | ./$@ -i > $@.log && diff $@.log orig/$@.log
-	cat $@.input | ./$@ -s > $@.log && diff $@.log orig/$@.log
-	./$@ > $@.s && gcc -g -m32 -o $@.run ../runtime/runtime.o $@.s && cat $@.input | ./$@.run > $@.log && diff $@.log orig/$@.log
-=======
-	cat $@.input | $(LAMAC) $@.lama -i > $@.log && diff $@.log orig/$@.log
-	cat $@.input | $(LAMAC) $@.lama -s > $@.log && diff $@.log orig/$@.log
-	$(LAMAC) $@.lama && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
+	cat $@.input | $(LAMAC) $@.lama -i > $@.log && diff $@.log orig/$@.log 
+#	cat $@.input | $(LAMAC) $@.lama -s > $@.log && diff $@.log orig/$@.log
+#	$(LAMAC) $@.lama && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
 
 expr_tests:
 	make -C expressions
 	make -C deep-expressions
->>>>>>> 446de7f73f136a9037c03c5298f28abbbc3c95ea
 
 clean:
 	$(RM) *.s *.i *~ $(LOGS) $(TESTS) *.run
