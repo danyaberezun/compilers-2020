@@ -131,7 +131,9 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
+
   -- popped items and an updated environment
+
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -289,6 +291,7 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+
         | CONST (val) ->
           case env.allocate of
             [s, env] -> [env, code <+ Mov (L (val), s)]
@@ -314,6 +317,7 @@ fun compile (env, code) {
                   esac
               esac
           esac
+
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
@@ -321,6 +325,7 @@ fun compile (env, code) {
 
   compile (env, code) 
 }
+
 
 fun ofCategory(op) {
   case op of
@@ -368,6 +373,7 @@ fun generateLogicCode(code, op, src, dst) {
       .generateBasicBinopCode(op, src, dst)
 }
 
+
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
@@ -379,8 +385,10 @@ public fun compileX86 (args, code) {
                        | path     -> path
                        esac ++ "/runtime.o";
 
+
        fwrite (asmFile,
                map (insnString,
+
                     getBuffer $
                       singletonBuffer (Meta ("\t.global\tmain\n")) <+>
                       dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
