@@ -145,50 +145,72 @@ fun compileExpr (expr) {
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  case compileSMInEnvironment(stmt, initCompEnv()) of  [code, _] -> code esac
+  compileSMInEnvironment(stmt, [initCompEnv(), None])[0]
 }
 
+-- compileSMInEnvironment :: Stmt -> (CompEnv, Maybe Label) -> (CompEnv, Maybe Label)
+public fun compileSMInEnvironment (stmt, env@[labels, ret]) {
+  infixl >>= after : ([code, env], f) { 
+    case f (env) of [code2, env] -> [code +++ code2, enmv] esac               -- a La bind for writer
+  } 
+  fun run_ (labels) { [{}, [labels, None]] }                                 -- start writer
+  fun ex_ (expr)    { fun (env) { [compileExpr(expr), env]             } }   -- write expression
+  fun st_ (stmt)    { fun (env) { compileSMInEnvironment(stmt, env)    } }   -- write statement
+  fun cmd_(command) { fun (env) { [command :{}, env]                   } }   -- write single command
 
-public fun compileSMInEnvironment (stmt, env) {
-  infixl >>= after : ([code, env], f) { case f (env) of [code2, env] -> [code +++ code2, env] esac }
-  fun ex_ (expr)    { fun (env) { [compileExpr(expr), env]             } }
-  fun st_ (stmt)    { fun (env) { compileSMInEnvironment(stmt, env)    } }
-  fun cmd_(command) { fun (env) { [command :{}, env]                   } }
-  fun in_ (env)     { [{}, env] }
-  fun check_ (cond) { Binop("!=", cond, Const (0)) }
-
+  fun check_ (cond) { Binop("!=", cond, Const (0)) }                         -- convert Int to Bool 
+  fun lfi_ (mbRet)  { fun ([labels, _]) { [{}, [labels, mbRet]] } }          -- set the return label to mbRet      
 
   case stmt of 
-    Skip            -> in_(env)
-  | Read  (x)       -> in_(env) >>= cmd_(READ) >>= cmd_(ST (x))
-  | Write (e)       -> in_(env) >>= ex_(e) >>= cmd_(WRITE)
-  |  Assn (x, e)    -> (in_(env) >>= ex_(e)) >>= cmd_(ST (x))
-  |   Seq (e1, e2)  -> (in_(env) >>= st_(e1)) >>= st_(e2)
-  | While (cnd, st) -> case env.genLabels(2) of
-                          [le, ls, env] -> in_(env) 
+    Skip            -> run_(labels)
+  | Read  (x)       -> run_(labels) >>= cmd_(READ) >>= cmd_(ST (x))
+  | Write (e)       -> run_(labels) >>= ex_(e)     >>= cmd_(WRITE)
+  |  Assn (x, e)    -> run_(labels) >>= ex_(e)     >>= cmd_(ST (x))
+  |   Seq (e1, e2)  -> run_(labels) >>= st_(e1)   >>= st_(e2)
+  | While (cnd, st) -> case labels.genLabels(2) of [le, ls, labels] 
+                                             -> run_(labels) 
                                             >>= cmd_( JMP (le)        )  --      JMP Le
                                             >>= cmd_( LABEL (ls)      )  -- Ls:
                                             >>= st_ ( st              )  --      [st]  
                                             >>= cmd_( LABEL (le)      )  -- Le:
-                                            >>= ex_ ( check_(cnd)     )  --      [cnd] != 0
+                                            >>= ex_ ( check_(cnd)     )  --      [cnd != 0]
                                             >>= cmd_( CJMP ("nz", ls) )  --      jnz Ls
                         esac
-  | Repeat (st, cnd) -> case env.genLabels(1) of
-                              [l, env] -> in_(env)
+  | Repeat (st, cnd) -> case labels.genLabels(1) of [l, labels] 
+                                             -> run_(labels)
                                             >>= cmd_( LABEL (l)     ) -- L:
                                             >>= st_ ( st            ) --     [st]
-                                            >>= ex_ ( check_(cnd)   ) --     [cnd] != 0
+                                            >>= ex_ ( check_(cnd)   ) --     [cnd != 0]
                                             >>= cmd_( CJMP ("z", l) ) --     jz L
                         esac 
-  | If (cnd, th, el) -> case env.genLabels(2) of            -- naive solution
-                          [le, lfi, env] -> in_(env)
-                                            >>= ex_ ( check_(cnd)    ) --     [cnd] != 0
+  | If (cnd, th, el) -> case ret of
+                          None -> case labels.genLabels(2) of [le, lfi, labels]
+                                             -> run_(labels)
+                                            >>= lfi_( Some (lfi)     ) --                 # set the return label
+                                                                       -- 
+                                            >>= ex_ ( check_(cnd)    ) --     [cnd != 0]
                                             >>= cmd_( CJMP ("z", le) ) --     jz Le
                                             >>= st_ ( th             ) --     [th]
                                             >>= cmd_( JMP (lfi)      ) --     jmp Lfi
                                             >>= cmd_( LABEL (le)     ) -- Le:
                                             >>= st_ ( el             ) --     [el]
                                             >>= cmd_( LABEL (lfi)    ) -- Lfi:
+                                                                       -- 
+                                            >>= lfi_( None           ) --                 # clear the return label
+                                  esac
+                        | Some (lfi) -> case labels.genLabels(1) of [le, labels]
+                                             -> run_(labels)
+                                            >>= lfi_( Some (lfi)     ) --                 # set the return label
+                                                                       -- 
+                                            >>= ex_ ( check_(cnd)    ) --     [cnd != 0]
+                                            >>= cmd_( CJMP ("z", le) ) --     jz Le
+                                            >>= st_ ( th             ) --     [th]
+                                            >>= cmd_( JMP (lfi)      ) --     jmp Lfi     # label already exists
+                                            >>= cmd_( LABEL (le)     ) -- Le:
+                                            >>= st_ ( el             ) --     [el]
+                                                                       --
+                                            >>= lfi_( None           ) --                 # clear the return label
+                                        esac      
                         esac
   esac
 }
