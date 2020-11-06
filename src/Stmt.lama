@@ -26,6 +26,20 @@ case stmt of
 	| Read (x) -> [map <- [x, fst (readWorld (world))], snd (readWorld (world))] 
 	| Write (e) -> [map, writeWorld (evalExpr (map, e), world)]
 	| Skip -> [map, world]
+	| If (e, s1, s2) -> case evalExpr (map, e) of
+				0 -> eval (c, s2)
+				| _ -> eval (c, s1)
+			    esac
+	| While (e, statement) -> case evalExpr (map, e) of
+				0 -> [map, world]
+				| _ -> eval (eval (c, statement), stmt)
+				  esac
+	| Repeat (stmt, e) -> case eval (c, stmt) of
+				new_c@[new_map, new_world] -> case evalExpr (new_map, e) of
+								0 -> eval (new_c, Repeat (stmt, e))
+								| _ -> [new_map, new_world]
+							esac
+			      esac
 esac
 }
 
