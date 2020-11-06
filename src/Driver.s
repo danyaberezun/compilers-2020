@@ -184,6 +184,8 @@ global_args:	.int	1
 
 # EXTERN ("Lzip") / 
 
+# EXTERN ("LdeepFlatten") / 
+
 # EXTERN ("Lflatten") / 
 
 # EXTERN ("Lfind") / 
@@ -984,7 +986,6 @@ L25:
 
 # JMP ("L0") / 
 
-	jmp	L0
 # SLABEL ("L23") / 
 
 L23:
@@ -1326,6 +1327,10 @@ L87:
 
 L88:
 
+# LABEL ("L86") / 
+
+L86:
+
 # SLABEL ("L85") / 
 
 L85:
@@ -1404,6 +1409,10 @@ L94:
 # SLABEL ("L95") / 
 
 L95:
+
+# LABEL ("L93") / 
+
+L93:
 
 # SLABEL ("L92") / 
 
@@ -1826,6 +1835,10 @@ L121:
 
 L122:
 
+# LABEL ("L120") / 
+
+L120:
+
 # SLABEL ("L119") / 
 
 L119:
@@ -2100,6 +2113,10 @@ L162:
 
 L163:
 
+# LABEL ("L161") / 
+
+L161:
+
 # SLABEL ("L160") / 
 
 L160:
@@ -2185,6 +2202,10 @@ L168:
 # SLABEL ("L169") / 
 
 L169:
+
+# LABEL ("L167") / 
+
+L167:
 
 # SLABEL ("L166") / 
 
