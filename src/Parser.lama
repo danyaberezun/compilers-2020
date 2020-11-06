@@ -4,16 +4,18 @@ import Ostap;
 import Lexer;
 import List;
 import Fun;
+import Matcher;
 
 -- A parser of "something" in brackets; l, r are left and right
--- brackets as strings, p --- a parser of "something"
+-- brackets as parsers, p --- a parser of "something"
+
 fun inbr (l, p, r) {
   syntax (-l p -r)
 }
 
 -- Primary expression
-local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
-                                   x=lident  {Var (x)}               |
+local primary = memo $ eta syntax (decimal @ fun (x) {Const (stringInt (x))} |
+                                   lident  @ fun (x) {Var (x)}  |
                                    inbr[s("("), exp, s(")")]),
       binop = fun (l, op, r) {Binop(op,l,r)},
       ops = {[Left, [s ("!!"), binop] :{}],
@@ -30,8 +32,7 @@ local stmt = memo $ eta syntax (
    x1 = stmt s[";"] x2 = stmt end          {Seq(x1, x2)}| 
    kSkip {Skip}
    );
-   
+  
 
 -- Public top-level parser
 public parse = stmt;
-             
