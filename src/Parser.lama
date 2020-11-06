@@ -43,60 +43,6 @@ fun inbr (l, p, r) {
   syntax (-l p -r)
 }
 
-
-fun binop(l, op, r) {
-	Binop(op, l, r)
-}
-
-
--- Primary expression
-local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
-                            lident  @ fun (x) {Var (x)} |
-                            inbr (s ("("), exp, s (")"))),
-      exp = memo $ eta expr({ 
-						[Left, [s("!!") , binop] : {} ],
-						[Left, [s("&&") , binop] : {} ], 
-						[Nona, {	[s("==") , binop ],
-									[s("!=") , binop ],
-									[s("<=") , binop ],
-									[s("<")  , binop ],
-									[s(">=") , binop ],
-									[s(">")  , binop ]
-								}],
-						[Left, { 	[s("+"),   binop ],
-									[s("-"),   binop ]
-								}],
-						[Left, {	[s("*") ,  binop ],
-									[s("/") ,  binop ],
-									[s("%") ,  binop ]
-								}] 
-						}, primary);
-
-local elifParser  = memo $ eta syntax(
-				kElse x=stmt                                    { x } |
-				kElif e=exp kThen x=stmt y=elifParser { If(e, x, y) } 
-						);
-						
-local primaryStmt = memo $ eta syntax( 
-				kWrite x=inbr[s("("), exp, s(")")]         { Write(x) } |
-				kRead x=inbr[s("("), lident, s(")")]         {Read(x) } |
-				x=lident s[":="] e=exp                   { Assn(x, e) } |
-				kSkip									        { Skip} |
-				kWhile e=exp kDo x=stmt kOd             { While(e, x) } |
-				kIf e=exp kThen x=stmt y=elifParser kFi { If(e, x, y) } |
-				kIf e=exp kThen x=stmt kFi           { If(e, x, Skip) } |
-				kRepeat x=stmt kUntil e=exp             {Repeat(x, e) } |
-				kFor x=stmt s[","] e=exp s[","] y=stmt kDo z=stmt kOd  {Seq(x, While(e, Seq(z, y)) ) }
-						),
-			 stmt = memo $ eta syntax(
-						primaryStmt                                     | 
-						x=primaryStmt s[";"] y=stmt         {Seq(x, y)}
-						);
-
--- Public top-level parser
-public parse = stmt;
-
-(*
 fun binop (op) {
   [syntax (pos -s[op]), fun (l, loc, r) {
                           fun (a) {
@@ -106,19 +52,39 @@ fun binop (op) {
   ]
 }
 
-local primary  = memo $ eta syntax (
-                                    -- decimal constant
-                                    loc=pos x=decimal                                 {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
+fun myIf(cond, x, y)
+{
+	fun(a) { If(cond(Var), x(a), y(a))}
+}
 
-                                    -- identifier
-                                    x=lident                                          {fun (a) {
-                                                                                         case a of
-                                                                                           Ref  -> Ref (x)
-                                                                                         | Void -> Ignore (Var (x))
-                                                                                         | _    -> Var (x)
-                                                                                         esac
-                                                                                      }} |
-                                    $(failure ("the rest of primary parsing in not implemented\n"))),
+local elifParser  = memo $ eta syntax(
+				kElse x=exp                                    { x } |
+				kElif e=exp kThen x=exp y=elifParser { myIf(e, x, y) } 
+						);
+
+local primary  = memo $ eta syntax (
+			-- decimal constant
+			loc=pos x=decimal                                 {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}	 |
+
+			-- identifier
+			x=lident                                          {fun (a) {
+																case a of
+																	Ref  -> Ref (x)
+																	| Void -> Ignore (Var (x))
+																	| _    -> Var (x)
+																esac
+																}} 																 |
+			inbr[s ("("), exp, s (")")]					  		  																 |
+			loc=pos kRead x=inbr[s("("), lident, s(")")]         	  { fun (a) { assertVoid(a, Read(x),       loc) }} 			 |
+			loc=pos kWrite x=inbr[s("("), exp, s(")")]         		  { fun (a) { assertVoid(a, Write(x(Val)), loc) }} 			 |
+			loc=pos kSkip									          { fun (a) { assertVoid(a, Skip, loc) }} 					 |
+			loc=pos kWhile e=exp kDo x=exp kOd             			  { fun (a) { assertVoid(a, While(e(Val), x(Void)), loc) }}	 |
+			loc=pos kIf e=exp kThen x=exp y=elifParser kFi 			  { myIf(e, x, y) } 										 |
+			loc=pos kIf e=exp kThen x=exp kFi           			  { myIf(e, x, fun(a) { assertVoid(a, Skip, loc)})}			 |
+			loc=pos kRepeat x=exp kUntil e=inbr[s("("), exp, s(")")]  { fun (a) { assertVoid(a, Repeat(x(Void), e(Val)), loc) }} |
+			loc=pos kFor x=exp s[","] e=exp s[","] y=exp kDo z=exp kOd { fun (a) { assertVoid(a, Seq(x(Void), While(e(Val), Seq(z(Void), y(Void)))), loc) }}
+			--$(failure ("the rest of primary parsing in not implemented\n"))
+		),
       basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                         fun (l, loc, r) {
                                                           fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
@@ -134,4 +100,3 @@ local primary  = memo $ eta syntax (
 
 -- Public top-level parser
 public parse = syntax (s=exp {s (Void)});
-*)

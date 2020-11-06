@@ -392,17 +392,30 @@ fun compile (env, code) {
 			case env.addGlobal(x).allocate of
 			  [s, env] -> [env, code <+> move (env.loc(x), s) ]
 			esac
+		| LDA(x) -> 
+			case env.addGlobal(x).allocate of
+			  [s, env] -> [env, code <+ Lea(env.loc(x), eax) <+ Mov(eax, s)]
+			esac
 		| ST(x) ->
 			case env.addGlobal(x).pop of
 			  [s, env] -> [env, code <+> move (s, env.loc(x))]
 			esac
+		| STI -> 
+			case env.pop2 of
+			  [s, adr, env1] -> 
+				case env1.allocate of [s2, env2] ->
+					[env2, code <+> move (s, I(0, adr)) <+> move(s, s2)]
+				esac
+			esac
+		| DROP -> 
+			[env.pop[1], code]
 		| LABEL(l) -> 
-			[env, code <+ Label(l)]
+			[if env.isBarrier then env.retrieveStack(l) else env fi, code <+ Label(l)]
 		| JMP (l) ->
-			[env, code <+ Jmp(l)]
+			[setBarrier(setStack(env, l)), code <+ Jmp(l)]
 		| CJMP(c, l) ->
 			case env.pop of [s, env] -> 
-				[env, code <+ Mov(L(0), eax) <+ Binop("cmp", eax, s) <+ CJmp(c, l)]
+				[env.setStack(l), code <+ Mov(L(0), eax) <+ Binop("cmp", eax, s) <+ CJmp(c, l)]
 			esac
 		| BINOP(op) ->
 			case env.pop2 of
