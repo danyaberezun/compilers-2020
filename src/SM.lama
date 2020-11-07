@@ -151,7 +151,7 @@ public fun compileSM (stmt) {
 -- compileSMInEnvironment :: Stmt -> (CompEnv, Maybe Label) -> (CompEnv, Maybe Label)
 public fun compileSMInEnvironment (stmt, env@[labels, ret]) {
   infixl >>= after : ([code, env], f) { 
-    case f (env) of [code2, env] -> [code +++ code2, enmv] esac               -- a La bind for writer
+    case f (env) of [code2, env] -> [code +++ code2, env] esac               -- a La bind for writer
   } 
   fun run_ (labels) { [{}, [labels, None]] }                                 -- start writer
   fun ex_ (expr)    { fun (env) { [compileExpr(expr), env]             } }   -- write expression
