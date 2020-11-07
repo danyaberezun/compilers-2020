@@ -52,23 +52,47 @@ fun binop (op) {
   ]
 }
 
-local primary  = memo $ eta syntax (
-                                    -- decimal constant
-                                    loc=pos x=decimal                                 {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
+infixl |- before : (type, val) {
+  fun (a) { 
+    case type of 
+      Void (loc) -> assertVoid(a, val, loc)
+    | Val (loc)  -> assertValue(a, val, loc)
+    | Ref (loc)  -> failure ("NIMP")
+    esac
+  }
+}
 
-                                    -- identifier
-                                    x=lident                                          {fun (a) {
-                                                                                         case a of
-                                                                                           Ref  -> Ref (x)
-                                                                                         | Void -> Ignore (Var (x))
-                                                                                         | _    -> Var (x)
-                                                                                         esac
-                                                                                      }} |
-                                    $(failure ("the rest of primary parsing in not implemented\n"))),
-      basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
-                                                        fun (l, loc, r) {
-                                                          fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
-                                                        }])],
+local primary  = memo $ eta syntax ( loc=pos x=decimal                            { Val (loc) |- Const (stringInt (x)) }
+                                   | x=lident                                     {fun (a) {
+                                                                                     case a of
+                                                                                       Ref  -> Ref (x)
+                                                                                     | Void -> Ignore (Var (x))
+                                                                                     | _    -> Var (x)
+                                                                                     esac
+                                                                                   }
+                                                                                  }
+                                   | inbr[s ("("), exp, s (")")]                                         
+                                   | loc=pos kSkip                                { Void (loc) |- Skip                         }         
+                                   | loc=pos kRead x=inbr[s("("), lident, s(")")] { Void (loc) |- Read (x)                     } 
+                                   | loc=pos kWrite e=inbr[s("("), exp,   s(")")] { Void (loc) |- Write (e(Val))               } 
+                                   | loc=pos kWhile e=exp kDo st=exp kOd          { Void (loc) |- While (e(Val), st(Void))     }
+                                   | loc=pos kIf e=exp kThen s1=exp s2=elseStmt kFi       
+                                                                                  { fun (a) { If (e(Val), s1(a), s2(a)) }      }
+                                   | loc=pos kRepeat st=exp kUntil e=inbr[s("("), exp, s(")")]           
+                                                                                  { Void (loc) |- Repeat (st(Void), e(Val))    }
+                                   | loc=pos kFor s1=exp s[","] e=exp s[","] s2=exp kDo s3=exp kOd                  
+                                                                                  { Void (loc) |- Seq (s1(Void), 
+                                                                                                       While (e(Val), 
+                                                                                                              Seq (s3(Void), 
+                                                                                                                   s2(Void)))) }
+                                   ),
+
+      elseStmt = memo $ eta syntax ( loc=pos kElif e=exp kThen s1=exp s2=elseStmt { fun (a) { If (e(Val), s1(a), s2 (a)) } }
+                                   | loc=pos kElse s=exp                          { eta (s)                                }
+                                   | loc=pos empty                                { Void (loc) |- Skip                     }
+                                   ),
+                                   
+      basic    = memo $ eta (expr ({[Right, singleton ([s (":="), fun (l, loc, r) { Val (loc) |- Assn (l (Ref), r (Val)) } ])],
                                     [Left , map (binop, singleton ("!!"))],
                                     [Left , map (binop, singleton ("&&"))],
                                     [Nona , map (binop, {"==", "!=", "<", ">", "<=", ">="})],

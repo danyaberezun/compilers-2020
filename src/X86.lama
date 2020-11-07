@@ -344,7 +344,34 @@ fun suffix (op) {
   | "!=" -> "ne"
   | ">=" -> "ge"
   | ">"  -> "g"
+  | _    -> None
   esac
+}
+
+fun binOpKind(op) {
+  case op of
+    "/"  -> DIV (eax)
+  | "%"  -> DIV (edx)
+  | "!!" -> LOG (op)
+  | "&&" -> LOG (op)
+  | _    -> case suffix (op) of 
+              None -> REGULAR (op)
+            | suff -> CMP (suff) 
+            esac
+  esac
+}
+
+fun moveIf(x, cond, reg, code) {
+  if cond
+  then [reg, code <+ Mov (x, reg)]
+  else [x, code]
+  fi
+}
+
+fun low(R (n)) { "%" ++ regs[n].substring(2, 1) ++ "l" }
+
+fun toBoolean(x, reg, code) {
+  code <+ Binop ("cmp", L (0), x) <+ Mov (L (0), reg) <+ Set ("nz", reg.low) 
 }
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
@@ -355,7 +382,16 @@ fun compile (env, code) {
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
-          READ ->
+          DROP -> [env.pop[1], code]
+        | LDA (x) ->  
+            case env.addGlobal(x).allocate of
+              [s, env] -> [env, code <+ Lea (env.loc (x), eax) <+ Mov (eax, s)]
+            esac  
+        | STI -> 
+            case env.pop2 of [e, xref, env] -> case env.allocate of
+              [s, env] -> [env, code <+ Mov (e, eax) <+ Mov (xref, edx) <+ Mov (eax, I(0, edx)) <+ Mov (eax, s)]
+            esac esac
+        | READ ->
             case env.allocate of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
             esac             
@@ -363,6 +399,34 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST (n) ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (L (n), s)]
+            esac  
+        | LD (x) -> 
+            case env.addGlobal(x).allocate of
+              [s, env] -> [env, code <+> move (env.loc (x), s)]
+            esac 
+        | ST (x) -> 
+            case env.addGlobal(x).pop of
+              [s, env] -> [env, code <+> move (s, env.loc (x))]
+            esac
+        | BINOP (op) ->
+            case env.pop2 of [x, y, env] -> case env.allocate of [res, env] -> 
+              [env, case binOpKind(op) of
+                      DIV (rg) -> code <+ Mov (y, eax) <+ Cltd <+ IDiv (x) <+ Mov (rg, res)
+                    | CMP (sf) -> 
+                        case x.moveIf(memOpnd(x) && memOpnd(y), eax, code) of
+                          [x, code] -> code <+ Binop ("cmp", x, y) <+ Mov (L (0), eax) <+ Set (sf, eax.low) <+ Mov (eax, res)
+                        esac
+                    | LOG (op) -> x.toBoolean(eax, y.toBoolean(edx, code)) <+ Binop (op, edx, eax) <+ Mov (eax, res)
+                    | _        -> code <+ Mov (y, eax) <+ Binop (op, x, eax) <+ Mov (eax, res) 
+                    esac 
+              ]
+            esac esac
+        | JMP (to) -> [env, code <+ Jmp (to)]
+        | LABEL (l) -> [env, code <+ Label (l)]
+        | CJMP (c, l) -> [env, code <+ CJmp (c, l)]
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
