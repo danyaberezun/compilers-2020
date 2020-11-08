@@ -76,16 +76,9 @@ fun fromLabel (env, lab) {
 }
 
 
-fun mycmp(c, a)
-{
-	case c of 
-	  "z"  -> (a == 0) 
-	| "nz" -> (a != 0)
-	esac
-}
-
--- Stack machine interpreter. Takes an SM-configuration and a program,
+-- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
+(* Assignment *)
 fun eval (env, c, insns) {
 	if size(insns) <= 0 then c 
 	else
@@ -129,7 +122,7 @@ fun eval (env, c, insns) {
 		esac
 	fi
 }
-
+(* End *)
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
@@ -167,9 +160,6 @@ fun genLabels (env, n) {
 }
 
 
--- Compiles a statement into a stack machine code.
--- Takes a statement, returns a list of stack machine
--- instructions.
 fun compileSM1 (env, stmt, lEnd) {
 	case stmt of
 	  Var(x) 		  -> [env, singleton(LD(x))]
@@ -249,7 +239,12 @@ fun compileSM1 (env, stmt, lEnd) {
 }
 
 
+-- Compiles an expression into a stack machine code.
+-- Takes an expression, returns a list of stack machine
+-- instructions.
+(* Assignment *)
 public fun compileSM(stmt)
 {
 	compileSM1(initCompEnv(), stmt, "")[1]
 }
+(* End *)

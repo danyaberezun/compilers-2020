@@ -1,0 +1,12 @@
+local x;
+
+read (x);
+
+write (x);
+
+{local x;
+ read (x);
+ write (x)
+};
+
+write (x)
