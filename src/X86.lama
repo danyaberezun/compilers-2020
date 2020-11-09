@@ -5,7 +5,7 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
-import Manifest
+import Manifest;
 
 -- Assembler language interface
 -- The registers: 
