@@ -27,7 +27,7 @@ fun eval (c, stmt) {
                     local new_w = read[1];
                     return [s <- [x, val], new_w]
     |   Write (e) -> return [s, writeWorld (evalExpr (s, e), w)]
-    |   Skip -> return c  
+    |   Skip -> return c
     esac
 }
 

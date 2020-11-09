@@ -44,7 +44,6 @@ fun eval (c, insns) {
     esac
 }
 
-
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
@@ -71,5 +70,5 @@ public fun compileSM (stmt) {
     |   Read (x) -> return {READ, ST (x)}
     |   Write (e) -> return compileExpr (e) +++ singleton (WRITE)
     |   Skip -> return {}
-    esac 
+    esac
 }
