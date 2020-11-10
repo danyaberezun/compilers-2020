@@ -11,37 +11,57 @@ fun inbr (l, p, r) {
   syntax (-l p -r)
 }
 
-fun toOpParser(ops, assoc) {
-  fun binop(l, op, r) { Binop(op, l, r) }
-  [assoc, map (fun (op) {[s(op), binop]}, ops)]
-}
-
-local ops = {
-    ("!!":{}).toOpParser(Left),
-    ("&&":{}).toOpParser(Left),
-    {"<", "<=", "==", "!=", ">=", ">"}.toOpParser(Nona),
-    {"+", "-"}.toOpParser(Left),
-    {"*", "/", "%"}.toOpParser(Left)
-};
-
-
 -- Primary expression
 local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
                                    x=lident  {Var (x)}               |
                                    inbr[s("("), exp, s(")")]),
-      exp = memo $ eta expr (ops, primary) (id);
-      
-      
-local singleStmt = memo $ eta syntax  ( kSkip                                 { Skip         }         
+      exp = memo $ eta (expr (
+      {
+      [Left, {[s ("!!"), fun (l, op, r) {Binop(op, l, r)}]
+              }],
+      [Left, {[s ("&&"), fun (l, op, r) {Binop(op, l, r)}]
+              }],
+      [Left, {[s ("+"), fun (l, op, r) {Binop(op, l, r)}] ,
+              [s ("-"), fun (l, op, r) {Binop(op, l, r)}]
+              }],
+      [Left, {[s ("*"), fun (l, op, r) {Binop(op, l, r)}] ,
+              [s ("/"), fun (l, op, r) {Binop(op, l, r)}],
+              [s ("%"), fun (l, op, r) {Binop(op, l, r)}]
+              }]}
+                         ,
+                         primary
+                         ));
+  
+  
+                         
+local simpleStmt = memo $ eta syntax (
+      kSkip { Skip } |
+      kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
+      kWrite e=inbr[s("("), exp, s(")")] {Write (e)}  |
+      x=lidenr s[":="] e=exp {Assn (x, e)} |
+      kWhile e=exp s=inbr[kDo, stmt, kOd] {While (e, s)} |
+      kFor s1=stmt s[","] e=exp s[","] s2=stmt body=inbr[kDo, stmt, kOd] {Seq (s1, While (e, Seq(b, s2)))} |
+      inbr[kIf, parseIf, kFi]
+);
 
-                                      | x=lident s[":="] e=exp                { Assn  (x, e) } 
-                                      | kRead  x=inbr[s("("), lident, s(")")] { Read  (x)    } 
-                                      | kWrite e=inbr[s("("), exp,    s(")")] { Write (e)    } 
-                                      ),
-      stmt = memo $ eta syntax (x=singleStmt s[";"] y=stmt {Seq (x, y)} | singleStmt);
-      
 
---local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
+
+local parseElse = memo $ eta syntax (
+      -kElse stmt |
+      empty {Skip} |
+      -kElif parseIf
+);
+
+
+local parseIf = memo $ eta syntax (
+      cond=exp kThen thenPart=stmt elsePart=parseElse {If (cond, thenPart, elsePart)}
+);
+  
+                         
+
+local stmt = memo $ eta syntax (simpleStmt |
+       s1=simpleStmt s[";"] s2=stmt {Seq (s1, s2)}
+);
    
 
 -- Public top-level parser
