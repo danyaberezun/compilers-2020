@@ -16,15 +16,12 @@ import World;
 --        Read   (string)           |
 --        Write  (expr)             |
 
-fun eval (c@[st, [i,o]], stmt) {
-case stmt of
-      Skip -> c
-    | Read(x) -> local result = readWorld(c[1]); 
-                                [c[0] <- [x, result[0]], result[1]]
-    | Write(expr) -> [c[0], writeWorld(evalExpr(c[0], expr), c[1])]
-    | Seq(s1, s2) -> eval(eval(c, s1), s2)
-    | Assn(x, expr) -> [(st <- [x, evalExpr(st, expr)]), [i,o]]
-esac
+--        if     (expr, stmt, stmt) |
+--        While  (expr, stmt)       |
+--        Repeat (stmt, expr)
+
+fun eval (c, stmt) {
+  failure ("Stmt eval not implemented\n")
 }
 
 -- Evaluates a program with a given input and returns an output

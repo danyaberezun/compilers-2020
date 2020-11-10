@@ -4,66 +4,26 @@ import Ostap;
 import Lexer;
 import List;
 import Fun;
+import Matcher;
 
 -- A parser of "something" in brackets; l, r are left and right
--- brackets as strings, p --- a parser of "something"
+-- brackets as parsers, p --- a parser of "something"
 fun inbr (l, p, r) {
   syntax (-l p -r)
 }
 
 -- Primary expression
-local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
-                                   x=lident  {Var (x)}               |
-                                   inbr[s("("), exp, s(")")]),
-      exp = memo $ eta (expr (
-      {
-      [Left, {[s ("!!"), fun (l, op, r) {Binop(op, l, r)}]
-              }],
-      [Left, {[s ("&&"), fun (l, op, r) {Binop(op, l, r)}]
-              }],
-      [Left, {[s ("+"), fun (l, op, r) {Binop(op, l, r)}] ,
-              [s ("-"), fun (l, op, r) {Binop(op, l, r)}]
-              }],
-      [Left, {[s ("*"), fun (l, op, r) {Binop(op, l, r)}] ,
-              [s ("/"), fun (l, op, r) {Binop(op, l, r)}],
-              [s ("%"), fun (l, op, r) {Binop(op, l, r)}]
-              }]}
-                         ,
-                         primary
-                         ));
-  
-  
-                         
-local simpleStmt = memo $ eta syntax (
-      kSkip { Skip } |
-      kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
-      kWrite e=inbr[s("("), exp, s(")")] {Write (e)}  |
-      x=lidenr s[":="] e=exp {Assn (x, e)} |
-      kWhile e=exp s=inbr[kDo, stmt, kOd] {While (e, s)} |
-      kFor s1=stmt s[","] e=exp s[","] s2=stmt body=inbr[kDo, stmt, kOd] {Seq (s1, While (e, Seq(b, s2)))} |
-      inbr[kIf, parseIf, kFi]
-);
 
 
+local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
+                            lident  @ fun (x) {Var (x)} |
+                            inbr (s ("("), exp, s (")"))),
+      exp = memo $ eta (failure ("expression parsing not implemented\n"));
 
-local parseElse = memo $ eta syntax (
-      -kElse stmt |
-      empty {Skip} |
-      -kElif parseIf
-);
+local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
 
-
-local parseIf = memo $ eta syntax (
-      cond=exp kThen thenPart=stmt elsePart=parseElse {If (cond, thenPart, elsePart)}
-);
-  
-                         
-
-local stmt = memo $ eta syntax (simpleStmt |
-       s1=simpleStmt s[";"] s2=stmt {Seq (s1, s2)}
-);
    
 
 -- Public top-level parser
 public parse = stmt;
-             
+
