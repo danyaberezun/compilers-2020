@@ -29,6 +29,25 @@ public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
 
+public fun binopCalc (op, a, b) {
+	case op of
+			"+"  -> (a + b)
+		  | "-"  -> (a - b)
+		  | "*"  -> (a * b)
+		  | "/"  -> (a / b)
+		  | "%"  -> (a % b)
+		  | "==" -> (a == b)
+		  | "!=" -> (a != b)
+		  | "<"  -> (a < b)
+		  | "<=" -> (a <= b)
+		  | ">"  -> (a > b)
+		  | ">=" -> (a >= b)
+		  | "&&" -> (a && b)
+		  | "!!" -> (a !! b)
+		esac
+}
+
+
 -- Evaluation environment: keeps a mapping between labels and (sub)programs
 fun initEvalEnv (insns) {
   local map =
@@ -52,11 +71,53 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
--- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
+
+fun mycmp(c, a)
+{
+	case c of 
+	  "z"  -> (a == 0) 
+	| "nz" -> (a != 0)
+	esac
+}
+
+-- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+	if size(insns) <= 0 then c 
+	else
+		case c of [st, sigma, w] ->
+			case insns[0] of
+			  BINOP(op) 	-> 
+					case st of a : b : tl ->
+						eval(env, [singleton(binopCalc(op, b, a)) +++ tl, sigma, w], insns[1])
+					esac 
+			| CONST  (n)  	-> 
+					eval(env, [singleton(n) +++ st, sigma, w], insns[1])
+			| LD     (x)   	-> 
+					eval(env, [singleton(sigma(x)) +++ st, sigma, w], insns[1])
+			| ST     (x)   	-> 
+					eval(env, [st[1], sigma <- [x, st[0]], w], insns[1])
+			| READ        	-> 
+					local r = readWorld(w); 
+					eval(env, [singleton(r[0]) +++ st, sigma, r[1]], insns[1])
+			| WRITE       	-> 
+					local r = writeWorld(st[0], w); 
+					eval(env, [st[1], sigma, r], insns[1])
+			| LABEL (s)		-> eval(env, c, insns[1])
+			| JMP   (l)		-> eval(env, c, fromLabel(env, l))
+			| CJMP  (c, l)	-> 
+				case st of a : tl ->
+					if ((compare(c, "z")==0 && a==0) !! (compare(c, "nz")==0 && a))
+					then eval(env, [tl, sigma, w], fromLabel(env, l))
+					else eval(env, [tl, sigma, w], insns[1])
+					fi
+				esac
+			| _            	-> printf("??\n"); c
+			esac
+		esac
+	fi
 }
+
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
@@ -97,12 +158,71 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+	case expr of
+		Var(x)           -> singleton(LD(x))
+	  | Const(n)         -> singleton(CONST(n))
+	  | Binop(c, e1, e2) -> compileExpr(e1) +++ compileExpr(e2) +++ singleton(BINOP(c))
+	  | _                -> singleton("Can't recognize expr")
+	esac
 }
+
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
-public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+fun compileSM1 (env, stmt, lEnd) {
+	case stmt of
+	  Assn(x, e)	-> [env, compileExpr(e) +++ singleton(ST(x))]
+	| Read(x)     	-> [env, singleton(READ) +++ singleton(ST(x))]
+	| Write(e)	    -> [env, compileExpr(e) +++ singleton(WRITE)]
+	| Seq(s1, s2)   -> 
+		case compileSM1(env, s1, "") of [env1, insns1] -> 
+			case compileSM1(env1, s2, lEnd) of [env2, insns2] ->
+				[env2, insns1 +++ insns2]
+			esac
+		esac
+	| Skip 			-> [env, {}]
+	| While(e, s)	-> 
+		case genLabels(env, 2) of [l1, l2, env1] ->
+			case compileSM1(env1, s, "") of [env2, insns] ->
+				[env2, {JMP (l2), LABEL (l1)} +++ 
+					    insns +++ 
+					    singleton(LABEL (l2)) +++ 
+					    compileExpr(e) +++
+					    singleton(CJMP ("nz", l1)) ]
+			esac
+		esac
+	| Repeat(s, e)  ->
+		case genLabels(env, 1) of [l, env1] ->
+			case compileSM1(env1, s, "") of [env2, insns] ->
+				[env2, singleton(LABEL(l)) +++
+					   insns +++
+					   compileExpr(e) +++
+					   singleton(CJMP("z", l))]
+			esac
+		esac
+	| If(e, s1, s2) ->
+		case genLabels(env, 2) of [lElse, lFi, env1] ->
+			if compare(lEnd, "") == 0 then lEnd := lFi fi;
+			case compileSM1(env1, s1, lEnd) of [env2, insns1] ->
+				case compileSM1(env2, s2, lEnd) of [env3, insns2] ->
+					[env3, compileExpr(e) +++
+						   singleton(CJMP("z", lElse)) +++
+						   insns1 +++
+						   singleton(JMP(lEnd)) +++
+						   singleton(LABEL(lElse)) +++
+						   insns2 +++
+						   singleton(LABEL(lFi))]
+				esac
+			esac
+		esac
+	| _             -> printf("Can't recognize stmt instruction");
+					   [env, {}]
+	esac
+}
+
+
+public fun compileSM(stmt)
+{
+	compileSM1(initCompEnv(), stmt, "")[1]
 }
