@@ -30,15 +30,34 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
 
 local stmt = memo $ eta syntax(
 	
-	      kWrite x = inbr[s("("), exp, s(")")] {Write(x)} |
+	      kWrite x = inbr[s("("), exp, s(")")]             {Write(x)}    |
 	      
-	      kRead x = inbr[s("("), lident, s(")")] {Read(x)} |
+	      kRead x = inbr[s("("), lident, s(")")]           {Read(x)}     |
 	      
-	      x = lident s[":="] y = exp {Assn(x, y)} |
+	      x = lident s[":="] y = exp                       {Assn(x, y)}  | 
 	      
-	      x = stmt s[";"] y = stmt end {Seq(x, y)} |
+	      x = stmt s[";"] y = stmt end                     {Seq(x, y)}   |
 	      
-	      kSkip {Skip});
+	      kSkip                                            {Skip}        |
+
+        kIf cond=exp kThen s1=seqq s2=ifTailParser       {If (cond, s1, s2)} |
+        
+        kWhile cond=exp kDo s=seqq kOd                   {While(cond, s)} |
+
+        kRepeat s=seqq kUntil cond=exp                   {Repeat(s, cond)} |
+
+        kFor e1=seqq s[","] e2=exp s[","] e3=seqq kDo s=seqq kOd {Seq(e1, While(e2, Seq(s, e3)))}
+        ),
+
+      ifTailParser = memo $ eta syntax (-kFi                   {Skip} |
+                                          
+                                        -kElse seqq -kFi              |
+                                          
+                                        kElif cond=exp kThen s1=seqq s2=ifTailParser {If(cond, s1, s2)}
+      ),
+
+      seqq = memo $ eta syntax (stmt | s1=stmt s[";"] s2=seqq {Seq(s1, s2)}
+      );
    
 
 -- Public top-level parser
