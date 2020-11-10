@@ -35,15 +35,24 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
                                    inbr[s("("), exp, s(")")]),
       exp = memo $ eta expr (operTable, primary);
 
+local ifOtherPars = memo $ eta syntax(-kFi           {Skip} |
+                                      -kElse seqstmt -kFi   |
+                                      -kElif cond=exp kThen s1=seqstmt s2=ifOtherPars {If (cond, s1, s2)}
+                                     );
 
 local stmt = memo $ eta syntax (
-  x=kSkip {Skip} |
-  x=lident s[":="] y=exp {Assn (x, y)} |
-  s1=stmt s[";"] s2=stmt end {Seq (s1, s2)} |
-  kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
-  kWrite x=inbr[s("("), exp, s(")")] {Write (x)}
-);
+  x=kSkip                                          {Skip} |
+  x=lident s[":="] y=exp                    {Assn (x, y)} |
+  s1=stmt s[";"] s2=stmt end               {Seq (s1, s2)} |
+  kRead x=inbr[s("("), lident, s(")")]         {Read (x)} |
+  kWrite x=inbr[s("("), exp, s(")")]          {Write (x)} |
+  kIf cond=exp kThen s1=seqstmt s2=ifOtherPars  {If (cond, s1, s2)} |
+  kWhile e=exp kDo s=seqstmt kOd             {While(e,s)} |
+  kRepeat s=seqstmt kUntil cond=exp   {Repeat (s, cond)}  |
+  kFor s1=seqstmt s[","] e=exp s[","] s2=seqstmt body=inbr[kDo, seqstmt, kOd] {Seq(s1,While(e,Seq(body,s2)))}
+ );
 
+local seqstmt = memo $ eta syntax (stmt | s1=stmt s[";"] s2=seqstmt {Seq(s1, s2)});
 
 -- Public top-level parser
 public parse = stmt;
