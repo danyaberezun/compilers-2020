@@ -1,0 +1,6 @@
+*.i
+*.o
+*.s
+regression/*.log
+regression/test???
+
