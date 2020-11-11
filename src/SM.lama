@@ -9,7 +9,19 @@ import Expr;
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+  case insns of
+    {}             -> c
+  | ins : insns    -> case c of [stack, state, world] ->
+      case ins of
+        CONST (n)  -> [n : stack, state, world]
+      | BINOP (op) -> case stack of v1 : v2 : vs -> [opFun (op) (v1, v2) : vs, state, world] esac
+      | LD (x)     -> [state (x) : stack, state, world]
+      | ST (x)     -> case stack of v : vs -> [vs, state <- [x, v], world] esac
+      | READ       -> case readWorld (world) of [v, world1] -> [v : stack, state, world1] esac
+      | WRITE      -> case stack of v : vs -> [vs, state, writeWorld (v, world)] esac
+      esac.eval (insns)
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -21,12 +33,22 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+    case (expr) of 
+      Var   (x)          -> LD    (x)
+    | Const (n)        -> CONST (n)
+    | Binop (op, l, r) -> { compileExpr (r), compileExpr (l), BINOP (op) }
+    esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  deepFlatten (    
+    case stmt of
+      Read (v)         -> {READ, ST (v)}
+    | Write (expr)     -> {compileExpr (expr), WRITE}
+    | Assn (v, expr)   -> {compileExpr (expr), ST (v)}
+    | Seq (seq1, seq2) -> {compileImpl (seq1), compileImpl (seq2)}
+    esac)
 }
