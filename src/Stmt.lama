@@ -15,10 +15,7 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
-<<<<<<< HEAD
 
-=======
->>>>>>> A01-straight-line-int-sm
 fun eval (c, stmt) {
   case c of [ state, world ] ->
     case stmt of
