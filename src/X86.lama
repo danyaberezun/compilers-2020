@@ -5,7 +5,10 @@ import Collection;
 import List;
 import Buffer;
 import Fun;
+<<<<<<< HEAD
 import Manifest;
+=======
+>>>>>>> A02-straight-line-x86
 
 -- Assembler language interface
 -- The registers: 
@@ -289,7 +292,46 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+<<<<<<< HEAD
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+=======
+        | CONST (n) ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (L (n), s)]
+            esac
+        | LD (x) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move (env.loc (x), s)]
+            esac
+        | ST (x) -> 
+            case env.addGlobal(x).pop of
+              [s, env] -> [env, code <+> move (s, env.loc (x))]
+            esac
+        | BINOP (op) ->
+            case env.pop2 of
+              [x, y, env] -> case env.allocate of
+                [s, env] -> case op of
+                  "/" -> [env, code <+ Mov (x, eax)
+                                    <+ Cltd
+                                    <+ IDiv (y)
+                                    <+ Mov (eax, s)]
+                | "%" -> [env, code <+ Mov (x, eax)
+                                    <+ Cltd
+                                    <+ IDiv (y)
+                                    <+ Mov (edx, s)]
+                | "+" -> [env, code <+ Mov (x, eax) <+ Binop("+", y, eax) <+ Mov (eax, s)]
+                | "-" -> [env, code <+ Mov (x, eax) <+ Binop("-", y, eax) <+ Mov (eax, s)]
+                | "*" -> [env, code <+ Mov (x, eax) <+ Binop("*", y, eax) <+ Mov (eax, s)]
+                | "&&" -> [env, code <+ Mov (x, eax) <+ Binop("&&", y, eax) <+ Mov (eax, s)]
+                | "!!" -> [env, code <+ Mov (x, eax) <+ Binop("!!", y, eax) <+ Mov (eax, s)]
+                | _ -> [env, code <+ Mov (y, eax)
+                                  <+ Binop ("cmp", eax, x)
+                                  <+ Set (suffix (op), "%al")
+                                  <+ Mov (eax, s)]
+                esac
+              esac
+            esac
+>>>>>>> A02-straight-line-x86
         esac
       }, [env, emptyBuffer ()], code)
   }
@@ -297,6 +339,7 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
+<<<<<<< HEAD
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
@@ -322,5 +365,23 @@ public fun compileX86 (args, code) {
                     ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
+=======
+-- A top-level codegeneration function. Takes a stack machine program
+-- and returns x86 listing as a string
+public fun compileX86 (code) {
+  case compile (initEnv (), code) of
+    [env, code] ->
+       map (insnString, 
+            getBuffer $
+              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
+              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
+              codeSection (
+                singletonBuffer (Meta ("main:\n")) <+>
+                prologue (getStackSize (env)) <+>
+                code <+>
+                epilogue ()
+              )
+           ).stringcat
+>>>>>>> A02-straight-line-x86
   esac
 }
