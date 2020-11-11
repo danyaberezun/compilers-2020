@@ -131,11 +131,8 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-<<<<<<< HEAD
   -- popped items and an undated environment
-=======
-  -- popped items and an updated environment
->>>>>>> A03-straight-line-parser
+
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]

@@ -25,19 +25,19 @@ fun eval (c@[s, w], stmt) {
    | Read(x) -> fun (s, x, [n, w]) { [s <- [x, n], w] } (s, x, readWorld(w)) 
    | Write(e) -> [s, writeWorld(evalExpr(s, e), w)] 
    | Assn(x, e) -> [s <- [x, evalExpr(s, e)], w] 
-   | If(e, s1, s2) -> case evalExpr (map, e) of
+   | If(e, s1, s2) -> case evalExpr (s, e) of
     					0 -> eval (c, s2)
     					| _ -> eval(c, s1)
     				esac
-   | While(e, stm) -> case evalExpr (map, e) of
-   				0 -> [map, world]
+   | While(e, stm) -> case evalExpr (s, e) of
+   				0 -> [s, w]
    				| _ -> eval(eval(c, stm), stmt)
    			esac
    | Repeat (stmt, e) -> case eval (c, stmt) of
-   					new_c@[new_map, new_world] -> 
-   					case evalExpr (new_map, e) of
+   					new_c@[new_s, new_w] -> 
+   					case evalExpr (new_s, e) of
    						0 -> eval (new_c, Repeat(stmt, e)) 
-   						| _ -> [new_map, new_world]
+   						| _ -> [new_s, new_w]
    					esac
    			esac
     esac
