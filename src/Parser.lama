@@ -20,10 +20,10 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
       	[Left, [s("!!"), fun (l, op, r) {Binop (op, l, r)}]:{}],
       	[Left, [s("&&"), fun (l, op, r) {Binop(op, l, r)}]:{}],
       	[Nona, {[s("!="), fun (l, op, r) {Binop (op, L, r)}],
-      		[s("=="), fun (l, op, r) {Binop(op, l, r)}]
-      		[s("<"), fun (l, op, r) {Binop(op, l, r)}]
-      		[s("<="), fun (l, op, r) {Binop(op, l, r)}]
-      		[s(">"), fun (l, op, r) {Binop(op, l, r)}]
+      		[s("=="), fun (l, op, r) {Binop(op, l, r)}],
+      		[s("<"), fun (l, op, r) {Binop(op, l, r)}],
+      		[s("<="), fun (l, op, r) {Binop(op, l, r)}],
+      		[s(">"), fun (l, op, r) {Binop(op, l, r)}],
       		[s(">="), fun (l, op, r) {Binop(op, l, r)}]
       		}],
       	[Left, {[s("+"), fun(l, op, r) {Binop(op, l, r)}],
