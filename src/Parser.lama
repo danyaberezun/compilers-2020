@@ -50,11 +50,20 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
 		 [s ("%"), fun (l, op, r) {Binop(op, l, r)}] 
 		}] }, primary);
 
+local elseBranch = memo $ eta syntax (
+					kElse e_stmt = stmt kFi {e_stmt} 
+					| kElif cond = exp kThen e_stmt1=stmt e_stmt2=elseBranch {If(cond, e_stmt1, e_stmt2)});
+
 local s_stmt = memo $ eta syntax (
 	kSkip {Skip} |
 	kRead x=inbr[s("("), lident, s(")")] {Read(x)} |
 	kWrite e=inbr[s("("), exp, s(")")] {Write(e)} |
-	x=lident s[":="] e=exp {Assn(x, e)}
+	x=lident s[":="] e=exp {Assn(x, e)} |
+	kIf cond=exp kThen i_stmt=stmt kFi {If(cond, i_stmt, Skip)} |
+	kIf cond=exp kThen i_stmt1=stmt i_stmt2=elseBranch kFi {If(cond, i_stmt1, i_stmt2)} |
+	kWhile cond=exp b=inbr[kDo, stmt, kOd] { While(cond, b) |
+	kRepeat b=stmt kUntil cond=exp {Repeat(b, cond)} |
+	kFor decl=stmt s[","] cond=exp s[","] iter=stmt b=inbr[kDo, stmt, kOd] {Seq (decl, While (cond, Seq (b, iter)))}
     );
 local stmt = memo $ eta syntax (
 		s_stmt |
