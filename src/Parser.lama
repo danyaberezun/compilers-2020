@@ -43,7 +43,7 @@ local s_stmt = memo $ eta syntax (
 	x=lident s[":="] e=exp {Assn(x, e)} |
 	kIf cond=exp kThen i_stmt=stmt kFi {If(cond, i_stmt, Skip)} |
 	kIf cond=exp kThen i_stmt1=stmt i_stmt2=elseBranch kFi {If(cond, i_stmt1, i_stmt2)} |
-	kWhile cond=exp b=inbr[kDo, stmt, kOd] { While(cond, b) |
+	kWhile cond=exp b=inbr[kDo, stmt, kOd] { While(cond, b) } |
 	kRepeat b=stmt kUntil cond=exp {Repeat(b, cond)} |
 	kFor decl=stmt s[","] cond=exp s[","] iter=stmt b=inbr[kDo, stmt, kOd] {Seq (decl, While (cond, Seq (b, iter)))}
     );
