@@ -8,6 +8,7 @@ import World;
 import State;
 import Expr;
 import Buffer;
+import Fun;
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -41,7 +42,7 @@ fun initEvalEnv (insns) {
             esac
           }
         }) $ [emptyMap (compare), insns];
-  
+
   [fun (l) {
      case findMap (map, l) of Some (insns) -> insns esac
   }]
@@ -52,10 +53,57 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
--- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
+-- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+  -- example of upcoming instructions:
+  -- {READ, ST ("x"), READ, ST ("y"), LD ("x"), LD ("y"), BINOP ("*"), CONST (3), BINOP ("*"), ST ("z"), LD ("z"), WRITE}
+
+  fun applyOp(op, v1, v2) {
+      case op of
+              "*"  -> v1 * v2
+            | "+"  -> v1 + v2
+            | "-"  -> v1 - v2
+            | "/"  -> v1 / v2
+            | "%"  -> v1 % v2
+            | "==" -> v1 == v2
+            | "!=" -> v1 != v2
+            | "<"  -> v1 < v2
+            | "<=" -> v1 <= v2
+            | ">"  -> v1 > v2
+            | ">=" -> v1 >= v2
+            | "&&" -> v1 && v2
+            | "!!" -> v1 !! v2
+      esac
+  }
+
+  fun evalInstruction(c, instruction) {
+    -- printf ("SM instruction to eval: ""%s""\n", instruction.string);
+    case instruction of
+        READ -> local res = readWorld(c[2]); -- pair (value * world)
+              [res[0]:c[0], c[1], res[1]]
+      | WRITE -> case c[0] of v:vs -> [vs, c[1], writeWorld(v, c[2])] esac
+      | LD (name) -> [(c[1](name)):c[0], c[1], c[2]]
+      | ST (name) -> case c[0] of v:vs -> [vs, c[1] <- [name, v], c[2]] esac
+      | BINOP (op) -> case c[0] of v2:v1:vs -> [applyOp(op, v1, v2):vs, c[1], c[2]] esac
+      | CONST (val) -> [val:c[0], c[1], c[2]]
+      | LABEL (_) -> c
+    esac
+  }
+
+  case insns of
+      instruction:continuation -> case instruction of
+        JMP (l) -> eval(env, c, env.fromLabel(l))
+      | CJMP (znz, l) -> case c[0] of
+                  v:vs -> local ok = case znz of Z -> v == 0 | _ -> v != 0 esac;
+                          if ok then eval(env, [vs, c[1], c[2]], env.fromLabel(l))
+                                else eval(env, [vs, c[1], c[2]], continuation)
+                          fi
+                  esac
+      | _      -> eval(env, evalInstruction(c, instruction), continuation)
+      esac
+    | _ -> c
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -97,12 +145,82 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+      Var (name) -> singleton(LD (name))
+    | Const (val) -> singleton(CONST (val))
+    | Binop (op, expr1, expr2) -> compileExpr(expr1) +++ compileExpr(expr2) +++ singleton(BINOP (op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+
+  -- converts end label to SM code
+  fun maybeJump(maybeLabel) {
+    case maybeLabel of Some(l) -> singleton(JMP(l)) | _ -> {} esac
+  }
+
+  -- Compiles a single statement from sequential composition.
+  -- Returns [labelGenerator, SMCode]
+  fun complieSMSingleStmt (labelGenerator, stmt, endLabel) {
+    -- printf ("Statement to compile to SM: ""%s""\n", stmt.string);
+    case stmt of
+        Seq (_, _)  -> compileStatement(labelGenerator, stmt, endLabel)
+      | Read (name) -> [labelGenerator, {READ, ST (name)} +++ maybeJump(endLabel)]
+      | Write (expr) -> [labelGenerator, compileExpr(expr) +++ singleton(WRITE) +++ maybeJump(endLabel)]
+      | Assn (name, expr) -> [labelGenerator, compileExpr(expr) +++ singleton(ST (name)) +++ maybeJump(endLabel)]
+      | Skip              -> [labelGenerator, maybeJump(endLabel)]
+      | While (cond, s)   -> case labelGenerator.genLabels(2) of
+               [l1, l2, lg] -> case compileStatement(lg, s, Some(l1)) of
+                  [lg2, sm] -> [lg2, {JMP (l1), LABEL (l2)} +++ sm
+                         +++ singleton(LABEL(l1)) +++ compileExpr(cond) +++ singleton(CJMP(NZ, l2))
+                         +++ maybeJump(endLabel)]
+                  esac
+               esac
+      | Repeat (s, cond)  -> case labelGenerator.genLabels(2) of
+               [l1, l2, lg] -> case compileStatement(lg, s, Some(l1)) of
+                  [lg2, sm] -> [lg2,     singleton(LABEL(l2)) +++ sm
+                                     +++ singleton(LABEL(l1)) +++ compileExpr(cond) +++ singleton(CJMP(Z, l2))
+                                     +++ maybeJump(endLabel)]
+                  esac
+               esac
+      | If (cond, s1, s2) -> case endLabel of
+             Some(l2) -> case labelGenerator.genLabels(1) of
+               [l1, lg] -> case compileStatement(lg, s1, endLabel) of
+                 [lg2, sm1] -> case compileStatement(lg2, s2, endLabel) of
+                   [lg3, sm2] -> [lg3, compileExpr(cond) +++ singleton(CJMP(Z, l1))
+                                       +++ sm1 +++ singleton(LABEL(l1)) +++ sm2]
+                   esac
+                 esac
+               esac
+           | None     -> case labelGenerator.genLabels(2) of
+               [l1, l2, lg] -> case compileStatement(lg, s1, Some(l2)) of
+                 [lg2, sm1] -> case compileStatement(lg2, s2, Some(l2)) of
+                   [lg3, sm2] -> [lg3, compileExpr(cond) +++ singleton(CJMP(Z, l1))
+                                       +++ sm1 +++ singleton(LABEL(l1)) +++ sm2 +++ singleton(LABEL(l2))]
+                 esac
+               esac
+             esac
+           esac
+    esac
+  }
+
+  -- Returns [labelGenerator, SMCode]
+  fun compileStatement(labelGenerator, stmt, endLabel) {
+      case stmt of
+          Seq (next_stmt, continuation@_) -> case complieSMSingleStmt(labelGenerator, next_stmt, None) of
+            [lg, sm] -> case compileStatement(lg, continuation, endLabel) of
+              [lg2, sm2] -> [lg2, sm +++ sm2]
+            esac
+          esac
+        | next_stmt -> complieSMSingleStmt(labelGenerator, next_stmt, endLabel)
+      esac
+  }
+
+  local code = compileStatement(initCompEnv(), stmt, None)[1];
+  -- local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+  -- fprintf(stderr, "State machine code: %s\n", code.string);
+  code
 }
