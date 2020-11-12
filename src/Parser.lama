@@ -38,7 +38,7 @@ local simpleStmt = memo $ eta syntax (
       kSkip { Skip } |
       kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
       kWrite e=inbr[s("("), exp, s(")")] {Write (e)}  |
-      x=lidenr s[":="] e=exp {Assn (x, e)}
+      x=lident s[":="] e=exp {Assn (x, e)}
 );
                          
 
