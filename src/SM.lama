@@ -59,8 +59,77 @@ fun fromLabel (env, lab) {
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
 (* Assignment *)
+
+fun checkJump(cond, val) {
+  case cond of
+	  "z" -> val == 0
+  | "n" -> val != 0
+	esac
+}
+
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+  case c of [stack, state, world] -> 
+  	case insns of
+  	  READ:tail ->
+        case readWorld(world) of [a, newWorld] ->
+          eval(env, [a:stack, state, newWorld], tail)
+        esac
+		| LD(x):tail -> eval(env, [state(x):stack, state, world], tail)
+		-- todo check it ok: maybe should pass smth like Ref(x)?
+		| LDA(x):tail -> eval(env, [x:stack, state, world], tail)
+		| CONST(c):tail -> eval(env, [c:stack, state, world], tail)
+		| BINOP(op):tail ->
+			case stack of
+			  y:x:s_tail -> {
+					local res = calculate(op, x, y);
+					eval(env, [res:s_tail, state, world], tail)
+        }
+			| _ -> failure("Not enough arguments in stack for binop!")
+			esac
+		-- todo eliminate ST?
+		| ST(x):tail ->
+		  case stack of
+			  val:s_tail -> eval(env, [s_tail, state <- [x, val], world], tail)
+			esac
+		| STI:tail ->
+		  case stack of
+			  ref:val:s_tail -> eval(env, [val:s_tail, state <- [ref, val], world], tail)
+			esac
+		| Var(x):tail ->
+		  eval(env, [state(x):stack, state, world], tail)
+		| DUP:tail -> eval(env, c, tail)
+		| WRITE:tail ->
+		  case stack of
+			  val:s_tail -> {
+          eval(env, [s_tail, state, writeWorld(val, world)], tail)
+        }
+			| _ -> failure("Not enough arguments in stack for write!")
+			esac
+	  -- TODO: remove this branch later? (hotfix: "WRITE:tail" not matched)
+		| WRITE ->
+		  case stack of
+			  val:s_tail -> {
+          eval(env, [s_tail, state, writeWorld(val, world)], {})
+        }
+			| _ -> failure("Not enough arguments in stack for write!")
+			esac
+		| LABEL(l):tail -> eval(env, c, tail)
+	  | JMP(l):tail -> eval(env, c, fromLabel(env, l))
+		| CJMP(cond, l):tail ->
+		  case stack of val:s_tail ->
+				case checkJump(cond, val) of
+					true -> eval(env, [s_tail, state, world], fromLabel(env, l))
+				| false -> eval(env, [s_tail, state, world], tail)
+				esac
+			esac
+    | DROP:tail ->
+      case stack of val:s_tail ->
+        eval(env, [s_tail, state, world], tail)
+      esac
+  	| {} -> c
+  	| _ -> failure("evalSM: can't parse insns: %s\n", insns.string)
+  	esac
+	esac
 }
 (* End *)
 
@@ -104,6 +173,82 @@ fun genLabels (env, n) {
 -- instructions.
 (* Assignment *)
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  local env = initCompEnv();
+	local res = compileSM0(stmt, env)[0];
+	res
+}
+
+public fun compileSM0 (stmt, env) {
+  case stmt of
+    Seq (head, tail) ->
+			case compileSM0(head, env) of [headSM, env] ->
+			  case compileSM0(tail, env) of [tailSM, env] ->
+			  	[headSM +++ tailSM, env]
+			  esac
+			esac
+  | Read(x) -> [READ:ST(x):{}, env]
+	| Skip -> [{}, env]
+	-- todo: refine later: fix sequences like seq(seq(a,b), c) before compile
+	| Ref(z) -> [singleton(LDA(z)), env]
+	-- todo: the old way to store via ST if Assn (Ref(z), expr)?
+  | Assn (z, expr) ->
+	  case compileSM0(expr, env) of [exprSM, env] ->
+  	  case compileSM0(z, env) of [zSM, env] ->
+  		  [exprSM +++ zSM +++ singleton(STI), env]
+  		esac
+		esac
+	| Binop(op, x, y) ->
+	  case compileSM0(x, env) of [xSM, env] ->
+		  case compileSM0(y, env) of [ySM, env] ->
+			  [xSM +++ ySM +++ singleton(BINOP(op)), env]
+			esac
+		esac
+	| Var(x) -> [singleton(LD(x)), env]
+	| Const(c) -> [singleton(CONST(c)), env]
+  | Write (expr) ->
+	  case compileSM0(expr, env) of [compE, env] ->
+		  [compE +++ singleton(WRITE), env]
+		esac
+	| w@While (e, b) -> {
+	  case genLabels(env, 2) of [l1, l2, env] ->
+		  case compileSM0(e, env) of [compE, env] ->
+			  case compileSM0(b, env) of [compB, env] -> {
+				  local joined = (LABEL(l1):compE) +++ (CJMP("z",l2):{})
+				    +++ compB
+					  +++ (JMP(l1):LABEL(l2):{});
+				  [joined, env]
+				} esac
+			esac
+		esac
+	}
+	| If (e, b1, b2) ->
+	  case genLabels(env, 2) of [le, lfi, env] ->
+			case compileSM0(e, env) of [compE, env] ->
+			  case compileSM0(b1, env) of [compB1, env] ->
+			    case compileSM0(b2, env) of [compB2, env] -> {
+				    local joined = compE +++ (CJMP("z", le):{}) 
+				                     +++ compB1 +++ (JMP(lfi)
+				    							 :LABEL(le):{})
+				    							   +++ compB2 +++
+				    							 (LABEL(lfi):{});
+				    [joined, env]
+					} esac
+			  esac
+		  esac
+		esac
+	| Repeat (s, e) ->
+	  case genLabel(env) of [l, env] ->
+		  case compileSM0(s, env) of [compS, env] ->
+			  case compileSM0(e, env) of [compE, env] ->
+				  [(LABEL(l):{}) +++ compS +++ compE +++ (CJMP("z", l):{}), env]
+				esac
+			esac
+	  esac
+  | Ignore (expr) ->
+    case compileSM0(expr, env) of [compExpr, env] -> {
+      [compExpr +++ singleton(DROP), env]
+    } esac
+  | wat -> failure("Can't parse command: %s\n", wat.string)
+  esac
 }
 (* End *)
