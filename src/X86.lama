@@ -328,31 +328,6 @@ fun compile (env, code) {
 
    compile (env, code)
   }
-  
-  
--- A top-level codegeneration function. Takes a stack machine program
--- and returns x86 listing as a string
-public fun compileX86 (code) {
-  case compile (initEnv (), code) of
-    [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
-        esac
-      }, [env, emptyBuffer ()], code)
-  }
-
-  compile (env, code) 
-}
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
