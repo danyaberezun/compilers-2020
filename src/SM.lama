@@ -85,7 +85,11 @@ fun eval (env, c, insns) {
       |  BINOP(s1)   -> c := [singleton(computeExpr(s1,c[0][1][0],c[0][0])) +++ c[0][1][1], c[1], c[2]]; insns := insns[1]
       |  CONST(n)    -> c := [singleton(n) +++ c[0], c[1], c[2]]; insns := insns[1]
       |  LD(x)       -> c := [singleton(c[1](x)) +++ c[0], c[1], c[2]]; insns := insns[1]
+      |  LDA(x)      -> c := [singleton(Ref(x)) +++ c[0], c[1], c[2]]; insns := insns[1]
       |  ST(x)       -> c := [c[0][1], c[1] <- [x, c[0][0]], c[2]]; insns := insns[1]
+      |  STI         -> case c[0] of
+          val:Ref(x):st -> c:= [val:st, c[1] <- [x, val], c[2]]; insns := insns[1]
+        esac
       |  Skip        -> insns := insns[1]
       |  LABEL(l)    -> insns := insns[1]
       |  CJMP(s,l)   -> if (c[0][0] && compare(s,"nz")==0) !! (c[0][0]==0 && compare(s,"z")==0) then
@@ -95,6 +99,7 @@ fun eval (env, c, insns) {
         fi;
         c := [c[0][1], c[1], c[2]]
       |  JMP(l)   ->  insns:=fromLabel(env, l)
+      | DROP         -> c := [c[0][1], c[1], c[2]]; insns := insns[1]
     esac
   od;
   c
@@ -135,48 +140,60 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list (of, possibly, lists)
--- of stack machine instructions
-fun compileExpr (expr) {
-  case expr of
-   Var(s1)           -> singleton(LD(s1))
-   | Const(s1)       -> singleton(CONST(s1))
-   | Binop(s1,s2,s3) -> compileExpr(s2) +++ compileExpr(s3) +++ singleton(BINOP(s1))
-  esac
-}
-
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 fun compileSM2 (env, stmt) {
   case stmt of
-   Seq(s1,s2)        -> case compileSM2(env, s1) of [env1, insns1]
+   Var(s1)           -> [env, singleton(LD(s1))]
+   | Const(s1)       -> [env, singleton(CONST(s1))]
+   | Ref(x)          -> [env, singleton(LDA(x))]
+   | Binop(s1,s2,s3) -> case compileSM2(env, s2) of [env1, insns1]
+                       -> case compileSM2(env1, s3) of [env2, insns2]
+                         -> [env2, insns1 +++ insns2 +++ singleton(BINOP(s1))]
+                       esac
+                     esac
+   |Seq(s1,s2)        -> case compileSM2(env, s1) of [env1, insns1]
                        -> case compileSM2(env1, s2) of [env2, insns2]
                          -> [env2, insns1 +++ insns2]
                        esac
                      esac
-   | Write(s1)       -> [env, compileExpr(s1) +++ singleton(WRITE)]
+   | Write(s1)       -> case compileSM2(env, s1) of [env1, insns1]
+                       -> [env1, insns1 +++ singleton(WRITE)]
+                     esac
    | Read(s1)        -> [env, singleton(READ) +++ singleton(ST(s1))]
-   | Assn(s1,s2)     -> [env, compileExpr(s2) +++ singleton(ST(s1))]
-   | Skip            -> [env, {}]
-   | While(e, st)    -> case compileSM2(env, st) of [env1, insns]
-                       -> case genLabels(env1,2) of [l1, l2, env2]
--> [env2, singleton(JMP(l2)) +++ singleton(LABEL(l1)) +++ insns +++ singleton(LABEL(l2)) +++ compileExpr(e) +++ singleton(CJMP("nz", l1))]
+   | Assn(s1,s2)     -> case compileSM2(env, s1) of [env1, insns1]
+                       -> case compileSM2(env1, s2) of [env2, insns2]
+                         -> [env2, insns1 +++ insns2 +++ singleton(STI)]
                        esac
                      esac
-   | If(e, st1, st2) -> case compileSM2(env, st1) of [env1, insns1]
-                       -> case compileSM2(env1, st2) of [env2, insns2]
-                         -> case genLabels(env2,2) of [l1, l2, env3]
--> [env3, compileExpr(e) +++ singleton(CJMP("z", l1)) +++ insns1 +++ singleton(JMP(l2)) +++ singleton(LABEL(l1)) +++ insns2 +++ singleton(LABEL(l2))]
+   | Skip            -> [env, {}]
+   | While(e, st)    -> case compileSM2(env, st) of [env1, insns1]
+                       -> case genLabels(env1,2) of [l1, l2, env2]
+                         -> case compileSM2(env2, e) of [env3, insns2]
+-> [env3, singleton(JMP(l2)) +++ singleton(LABEL(l1)) +++ insns1 +++ singleton(LABEL(l2)) +++ insns2 +++ singleton(CJMP("nz", l1))]
                          esac
                        esac
                      esac
-   | Repeat(st, e)    -> case compileSM2(env, st) of [env1, insns]
-                       -> case genLabels(env1,1) of [l, env2]
-                           -> [env2, singleton(LABEL(l)) +++ insns +++ compileExpr(e) +++ singleton(CJMP("z", l))]
+   | If(e, st1, st2) -> case compileSM2(env, e) of [env1, insns1]
+                       -> case genLabels(env1,2) of [l1, l2, env2]
+                         -> case compileSM2(env2, st1) of [env3, insns2]
+                           -> case compileSM2(env3, st2) of [env4, insns3]
+-> [env4, insns1 +++ singleton(CJMP("z", l1)) +++ insns2 +++ singleton(JMP(l2)) +++ singleton(LABEL(l1)) +++ insns3 +++ singleton(LABEL(l2))]
+                           esac
+                         esac
                        esac
                      esac
+   | Repeat(st, e)    -> case compileSM2(env, st) of [env1, insns1]
+                       -> case genLabels(env1,1) of [l, env2]
+                         -> case compileSM2(env2, e) of [env3, insns2]
+                           -> [env3, singleton(LABEL(l)) +++ insns1 +++ insns2 +++ singleton(CJMP("z", l))]
+                         esac
+                       esac
+                     esac
+    |Ignore(st) -> case compileSM2(env, st) of [env1, insns]
+        -> [env1, insns +++ singleton(DROP)]
+    esac
   esac
 }
 
