@@ -39,24 +39,7 @@ local simpleStmt = memo $ eta syntax (
       kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
       kWrite e=inbr[s("("), exp, s(")")] {Write (e)}  |
       x=lidenr s[":="] e=exp {Assn (x, e)} |
-      kWhile e=exp s=inbr[kDo, stmt, kOd] {While (e, s)} |
-      kFor s1=stmt s[","] e=exp s[","] s2=stmt body=inbr[kDo, stmt, kOd] {Seq (s1, While (e, Seq(b, s2)))} |
-      inbr[kIf, parseIf, kFi]
 );
-
-
-
-local parseElse = memo $ eta syntax (
-      -kElse stmt |
-      empty {Skip} |
-      -kElif parseIf
-);
-
-
-local parseIf = memo $ eta syntax (
-      cond=exp kThen thenPart=stmt elsePart=parseElse {If (cond, thenPart, elsePart)}
-);
-  
                          
 
 local stmt = memo $ eta syntax (simpleStmt |
@@ -66,4 +49,3 @@ local stmt = memo $ eta syntax (simpleStmt |
 
 -- Public top-level parser
 public parse = stmt;
-             
