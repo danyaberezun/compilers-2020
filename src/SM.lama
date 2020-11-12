@@ -63,7 +63,7 @@ fun initEvalEnv (insns) {
         }) $ [emptyMap (compare), insns];
   
   [fun (l) {
-     case findMap (map, l) of Some (insns) -> insns esac
+     case findMap (map, l) of Some (insns) -> insns | _ -> failure("No lable %s\n", l) esac
   }]
 }
 
@@ -119,7 +119,37 @@ fun eval (env, w, insns) {
   -- Core interpreter: takes a configuration and a program, returns a configuration
   (* Assignment *)
   fun eval (c@[st, cst, s, w], insns) {
-    failure ("SM interpreter is not implemented\n")
+    case insns of -- TODO: rewrite
+      {} -> c |
+      i:insns -> case [i, stack] of
+        [BINOP(op), arg2:arg1:stack] ->
+          eval(env, [evalOp(op, arg1, arg2):stack, mp, world], insns) |
+        [READ, _] -> case readWorld(world) of [x, world] ->
+            eval(env, [x:stack, mp, world], insns)
+          esac |
+        [WRITE, arg:stack] -> eval(env, [stack, mp, writeWorld(arg, world)], insns) |
+        [LD (x), _] -> eval(env, [mp(x):stack, mp, world], insns) |
+        [ST (x), arg:tail] -> eval(env, [stack, mp <- [x, arg], world], insns) |
+        [CONST (x), _] -> eval(env, [x:stack, mp, world], insns) |
+        [LABEL (l), _] -> eval(env, c, insns) |
+        [JMP (l), _] -> eval(env, c, env.fromLabel(l)) |
+        [CJMP ("z", l), arg:stack] ->
+          if arg != 0 then
+            eval(env, [stack, mp, world], insns)
+          else
+            eval(env, [stack, mp, world], env.fromLabel(l))
+          fi |
+        [CJMP ("nz", l), arg:stack] ->
+          if arg == 0 then
+            eval(env, [stack, mp, world], insns)
+          else
+            eval(env, [stack, mp, world], env.fromLabel(l))
+          fi |
+        [DROP, _:stack] -> eval(env, [stack, mp, world], insns) |
+        [LDA (x), _] -> eval(env, [x:stack, mp, world], insns) |
+        [STI, addr:val:stack] -> eval(env, [val:stack, mp <- [addr, val], world], insns)
+      esac 
+    esac
   }
   (* End *)
   
@@ -327,28 +357,91 @@ fun addVars (env, names) {
 -- Takes an expression, returns a list of stack machine
 -- instructions.
 
-(* Assignment *)
-
--- Some guidelines for compiling functions and scopes.
---
--- 1. use env.beginScope/env.endScope properly;
--- 2. in each scope traverse the definitions twice:
---    a. first, add all bindings into symbolic state,
---       using end.addVar/env.addFun;
---    b. do not forget to generate GLOBAL instructions for
---       top-level variable declarations;
---    c. on the secord traversal add functions themselves for
---       future code generation (use env.rememberFun).
--- 3. the overall flow for codegeneration:
---    a. generate the code for thetopmost expression (the progrman itself);
---    b. take list of nested functions definitions via env.getFuns and
---       generate the code for each function;
---    c. repeat b. until no function definitions appear.
--- 4. when compiling functions, do not forget to create proper
---    environment (use env.beginFun) and register arguments
---    (use env.addArg).
-
 public fun compileSM (expr) {
-  failure ("compileSM not implemented\n")
+  fun inner(stmt, env) {
+    case stmt of
+      Binop (op, e1, e2) -> case inner(e1, env) of
+        [instr1, env] -> case inner(e2, env) of
+          [instr2, env] -> [instr1 +++ instr2 +++ singleton(BINOP (op)), env]
+        esac
+      esac |
+      Var (x) -> [singleton(LD (x)), env] |
+      Const (x) -> [singleton(CONST (x)), env] |
+      Ref (x) -> [singleton(LDA (x)), env] |
+      Ignore (exp) -> case inner(exp, env) of
+        [instr, env] -> [instr +++ singleton(DROP), env]
+      esac |
+      Assn (dest, exp) -> case inner(exp, env) of
+        [instr1, env] -> case inner(dest, env) of
+          [instr2, env] -> [instr1 +++ instr2 +++ singleton(STI), env]
+        esac
+      esac |
+      Seq (s1, s2) -> case inner(s1, env) of
+        [instr1, env] -> case inner(s2, env) of 
+          [instr2, env] -> [instr1 +++ instr2, env]
+        esac
+      esac |
+      Skip -> [{}, env] |
+      Read (x) -> [{READ, ST (x), DROP}, env] |
+      Write (exp) -> case inner(exp, env) of
+        [instr, env] -> [instr +++ singleton(WRITE), env]
+      esac |
+      If (cond, s1, s2) -> case env.genLabels(2) of
+        [l1, l2, env] -> case inner(cond, env) of
+          [condInstr, env] -> case inner(s1, env) of
+            [instr1, env] -> case inner(s2, env) of
+              [instr2, env] -> 
+                [
+                  condInstr +++ singleton(CJMP ("z", l1)) +++
+                  instr1 +++ {JMP (l2), LABEL (l1)} +++
+                  instr2 +++ singleton(LABEL (l2))
+                , env]
+            esac
+          esac
+        esac
+      esac |
+      While (cond, stmt) -> case env.genLabels(2) of
+        [l1, l2, env] -> case inner(cond, env) of
+          [condInstr, env] -> case inner(stmt, env) of
+            [body, env] ->
+              [
+                {JMP (l2), LABEL (l1)} +++ body +++ singleton(LABEL (l2)) +++
+                condInstr +++ singleton(CJMP ("nz", l1))
+              , env]
+          esac
+        esac
+      esac |
+      Repeat (stmt, cond) -> case env.genLabel of
+        [l, env] -> case inner(cond, env) of
+          [condInstr, env] -> case inner(stmt, env) of
+            [body, env] ->
+              [
+                singleton(LABEL (l)) +++ body +++ condInstr +++ singleton(CJMP ("z", l))
+              , env]
+          esac
+        esac
+      esac
+    esac
+  }
+  fun reduceJumps(env, i) {
+    case i of
+      JMP (l) -> case env.fromLabel(l) of 
+          _ : JMP (ol) : _ -> reduceJumps(env, JMP (ol)) |
+          _ -> i
+        esac |
+      CJMP (c, l) -> case env.fromLabel(l) of 
+          _ : JMP (ol) : _ -> reduceJumps(env, CJMP (c, ol)) |
+          _ -> i
+        esac |
+      _ -> i
+    esac
+  }
+  -- reduce jump chains
+  case inner(stmt, initCompEnv())[0] of
+    instr -> case initEvalEnv(instr) of
+      env -> map(fun (i) {
+          reduceJumps(env, i)
+        }, instr)
+    esac
+  esac
 }
-(* End *)
