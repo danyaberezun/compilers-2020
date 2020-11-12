@@ -28,7 +28,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
 local parseElse =  memo $ eta syntax (
       -kElse stSeq |
       empty {Skip} |
-      -kElif parseIf
+      -kElif inbr[kIf, parseIf, kFi]
 );
 
 local parseIf = memo $ eta syntax (
