@@ -26,12 +26,15 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
               [Left, [s("*") | s("/") | s("%"), binop] : {}] 
             }, primary );
 
-local simpleStmt = memo $ eta syntax (  kRead x=inbr[s("("), lident, s(")")] { Read (x) } |
-                                        kWrite x=inbr[s("("), exp, s(")")] { Write (x) } | 
-                                        x=lident s[":="] e=exp { Assn (x, e) } |
-                                        kSkip { Skip } );
+local stmt = memo $ eta syntax  (  
+                                  kRead x=inbr[s("("), lident, s(")")] { Read (x) }  |
+                                  kWrite ex=inbr[s("("), exp, s(")")] { Write (ex) } | 
+                                  x=lident s[":="] e=exp { Assn (x, e) }             |
+                                  s1=stmt s[";"] s2=stmt end { Seq (s1, s2) }        |
+                                  kSkip { Skip }
+                                );
 
-local stmt = memo $ eta syntax ( s1=simpleStmt s[";"] s2=stmt { Seq (s1, s2) } );
+-- local stmt = memo $ eta syntax ( s1=simpleStmt s[";"] s2=stmt end { Seq (s1, s2) } );
 
 -- Public top-level parser
 public parse = stmt;
