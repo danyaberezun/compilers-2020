@@ -41,7 +41,7 @@ fun initEvalEnv (insns) {
             esac
           }
         }) $ [emptyMap (compare), insns];
-  
+
   [fun (l) {
      case findMap (map, l) of Some (insns) -> insns esac
   }]
@@ -54,8 +54,62 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, configuration, commands) {
+  while 1 do {
+    case commands of
+      {} -> return configuration
+    | command:commandsTail ->
+        case eval1(env, configuration, command, commandsTail) of
+          [configuration2, commandsTail2] ->
+            commands := commandsTail2;
+            configuration := configuration2
+        esac
+    esac
+  } od
+}
+
+fun eval1 (env, configuration, command, commands) {
+  local stack = configuration[0];
+  local state = configuration[1];
+  local world = configuration[2];
+  local configuration2;
+  configuration2 := case command of
+    BINOP (op) ->
+      case stack of value2:value1:stack2 ->
+        local value = evalBinop (op, value1, value2);
+        [value:stack2, state, world]
+      esac
+  | CONST (value) -> [value:stack, state, world]
+  | READ ->
+      case readWorld (world) of
+        [value, world2] -> [value:stack, state, world2]
+      esac
+  | WRITE ->
+      case stack of value:stack2 ->
+        local world2 = writeWorld (value, world);
+        [stack2, state, world2]
+      esac
+  | LD (var) -> [state (var) : stack, state, world]
+  | ST (var) ->
+      case stack of value:stack2 ->
+        [stack2, state <- [var, value], world]
+      esac
+  | LABEL (label) -> configuration
+  | JMP (label) ->
+      commands := fromLabel(env, label);
+      configuration
+  | CJMP (code, label) ->
+      case stack of value:stack2 ->
+        local code_is_zero = compare(code, "z") == 0;
+        if (value == 0) == code_is_zero
+        then
+          commands := fromLabel(env, label);
+          [stack2, state, world]
+        else configuration
+        fi
+      esac
+  esac;
+  return [configuration2, commands]
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -97,12 +151,73 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+    Var (var) -> singleton (LD (var))
+  | Const (value) -> singleton (CONST (value))
+  | Binop (op, expr1, expr2) -> compileExpr (expr1) +++ compileExpr (expr2) +++ singleton (BINOP (op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case doCompileSM(initCompEnv(), stmt)
+    of [env, commands] -> commands
+  esac
+}
+
+public fun doCompileSM (env, stmt) {
+  local commands;
+  commands := case stmt of
+    Seq (stmt1, stmt2) ->
+      case doCompileSM(env, stmt1) of [env1, commands1] ->
+        case doCompileSM(env1, stmt2) of [env2, commands2] ->
+          env := env2;
+          commands1 +++ commands2
+        esac
+      esac
+  | Skip -> {}
+  | Read (var) -> {READ, ST (var)}
+  | Write (expr) -> compileExpr (expr) +++ singleton (WRITE)
+  | Assn (var, expr) -> compileExpr (expr) +++ singleton (ST (var))
+  | If (expr, stmt1, stmt2) ->
+      -- if expr == 0 jmp l1
+      -- stmt1
+      -- jmp l2
+      -- l1
+      -- stmt2
+      -- l2
+      case genLabels(env, 2) of [l1, l2, env2] ->
+        case doCompileSM(env2, stmt1) of [env3, commands1] ->
+          case doCompileSM(env3, stmt2) of [env4, commands2] ->
+            env := env4;
+            compileExpr(expr) +++ singleton(CJMP("z", l1)) +++ commands1 +++ {JMP(l2), LABEL(l1)} +++ commands2 +++ singleton(LABEL(l2))
+          esac
+        esac
+      esac
+  | While (expr, stmt) ->
+      -- jmp l2
+      -- l1
+      -- stmt
+      -- l2
+      -- if expr != 0 jmp l1
+      case genLabels(env, 2) of [l1, l2, env2] ->
+        case doCompileSM(env2, stmt) of [env3, stmtCommands] ->
+          env := env3;
+          {JMP(l2), LABEL(l1)} +++ stmtCommands +++ singleton(LABEL(l2)) +++ compileExpr(expr) +++ singleton(CJMP("nz", l1))
+        esac
+      esac
+  | Repeat (stmt, expr) ->
+      -- l1
+      -- stmt
+      -- if expr == 0 jmp l1
+      case genLabel(env) of [l1, env2] ->
+        case doCompileSM(env2, stmt) of [env3, stmtCommands] ->
+          env := env3;
+          singleton(LABEL(l1)) +++ stmtCommands +++ compileExpr(expr) +++ singleton(CJMP("z", l1))
+        esac
+      esac
+  esac;
+  return [env, commands]
 }
