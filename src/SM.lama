@@ -29,13 +29,14 @@ public fun showSM (prg) {
 fun eval (c@[st, state, w], insns) {
   case insns of
       {} -> [st, state, w]
-    | BINOP(op) : s -> eval([binopOp(op, st[1][0], st[0]) : st[1][1], state, w], s)
-    | CONST(n)  : s -> eval([n : st, state, w], s)
-    | READ      : s -> local world_ = readWorld(w); eval([world_[0] : st, state, world_[1]], s)
-    | WRITE     : s -> eval([st[1], state, writeWorld(st[0], w)], s)
-    | LD(x)     : s -> eval([state(x) : st, state, w], s)
-    | ST(x)     : s -> eval([st[1], state <- [x, st[0]], w], s)
+    | BINOP(op) : remI -> eval([binopOp(op, st[1][0], st[0]) : st[1][1], state, w], remI)
+    | CONST(n)  : remI -> eval([n : st, state, w], remI)
+    | READ      : remI -> local world_ = readWorld(w); eval([world_[0] : st, state, world_[1]], remI)
+    | WRITE     : remI -> eval([st[1], state, writeWorld(st[0], w)], remI)
+    | LD(x)     : remI -> eval([state(x) : st, state, w], remI)
+    | ST(x)     : remI -> eval([st[1], state <- [x, st[0]], w], remI)
   esac 
+}
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
