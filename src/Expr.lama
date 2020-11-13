@@ -1,6 +1,17 @@
+-- Expression evaluator
 
 import List;
 import State;
+
+
+-- The evaluator itself: takes a state and an expression,
+-- returns integer value
+--
+-- An expression is represented by a data structure of the following shape:
+--
+-- expr = Var   (string)             |
+--        Const (int)                |
+--        Binop (string, expr, expr)
 
 public fun binopOp(op, l, r)
 {
@@ -22,9 +33,9 @@ public fun binopOp(op, l, r)
 }
 
 public fun evalExpr (st, expr) {
-	case expr of
+  case expr of
 		  Const (n)	-> n
 		| Var (x)	-> st(x)
 		| Binop (op, l, r) -> binopOp(op, evalExpr(st, l), evalExpr(st, r))
 	esac
-}
+} 
