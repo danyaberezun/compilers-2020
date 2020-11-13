@@ -78,8 +78,7 @@ local primary  = memo $ eta syntax ( loc=pos x=decimal                          
                                    | loc=pos kWhile e=exp kDo st=exp kOd          { Void (loc) |- While (e(Val), st(Void))     }
                                    | loc=pos kIf e=exp kThen s1=exp s2=elseStmt kFi       
                                                                                   { fun (a) { If (e(Val), s1(a), s2(a)) }      }
-                                   | loc=pos kRepeat st=exp kUntil e=inbr[s("("), exp, s(")")]           
-                                                                                  { Void (loc) |- Repeat (st(Void), e(Val))    }
+                                   | loc=pos kRepeat st=exp kUntil e=primary      { Void (loc) |- Repeat (st(Void), e(Val))    }
                                    | loc=pos kFor s1=exp s[","] e=exp s[","] s2=exp kDo s3=exp kOd                  
                                                                                   { Void (loc) |- Seq (s1(Void), 
                                                                                                        While (e(Val), 

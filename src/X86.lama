@@ -385,7 +385,7 @@ fun compile (env, code) {
           DROP -> [env.pop[1], code]
         | LDA (x) ->  
             case env.addGlobal(x).allocate of
-              [s, env] -> [env, code <+ Lea (env.loc (x), eax) <+ Mov (eax, s)]
+              [s, env] -> [env, code <+ Lea (env.loc(x), eax) <+ Mov (eax, s)]
             esac  
         | STI -> 
             case env.pop2 of [e, xref, env] -> case env.allocate of
@@ -424,9 +424,11 @@ fun compile (env, code) {
                     esac 
               ]
             esac esac
-        | JMP (to) -> [env, code <+ Jmp (to)]
-        | LABEL (l) -> [env, code <+ Label (l)]
-        | CJMP (c, l) -> [env, code <+ CJmp (c, l)]
+        | JMP (to) -> [setBarrier(setStack(env, to)), code <+ Jmp (to)]
+        | LABEL (l) -> [if isBarrier(env) then retrieveStack(env, l) else env fi, code <+ Label (l)]
+        | CJMP (c, l) -> case env.pop of
+                            [val, env] -> [setStack(env, l), code <+ Mov (L (0), eax) <+ Binop ("cmp", eax, val) <+ CJmp (c, l)] 
+                         esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)

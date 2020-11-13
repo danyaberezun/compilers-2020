@@ -78,9 +78,8 @@ fun eval (env, conf@[st, sm_env, wrld], insns) {
       case x of 
           LABEL (_)    -> skip
         |   JMP (l)    -> xs := env.fromLabel(l) 
-        |  CJMP (x, l) -> if head(st).satisfies(x)
-                          then conf := [tail(st), sm_env, wrld]
-                          else xs   := env.fromLabel(l)
+        |  CJMP (x, l) -> if head(st).satisfies(x) then conf := [tail(st), sm_env, wrld]
+                                                   else xs   := env.fromLabel(l)
                           fi 
         | _ -> conf := 
                 case x of 
@@ -152,7 +151,6 @@ public fun compileExpr (stmt, env@[labels, ret]) {
   fun exp_(expr)   { fun (env) { compileExpr(expr, env) } } -- write expression
   fun cmd_(command){ fun (env) { [command :{}, env]     } } -- write single command
 
-  fun check_ (cond) { Binop("!=", cond, Const (0)) }                -- convert Int to Bool 
   fun lfi_ (mbRet)  { fun ([labels, _]) { [{}, [labels, mbRet]] } } -- set the return label to mbRet      
 
   case stmt of 
@@ -172,14 +170,14 @@ public fun compileExpr (stmt, env@[labels, ret]) {
                                             >>= cmd_( LABEL (ls)      )  -- Ls:
                                             >>= exp_( st              )  --      [st]  
                                             >>= cmd_( LABEL (le)      )  -- Le:
-                                            >>= exp_( check_(cnd)     )  --      [cnd != 0]
+                                            >>= exp_( cnd             )  --      [cnd != 0]
                                             >>= cmd_( CJMP ("nz", ls) )  --      jnz Ls
                         esac
   | Repeat (st, cnd) -> case labels.genLabels(1) of [l, labels] 
                                              -> run_(labels)
                                             >>= cmd_( LABEL (l)     ) -- L:
                                             >>= exp_( st            ) --     [st]
-                                            >>= exp_( check_(cnd)   ) --     [cnd != 0]
+                                            >>= exp_( cnd           ) --     [cnd != 0]
                                             >>= cmd_( CJMP ("z", l) ) --     jz L
                         esac 
   | If (cnd, th, el) -> case ret of
@@ -187,7 +185,7 @@ public fun compileExpr (stmt, env@[labels, ret]) {
                                              -> run_(labels)
                                             >>= lfi_( Some (lfi)     ) --                 # set the return label
                                                                        -- 
-                                            >>= exp_( check_(cnd)    ) --     [cnd != 0]
+                                            >>= exp_( cnd            ) --     [cnd != 0]
                                             >>= cmd_( CJMP ("z", le) ) --     jz Le
                                             >>= exp_( th             ) --     [th]
                                             >>= cmd_( JMP (lfi)      ) --     jmp Lfi
@@ -201,7 +199,7 @@ public fun compileExpr (stmt, env@[labels, ret]) {
                                              -> run_(labels)
                                             >>= lfi_( Some (lfi)     ) --                 # set the return label
                                                                        -- 
-                                            >>= exp_( check_(cnd)    ) --     [cnd != 0]
+                                            >>= exp_( cnd            ) --     [cnd != 0]
                                             >>= cmd_( CJMP ("z", le) ) --     jz Le
                                             >>= exp_( th             ) --     [th]
                                             >>= cmd_( JMP (lfi)      ) --     jmp Lfi     # label already exists
