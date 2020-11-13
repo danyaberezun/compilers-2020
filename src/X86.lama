@@ -307,6 +307,12 @@ fun compile (env, code) {
             case env.allocate of
               [s, env] -> [env, code <+> move (env.loc(x), s)]
             esac
+        | LABEL (label) -> [env, code <+ Label(label)]
+        | JMP (label) -> [env, code <+ Jmp(label)]
+        | CJMP (tag, label) ->
+            case env.pop of [s, env] ->
+              [env, code <+ Binop("cmp", L (0), s) <+ CJmp(tag, label)]
+            esac
         | BINOP (op) ->
             fun withOperands(code, x, y, action) {  -- moves first operand to register if both operands are memory
               if (memOpnd(x) && memOpnd(y))
