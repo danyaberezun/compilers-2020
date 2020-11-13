@@ -4,10 +4,9 @@ import Ostap;
 import Lexer;
 import List;
 import Fun;
-import Matcher;
 
 -- A parser of "something" in brackets; l, r are left and right
--- brackets as parsers, p --- a parser of "something"
+-- brackets as strings, p --- a parser of "something"
 fun inbr (l, p, r) {
   syntax (-l p -r)
 }
@@ -24,36 +23,25 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
              [Left, [s ("*") | s ("/") | s ("%"), binop] : {}]}, 
       exp = memo $ eta expr (ops, primary);
 
-local simpleStmt = memo $ eta syntax (
-      kSkip { Skip } |
-      kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
-      kWrite e=inbr[s("("), exp, s(")")] {Write (e)}  |
-      x=lidenr s[":="] e=exp {Assn (x, e)} |
-      kWhile e=exp s=inbr[kDo, stmt, kOd] {While (e, s)} |
-      kRepeat s=stmt kUntil cond=exp   {Repeat (s, cond)} |
-      kFor s1=stmt s[","] e=exp s[","] s2=stmt body=inbr[kDo, stmt, kOd] {Seq (s1, While (e, Seq(b, s2)))} |
-      inbr[kIf, parseIf, kFi]
-);
-
-
-
-local parseElse = memo $ eta syntax (
-      -kElse stmt |
-      empty {Skip} |
-      -kElif parseIf
-);
-
-
-local parseIf = memo $ eta syntax (
-      cond=exp kThen thenPart=stmt elsePart=parseElse {If (cond, thenPart, elsePart)}
-);
-  
-                         
-
-local stmt = memo $ eta syntax (simpleStmt |
-       s1=simpleStmt s[";"] s2=stmt {Seq (s1, s2)}
-);
+local stmt = memo $ eta syntax (
+   kWrite x = inbr[s("("), exp, s(")")]    {Write(x)} |
+   kRead  x = inbr[s("("), lident, s(")")] {Read(x)}  |
+   x = lident s[":="] y = exp              {Assn(x,y)} |
+   x1 = stmt s[";"] x2 = stmt end          {Seq(x1, x2)}| 
+   kSkip {Skip}      |
+   kIf cond=exp kThen s1=seqq s2=ifTailParser   {If (cond, s1, s2)} |
+   kWhile cond=exp kDo s=seqq kOd               {While (cond, s)} |
+   kRepeat s=seqq kUntil cond=exp               {Repeat (s, cond)} |
+   kFor e1=seqq s[","] e2=exp s[","] e3=seqq kDo s=seqq kOd {Seq (e1, While(e2, Seq(s, e3)))}
+   ),
+   ifTailParser = memo $ eta syntax(-kFi           {Skip} |
+                                    -kElse seqq -kFi      |
+                                     kElif cond=exp kThen s1=seqq s2=ifTailParser {If (cond, s1, s2)}
+                                    ),
+   seqq = memo $ eta syntax (stmt | s1=stmt s[";"] s2=seqq {Seq(s1, s2)});  
+   );
    
 
 -- Public top-level parser
 public parse = stmt;
+             
