@@ -320,6 +320,12 @@ fun compile (env, code) {
                   esac
               esac
           esac
+        | LABEL (s)    -> [env, code <+ Label (s) ]
+        | JMP   (l)    -> [env, code <+ Jmp (l)]
+        | CJMP  (c, l) ->
+          case env.pop of
+            [x, env] -> [env, code.generateCompCode("!=", L(0), x) <+ CJmp (c.cjmpSuffixToString, l)]
+          esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
@@ -372,6 +378,13 @@ fun generateLogicCode(code, op, src, dst) {
   code.generateCompCode("!=", L (0), src)
       .generateCompCode("!=", L (0), dst)
       .generateBasicBinopCode(op, src, dst)
+}
+
+fun cjmpSuffixToString (suff) {
+  case suff of
+    Z  -> "z"
+  | NZ -> "nz"
+  esac
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
