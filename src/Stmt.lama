@@ -16,15 +16,16 @@ import World;
 --        Read   (string)           |
 --        Write  (expr)             |
 
-
-fun eval (c@[state, world], stmt) {
-  case stmt of
-    Skip                  -> c
-    | Assn (x, expr)      -> [state <- [x, evalExpr(state, expr)], world]
-    | Seq (stmt1, stmt2)  -> eval( eval(c, stmt1), stmt2 )
-    | Read (x)            -> [state <- [x, readWorld(world)[0]], readWorld(world)[1]]
-    | Write (expr)        -> [state, writeWorld( evalExpr(state, expr), world)]
-  esac
+fun eval (c, stmt) {
+    case c of [st, [in, out]] ->
+        case stmt of
+             Skip -> c
+            |Read(elem) -> case in of elemo : i -> [st <- [elem, elemo], [i, out]] esac
+            |Write(expr) -> [st, [in, evalExpr(st, expr) : out]]
+            |Assn(elem, expr) -> [st <- [elem, evalExpr(st, expr)], [in, out]]
+            |Seq(s1, s2) -> eval(eval(c, s1), s2)
+        esac
+    esac      
 }
 
 -- Evaluates a program with a given input and returns an output
