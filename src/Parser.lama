@@ -4,6 +4,7 @@ import Ostap;
 import Lexer;
 import List;
 import Fun;
+import Matcher;
 
 -- A parser of "something" in brackets; l, r are left and right
 -- brackets as strings, p --- a parser of "something"
@@ -11,51 +12,38 @@ fun inbr (l, p, r) {
   syntax (-l p -r)
 }
 
+
 -- Primary expression
-local primary = memo $ eta syntax (x = decimal {Const (stringInt (x))} |
-                                   x = lident  {Var (x)}               |
-                                   inbr[s("("), exp, s(")")]
-                                  );
-                               
-      	                                    
-local exp = memo $ eta expr(
-	     {[Left, [s ("!!"), fun (l, op, r) {Binop (op, l, r)}] : {}],
-      	     [Left, [s ("&&"), fun (l, op, r) {Binop (op, l, r)}] : {}],
-      	     [Nona, [s ("<") | s (">") | s ("<=") | s (">=") | s ("==") | s ("!="), fun (l, op, r) {Binop (op, l, r)}] : {}],
-      	     [Left, [s ("+") | s ("-"), fun (l, op, r) {Binop (op, l, r)}] : {}],
-      	     [Left, [s ("*") | s ("/") | s ("%"), fun (l, op, r) {Binop (op, l, r)}] : {}]
-      	     }, primary);
-      			
+local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
+                                   x=lident  {Var (x)}               |
+                                   inbr[s("("), exp, s(")")]);
+
+local exp = memo $ eta expr ({[Left, [s ("!!"), fun (l, op, r) {Binop (op, l, r)}] : {}],
+           		       [Left, [s ("&&"), fun (l, op, r) {Binop (op, l, r)}] : {}],
+             		       [Nona, [s ("<") | s (">") | s (">=") | s ("<=") | s ("==") | s ("!="), fun (l, op, r) {Binop (op, l, r)}] : {}],
+           		       [Left, [s ("+") | s ("-"), fun (l, op, r) {Binop (op, l, r)}] : {}],
+            		       [Left, [s ("*") | s ("/") | s ("%"), fun (l, op, r) {Binop (op, l, r)}] : {}]}
+            		       , primary);
+  
+local stmtSeq = memo $ eta syntax (simpleStmt | x1=simpleStmt s[";"] x2=stmtSeq {Seq(x1, x2)});
+
 local simpleStmt = memo $ eta syntax (
-	kSkip {Skip}                                      | 
-	kRead x=inbr[s("("), lident, s(")")] {Read(x)}    |
-	kWrite e=inbr[s("("), exp, s(")")] {Write(e)}     |
-	x=lident s[":="] e=exp {Assn(x, e)}               |
-	kWhile e=exp s=inbr[kDo, stmt, kOd] {While(e, s)} |
-	kRepeat s1=stmt kUntil e=exp {Repeat(s1, e)}      |
-	kFor s1=stmt s[","] e=exp s[","] s2=stmt b=inbr[kDo, stmt, kOd] {Seq (s1, While(e, Seq(b, s2)))} |
-	inbr[kIf, parseIf, kFi]
-	);
-
-local parseElse = memo $ eta syntax(
-       -kElse stmt -kFi  |
-       -kFi   {Skip}     |
-       -kElif parseIf
+      kSkip {Skip}                                                                                                          |
+      kRead x=inbr[s("("), lident, s(")")] {Read (x)}                                                                       |
+      kWrite x=inbr[s("("), exp, s(")")] {Write (x)}                                                                        |
+      x=lident s[":="] y=exp {Assn (x, y)}                                                                                  |
+      s1=simpleStmt s[";"]   s2=simpleStmt end {Seq (s1, s2)}                                                               |
+      kWhile cond=exp st=inbr[kDo, stmtSeq, kOd] {While (cond, st)}                                                         |
+      kFor s1=stmtSeq  s[","] cond=exp s[","] s2=stmtSeq body=inbr[kDo, stmtSeq, kOd] {Seq(s1, While(cond, Seq(body, s2)))} |      
+      kRepeat s1=stmtSeq  kUntil cond=exp {Repeat (s1, cond)}                                                               |
+      kIf cond=exp kThen s1=stmtSeq elsePart=parseElse {If(cond, s1, elsePart)}
 );
-
-local parseIf = memo $ eta syntax(
-	cond=exp kThen thenPart=stmt elsePart=parseElse {If (cond, thenPart, elsePart)}
+      
+local parseElse =  memo $ eta syntax (
+      -kElse stmtSeq -kFi |
+      -kFi   {Skip}     |
+      -kElif cond=exp kThen st=stmtSeq elsePart=parseElse {If(cond, st, elsePart)}
 );
-
-
-local stmt = memo $ eta syntax(simpleStmt |
-	s1 = stmt s[";"] s2 = stmt end {Seq(s1, s2)});
-
 
 -- Public top-level parser
-public parse = stmt;
-
-
-
-
-
+public parse = simpleStmt;
