@@ -30,10 +30,6 @@ local parseElse =  memo $ eta syntax (
       -kFi   {Skip}     |
       -kElif cond=exp kThen st=stSeq elsePart=parseElse {If(cond, st, elsePart)}
 );
-
-local parseIf = memo $ eta syntax (
-      cond=exp kThen st=stSeq elsePart=parseElse {If(cond, st, elsePart)}
-);
   
 local stSeq = memo $ eta syntax (stmt | x1=stmt s[";"] x2=stSeq {Seq(x1, x2)});
 
