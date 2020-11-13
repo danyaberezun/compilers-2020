@@ -52,10 +52,47 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
+fun head(x:xs) { x  }
+fun tail(x:xs) { xs }
+
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, conf@[st, sm_env, wrld], insns) {
+  fun satisfies(value, condition) {
+    case condition of
+      "z"  -> value != 0
+    | "nz" -> value == 0
+    | _    -> failure ("Only Jnz and Jz are supported") 
+    esac
+  }
+
+  case insns of 
+      {} -> conf
+  | x:xs -> {
+
+      case x of 
+          LABEL (_)    -> skip
+        |   JMP (l)    -> xs := env.fromLabel(l) 
+        |  CJMP (x, l) -> if head(st).satisfies(x)
+                          then conf := [tail(st), sm_env, wrld]
+                          else xs   := env.fromLabel(l)
+                          fi 
+        | _ -> conf := 
+                case x of 
+                  BINOP (op) -> case st of 
+                                  y:x:st -> [(evalExpr (sm_env, Binop (op, Const (x), Const (y)))):st, sm_env, wrld]
+                                esac
+                |  READ      -> case readWorld (wrld) of [z, wrld] -> [z:st, sm_env, wrld] esac
+                | WRITE      -> case st of z:st -> [st, sm_env, writeWorld (z, wrld)] esac
+                |    ST (x)  -> case st of z:st -> [st, sm_env <- [x, z], wrld] esac
+                |    LD (x)  -> [sm_env(x):st, sm_env, wrld]
+                | CONST (c)  -> [c:st, sm_env, wrld]
+                esac
+      esac;
+
+      eval (env, conf, xs)
+    }
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -97,12 +134,83 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+    Const (c)        -> CONST (c) :{}
+  |   Var (x)        -> LD (x) :{}
+  | Binop (op, l, r) -> compileExpr (l) +++ compileExpr (r) +++ (BINOP (op) :{})
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  compileSMInEnvironment(stmt, [initCompEnv(), None])[0]
+}
+
+-- compileSMInEnvironment :: Stmt -> (CompEnv, Maybe Label) -> (CompEnv, Maybe Label)
+public fun compileSMInEnvironment (stmt, env@[labels, ret]) {
+  infixl >>= after : ([code, env], f) { 
+    case f (env) of [code2, env] -> [code +++ code2, env] esac               -- a La bind for writer
+  } 
+  fun run_ (labels) { [{}, [labels, None]] }                                 -- start writer
+  fun ex_ (expr)    { fun (env) { [compileExpr(expr), env]             } }   -- write expression
+  fun st_ (stmt)    { fun (env) { compileSMInEnvironment(stmt, env)    } }   -- write statement
+  fun cmd_(command) { fun (env) { [command :{}, env]                   } }   -- write single command
+
+  fun check_ (cond) { Binop("!=", cond, Const (0)) }                         -- convert Int to Bool 
+  fun lfi_ (mbRet)  { fun ([labels, _]) { [{}, [labels, mbRet]] } }          -- set the return label to mbRet      
+
+  case stmt of 
+    Skip            -> run_(labels)
+  | Read  (x)       -> run_(labels) >>= cmd_(READ) >>= cmd_(ST (x))
+  | Write (e)       -> run_(labels) >>= ex_(e)     >>= cmd_(WRITE)
+  |  Assn (x, e)    -> run_(labels) >>= ex_(e)     >>= cmd_(ST (x))
+  |   Seq (e1, e2)  -> run_(labels) >>= st_(e1)   >>= st_(e2)
+  | While (cnd, st) -> case labels.genLabels(2) of [le, ls, labels] 
+                                             -> run_(labels) 
+                                            >>= cmd_( JMP (le)        )  --      JMP Le
+                                            >>= cmd_( LABEL (ls)      )  -- Ls:
+                                            >>= st_ ( st              )  --      [st]  
+                                            >>= cmd_( LABEL (le)      )  -- Le:
+                                            >>= ex_ ( check_(cnd)     )  --      [cnd != 0]
+                                            >>= cmd_( CJMP ("nz", ls) )  --      jnz Ls
+                        esac
+  | Repeat (st, cnd) -> case labels.genLabels(1) of [l, labels] 
+                                             -> run_(labels)
+                                            >>= cmd_( LABEL (l)     ) -- L:
+                                            >>= st_ ( st            ) --     [st]
+                                            >>= ex_ ( check_(cnd)   ) --     [cnd != 0]
+                                            >>= cmd_( CJMP ("z", l) ) --     jz L
+                        esac 
+  | If (cnd, th, el) -> case ret of
+                          None -> case labels.genLabels(2) of [le, lfi, labels]
+                                             -> run_(labels)
+                                            >>= lfi_( Some (lfi)     ) --                 # set the return label
+                                                                       -- 
+                                            >>= ex_ ( check_(cnd)    ) --     [cnd != 0]
+                                            >>= cmd_( CJMP ("z", le) ) --     jz Le
+                                            >>= st_ ( th             ) --     [th]
+                                            >>= cmd_( JMP (lfi)      ) --     jmp Lfi
+                                            >>= cmd_( LABEL (le)     ) -- Le:
+                                            >>= st_ ( el             ) --     [el]
+                                            >>= cmd_( LABEL (lfi)    ) -- Lfi:
+                                                                       -- 
+                                            >>= lfi_( None           ) --                 # clear the return label
+                                  esac
+                        | Some (lfi) -> case labels.genLabels(1) of [le, labels]
+                                             -> run_(labels)
+                                            >>= lfi_( Some (lfi)     ) --                 # set the return label
+                                                                       -- 
+                                            >>= ex_ ( check_(cnd)    ) --     [cnd != 0]
+                                            >>= cmd_( CJMP ("z", le) ) --     jz Le
+                                            >>= st_ ( th             ) --     [th]
+                                            >>= cmd_( JMP (lfi)      ) --     jmp Lfi     # label already exists
+                                            >>= cmd_( LABEL (le)     ) -- Le:
+                                            >>= st_ ( el             ) --     [el]
+                                                                       --
+                                            >>= lfi_( None           ) --                 # clear the return label
+                                        esac      
+                        esac
+  esac
 }
