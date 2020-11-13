@@ -23,18 +23,18 @@ public fun showSM (prg) {
 
 fun eval (c@[st, state, w], insns) {
     case insns of
- 	    BINOP (op) : remInsns -> eval( [binopOp(op, st[1][0], st[0]) : st[1][1], state, w], remInsns)
- 	  | CONST (n) : remInsns -> eval([n : st, state, w], remInsns)
- 	  | READ : remInsns -> eval([readWorld(w)[0] : st, state, readWorld(w)[1]], remInsns)
- 	  | WRITE : remInsns -> case st of
- 	  		digit : remainingStack -> eval([remainingStack, state, writeWorld(digit, w)], remInsns)
- 	    esac
- 	  | LD (x) : remInsns -> eval([state(x) : st, state, w], remInsns)
-    | ST (x) : remInsns -> case st of
-     		digit : st -> eval([st, state <- [x, digit], w], remInsns) 
+      BINOP (op) : remInsns -> eval( [binopOp(op, st[1][0], st[0]) : st[1][1], state, w], remInsns)
+    | CONST (n) : remInsns -> eval([n : st, state, w], remInsns)
+    | READ : remInsns -> eval([readWorld(w)[0] : st, state, readWorld(w)[1]], remInsns)
+    | WRITE : remInsns -> case st of
+        digit : remainingStack -> eval([remainingStack, state, writeWorld(digit, w)], remInsns)
       esac
- 	  | {} -> c
- 	esac
+    | LD (x) : remInsns -> eval([state(x) : st, state, w], remInsns)
+    | ST (x) : remInsns -> case st of
+        digit : st -> eval([st, state <- [x, digit], w], remInsns) 
+      esac
+    | {} -> c
+  esac
  }
 
 
@@ -53,10 +53,10 @@ fun compileExpr (expr) {
 
 public fun compileSM (stmt) {
   case stmt of 
-	    Read (x) -> singleton(READ) +++ singleton(ST(x))
-     	| Write (e) -> compileExpr(e) +++ singleton(WRITE)
-    	| Assn (x, e) -> compileExpr(e) +++ singleton(ST(x))
+      Read (x) -> singleton(READ) +++ singleton(ST(x))
+      | Write (e) -> compileExpr(e) +++ singleton(WRITE)
+      | Assn (x, e) -> compileExpr(e) +++ singleton(ST(x))
       | Seq (s1, s2) -> compileSM (s1) +++ compileSM (s2)
-     	| Skip -> {}
+      | Skip -> {}
   esac
 }
