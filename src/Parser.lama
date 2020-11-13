@@ -168,7 +168,6 @@ local primary    = memo $ eta syntax (
          loc=pos defs=defsparse {fun (a) {assertVoid (a, expandScope (defs, Skip), loc)}} | 
          defs=defsparse e=exp {fun (a) {expandScope (defs, e (a))}}
       ),
-(* End *)
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
                                                             fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}

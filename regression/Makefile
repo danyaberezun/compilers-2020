@@ -11,8 +11,13 @@ check: $(TESTS) expr_tests
 $(TESTS): %: %.lama
 	@echo $@
 	@ulimit -s -S 32768; cat $@.input | $(LAMAC) $@.lama -i > $@.log && diff $@.log orig/$@.log 
+<<<<<<< HEAD
 #	@ulimit -s -S 32768; cat $@.input | $(LAMAC) $@.lama -s > $@.log && diff $@.log orig/$@.log
 #	$(LAMAC) $@.lama && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
+=======
+	@ulimit -s -S 32768; cat $@.input | $(LAMAC) $@.lama -s > $@.log && diff $@.log orig/$@.log
+	$(LAMAC) $@.lama && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
+>>>>>>> 849e91c142fc270daaa419df84aa49dc4e263cef
 
 expr_tests:
 	make -C expressions
