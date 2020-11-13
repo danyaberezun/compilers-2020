@@ -2,17 +2,19 @@
 import State;
 import Expr;
 import World;
+import List;
 
 
 fun eval (c, stmt) {
-  case stmt of
-          Assn(x, e)  -> 	[c[0] <- [x, evalExpr(c[0], e)], c[1]]
-		| Write(x)    -> 	[c[0], writeWorld(evalExpr(c[0], x), c[1])]
-		| Read(x)	  -> 	local res = readWorld(c[1]);
-							[c[0] <- [x, res[0]], res[1]]
-		| Seq(s1, s2) -> 	eval(eval(c, s1), s2)
-		| Skip -> c
-	esac
+  case c of [st, [i, o]] ->
+    case stmt of
+        Skip         -> c
+      | Read (x)     -> case i of z : it -> [st <- [x, z], [it, o]] esac
+      | Write (expr) -> [st, [i, evalExpr (st, expr)  : o]]
+      | Assn (x, e)  -> [(st <- [x, evalExpr (st, e)]), [i, o]]
+      | Seq (s1, s2) -> eval (eval (c, s1), s2)
+      esac
+    esac 
 }
 
 
