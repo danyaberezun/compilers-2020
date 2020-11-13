@@ -23,6 +23,20 @@ fun eval (c, stmt)
   | Read(x)    -> local r = readWorld(c[1]); [c[0] <- [x, r[0]], r[1]]
   | Assn(x, e) -> [c[0] <- [x, evalExpr(c[0], e)], c[1]]
   | Seq(s1, s2)-> eval(eval(c, s1), s2)
+  | If (e, s1, s2) -> case evalExpr (c[0], e) of
+                            0 -> eval (c, s2)
+                          | _ -> eval (c, s1)
+			                esac
+	| While (e, statement) -> case evalExpr (c[0], e) of
+                                  0 -> c
+                                | _ -> eval (eval (c, statement), stmt)
+                            esac
+	| Repeat (stmt, e) -> case eval (c, stmt) of
+                            new_c@[new_map, new_world] -> case evalExpr (new_map, e) of
+                                                                0 -> eval (new_c, Repeat (stmt, e))
+                                                              | _ -> [new_map, new_world]
+                                                          esac
+			                    esac
   esac
 }
 

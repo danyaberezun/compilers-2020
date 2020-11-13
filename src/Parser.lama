@@ -32,12 +32,25 @@ local ops = {
 -- Expression parser (operators + primary operands)
 local exp = memo $ eta expr(ops, primary);
 
+-- Statements
+local assnStmt  = syntax(name=lident s[":="] value=exp {Assn(name, value)});
+local readStmt  = syntax(kRead   name=inbr[s("("), lident, s(")")] {Read(name)});
+local writeStmt = syntax(kWrite value=inbr[s("("), exp,    s(")")] {Write(value)});
+local skipStmt  = syntax(kSkip {Skip});
+
+local elseStmt = syntax(kElse statement=stmt kFi {statement} |
+                                   kElif condition=exp  kThen stmt1=stmt stmt2=elseStmt {If(condition, stmt1, stmt2)});                                   
+local ifStmt = syntax(kIf condition=exp kThen stmt1=stmt kFi {If(condition, stmt1, Skip)} |
+                                 kIf condition=exp kThen stmt1=stmt stmt2=elseStmt {If(condition, stmt1, stmt2)});
+
+local whileStmt  = syntax(kWhile  condition=exp  kDo    statement=stmt kOd {While(condition, statement)});
+local repeatStmt = syntax(kRepeat statement=stmt kUntil condition=exp      {Repeat (statement, condition)});
+
+local forStmt = syntax(kFor decl=stmt s[","] condition=exp s[","] change=stmt kDo statement=stmt kOd {Seq (decl, While (condition, Seq (statement, change)))});
+
 -- Statement parser
-local stmt = memo $ eta syntax ( kRead  x=inbr[s("("), lident, s(")")] {Read(x)}    |
-                                 kWrite e=inbr[s("("), exp, s(")")]    {Write(e)}   |
-                                 x=lident s[":="] e=exp                {Assn(x, e)} |
-                                 s1=stmt s[";"] s2=stmt end            {Seq(s1, s2)}|
-                                 kSkip {Skip});
+local simple_stmt = memo $ eta syntax(assnStmt | readStmt | writeStmt | skipStmt | ifStmt | whileStmt | repeatStmt | forStmt);
+local stmt = memo $ eta syntax(simple_stmt | stmt1=simple_stmt s[";"] stmt2=stmt{Seq(stmt1, stmt2)});
                                  
 -- Public top-level parser
 public parse = stmt;
