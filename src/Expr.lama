@@ -101,11 +101,12 @@ fun evalList (c, exprs) {
   esac
 }
 
+
 (* Assignment *)
 fun eval (c@[s, w], expr) {
 	case expr of
 	  Const(n) -> [c, n]
-	| Var(x) -> [c, s(x)]
+	| Var(x) ->  (* checkVar(s, x); *) [c, lookup(s, x)]
 	| Ref(x) -> [c, Ref(x)]
 	| Binop(op, l, r) -> 
 		case evalList(c, {l, r}) of 
@@ -159,10 +160,29 @@ fun eval (c@[s, w], expr) {
 		case eval(c, e) of
 			[c1, v] -> [c1, None]
 		esac
-	| _ -> printf("In Expr.lama unknown expr %s\n", expr.string) 
-		   --failure (expr.string)
+	| Scope(defs, e) ->
+		case evalList([s.enterScope, w], defs) of [c1, x] ->
+			case eval(c1, e) of [[s2, w2], y] ->
+				[[leaveScope(s2), w2], y]
+			esac
+		esac
+	| Local(vals) -> [[addNames(s, vals), w], None]
+	| Fun(f, args, body) -> [[addFunction(s, f, args, body), w], None]
+	| Call(f, exprs) -> (*checkFun(s, f); *)
+		case lookup(s, f) of Fun(args, body) ->
+			case evalList(c, exprs) of [[s1, w1], vals] ->
+				local s15 = enterFunction(s1); -- s15 читай как s_1,5
+				while size(args) > 0 do
+					s15 := addName(s15, args[0], vals[0]);
+					args := args[1];
+					vals := vals[1]
+				od;
+				case eval([s15, w1], body) of [[s2, w2], x] ->
+					[[leaveFunction(s1, getGlobal(s2)), w2], x]
+				esac
+			esac
+		esac
 	esac
-  --failure ("evalExpr not implemented\n")
 }
 
 
