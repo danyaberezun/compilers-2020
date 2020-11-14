@@ -101,10 +101,90 @@ fun evalList (c, exprs) {
   esac
 }
 
+
 (* Assignment *)
 fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+	case expr of
+	  Const(n) -> [c, n]
+	| Var(x) ->  (* checkVar(s, x); *) [c, lookup(s, x)]
+	| Ref(x) -> [c, Ref(x)]
+	| Binop(op, l, r) -> 
+		case evalList(c, {l, r}) of 
+			[c1, {a, b}] -> [c1, evalOp(op, a, b)]
+		esac
+	| Skip -> [c, None]
+	| Assn(l, r) -> 
+		case evalList(c, {l, r}) of
+			[[s1, w1], {Ref(x), a}] -> [[s1 <- [x, a], w1], a]
+		esac
+	| Read(x) ->
+		case readWorld(w) of
+			[val, w1] -> [[s <- [x, val], w1], None]
+		esac
+	| Write(e) -> 
+		case eval(c, e) of
+			[[s1, w1], a] -> [[s1, writeWorld(a, w)], None]
+		esac
+	| Seq(e1, e2) -> 
+		case eval(c, e1) of
+			[c1, v] -> eval(c1, e2)
+		esac
+	| If(cond, e1, e2) ->
+		case eval(c, cond) of
+			[c1, n] -> 
+				if(n) then eval(c1, e1)
+				else eval(c1, e2)
+				fi
+		esac
+	| While(cond, e) ->
+		case eval(c, cond) of 
+			[c1, n] -> 
+				if(n) then 
+					case eval(c1, e) of
+						[c2, x] -> eval(c2, While(cond, e))
+					esac
+				else [c1, None]
+				fi
+		esac
+	| Repeat(e, cond) ->
+		case eval(c, e) of
+			[c1, x] -> 
+				case eval(c1, cond) of
+					[c2, n] ->
+						if(n) then [c2, None]
+						else eval(c2, Repeat(e, cond))
+						fi
+				esac
+		esac
+	| Ignore(e) -> 
+		case eval(c, e) of
+			[c1, v] -> [c1, None]
+		esac
+	| Scope(defs, e) ->
+		case evalList([s.enterScope, w], defs) of [c1, x] ->
+			case eval(c1, e) of [[s2, w2], y] ->
+				[[leaveScope(s2), w2], y]
+			esac
+		esac
+	| Local(vals) -> [[addNames(s, vals), w], None]
+	| Fun(f, args, body) -> [[addFunction(s, f, args, body), w], None]
+	| Call(f, exprs) -> (*checkFun(s, f); *)
+		case lookup(s, f) of Fun(args, body) ->
+			case evalList(c, exprs) of [[s1, w1], vals] ->
+				local s15 = enterFunction(s1); -- s15 читай как s_1,5
+				while size(args) > 0 do
+					s15 := addName(s15, args[0], vals[0]);
+					args := args[1];
+					vals := vals[1]
+				od;
+				case eval([s15, w1], body) of [[s2, w2], x] ->
+					[[leaveFunction(s1, getGlobal(s2)), w2], x]
+				esac
+			esac
+		esac
+	esac
 }
+
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
@@ -112,3 +192,4 @@ public fun evalExpr (input, expr) {
     [c, _] -> c.snd.getOutput
   esac
 }
+
