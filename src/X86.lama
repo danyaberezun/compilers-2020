@@ -355,6 +355,12 @@ fun prologue (fLabel) {
   Binop ("-", M (sprintf ("$%s_SIZE", fLabel)), esp)  
 }
 
+fun prologue1 (nl) {
+  singletonBuffer (Push  (ebp)) <+
+  Mov   (esp, ebp) <+
+  Binop ("-", L (wordSize * nl), esp)  
+}
+
 -- Generates function epilogue
 fun epilogue (env) {
   local metaDef = Meta (sprintf ("\t.set\t%s_SIZE,\t%d\n", env.currentFunction, env.staticSize * wordSize));
@@ -363,6 +369,16 @@ fun epilogue (env) {
   then [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Binop ("^", eax, eax) <+ Ret <+ metaDef]
   else case env.pop of
          [y, env] -> [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Mov (y, eax) <+ Ret <+ metaDef]
+       esac
+  fi
+}
+
+-- Generates function epilogue
+fun epilogue1 (env) {
+  if compare (env.currentFunction, "main") == 0
+  then [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Binop ("^", eax, eax) <+ Ret]
+  else case env.pop of
+         [y, env] -> [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Mov (y, eax) <+ Ret]
        esac
   fi
 }
@@ -460,32 +476,32 @@ fun compile (env, code) {
   fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
-        local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+        local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n"); (*printf ("%s", showSMInsn (i));*)
         case i of
           READ ->
-            case env.allocate of
+            case allocate (env) of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
             esac             
         | WRITE ->
-            case env.pop of
+            case pop (env) of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
         | CONST (x) ->
-            case env.allocate of
+            case allocate (env) of
               [s, env] -> [env, code <+ Mov (L (x), s)]
             esac
         | ST (x) ->
-            case env.addGlobal(x).pop of
-              [s, env] -> [env, code <+> move (s, env.loc(x))]
+            case pop (env) of
+              [s, env] -> [env, code <+> move (s, loc(env, x))]
             esac
         | LD (x) -> 
-            case env.allocate of
-              [s, env] -> [env, code <+> move (env.loc(x), s)]
+            case allocate (env) of
+              [s, env] -> [env, code <+> move (loc(env, x), s)]
             esac
         | BINOP (op)   -> 
-            case env.pop2 of
+            case pop2 (env) of
               [s2, s1, env] -> 
-                case env.allocate of
+                case allocate (env) of
                   [s, env] -> 
                     case op of
                       "/"  -> [env, code <+ Mov (s1, eax) <+ Cltd <+ IDiv (s2) <+ Mov (eax, s)]
@@ -502,22 +518,22 @@ fun compile (env, code) {
                     esac 
                 esac
             esac
-        | DUP           -> [env.setBarrier, code]
-        | LABEL (l)     -> if env.isBarrier then [env.retrieveStack(l), code <+ Label (l)] else  [env, code <+ Label (l)] fi
+        | DUP           -> [setBarrier (env), code]
+        | LABEL (l)     -> if isBarrier (env) then [retrieveStack(env, l), code <+ Label (l)] else  [env, code <+ Label (l)] fi
         | JMP (l)       -> [env, code <+ Jmp (l)]
         | CJMP (znz, l) -> 
-            case env.pop of
-              [s, env] -> [env.setStack(l), code <+ Mov (s, eax) <+ Binop ("cmp", L (0), eax) <+ CJmp (znzene (znz), l)]
+            case pop (env) of
+              [s, env] -> [setStack(env, l), code <+ Mov (s, eax) <+ Binop ("cmp", L (0), eax) <+ CJmp (znzene (znz), l)]
             esac
-        | DROP          -> [env.pop[1], code]
+        | DROP          -> [pop (env)[1], code]
         | LDA (x)       -> 
-          case env.addGlobal(x).allocate of
-            [s, env] -> [env, code <+ Lea (env.loc(x), eax) <+ Mov (eax, s)]
+          case allocate (env) of
+            [s, env] -> [env, code <+ Lea (loc(env, x), eax) <+ Mov (eax, s)]
           esac
         | STI           ->
-          case env.pop2 of
+          case pop2 (env) of
             [s1, s2, env] ->
-            case env.allocate of
+            case allocate (env) of
               [s, env] -> [env, code <+  Mov (s2, eax) <+ Mov (s1, I (0, eax)) <+> move (s1, s)]
             esac 
           esac
@@ -539,7 +555,10 @@ fun compile (env, code) {
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
                
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        | BEGIN (f, na, nl) -> [enterFunction (env, f, nl), code <+> prologue1 (nl)]
+        | END               -> case epilogue1 (env) of [env, p] -> [env, code <+> p] esac
+        | CALL (fLabel, na) -> case call (env, fLabel, na) of [env, p] -> [env, code <+> p] esac
+        | GLOBAL (x)        -> [addGlobal (env, x), code]
         (* End *)
         esac
       }, [env, emptyBuffer ()], code)

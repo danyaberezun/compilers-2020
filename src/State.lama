@@ -8,20 +8,12 @@ import Parser;
 -- State with a stack of scopes; each scope is a map from names to
 -- their kind and values
 fun makeState (scopes) {
-<<<<<<< HEAD
   -- Searches a scope stack and performed a specified action
-=======
-  -- Searches a scope stack and performed a speficified action
->>>>>>> 849e91c142fc270daaa419df84aa49dc4e263cef
   -- on the found binding
   fun lookup (name, action) {
     fun lookupInScopes (scopes) {
       case scopes of
-<<<<<<< HEAD
         {}         -> error (sprintf ("name ""%s"" undefined", name), getLoc (name))
-=======
-        {}         -> error (sprintf ("name ""%s"" is undefined", name), getLoc (name))
->>>>>>> 849e91c142fc270daaa419df84aa49dc4e263cef
       | s : scopes ->
          case findMap (s, name) of
            None     -> lookupInScopes (scopes)
@@ -37,11 +29,7 @@ fun makeState (scopes) {
   fun assign (name, val) {
     fun assignInScopes (scopes) {
       case scopes of
-<<<<<<< HEAD
         {}         -> error (sprintf ("name ""%s"" undefined", name), getLoc (name))
-=======
-        {}         -> error (sprintf ("name ""%s"" is undefined", name), getLoc (name))
->>>>>>> 849e91c142fc270daaa419df84aa49dc4e263cef
       | s : scopes ->
          case findMap (s, name) of
            None     -> s : assignInScopes (scopes)
@@ -149,8 +137,4 @@ public fun getGlobal (state) {
 -- Creates an empty state
 public fun emptyState () {
   makeState ({})
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 849e91c142fc270daaa419df84aa49dc4e263cef

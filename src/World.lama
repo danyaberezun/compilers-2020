@@ -22,8 +22,4 @@ public fun readWorld ([n:input, output]) {
 -- Gets an output from a world
 public fun getOutput ([_, output]) {
   reverse (output)
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 849e91c142fc270daaa419df84aa49dc4e263cef
