@@ -75,6 +75,7 @@ local args = parseArgs (arrayList (sysargs).tl);
 -- code generator
 case parseString (parse |> bypass (end), fread (args.getInFile)) of
   Succ (program) ->
+    -- printf ("COMPILED SUCC:\n\n%s\n\n", compileSM (program).string);
     case args.getMode of
       Comp -> compileX86 (args, peepSM (args, compileSM (program)))
     | mode ->
