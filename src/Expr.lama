@@ -58,6 +58,10 @@ public fun evalOp (op, l, r) {
 --
 -- def = Local (string list)                |
 --       Fun   (string, string list, expr)
+(*
+--        Call   (string, expr list)  |
+--        Ignore (expr)
+*)
 
 -- Helper function: checks that given name designates a regular variable in
 -- a given state
@@ -100,7 +104,6 @@ fun evalList (c, exprs) {
     [c, vals] -> [c, reverse (vals)]
   esac
 }
-
 
 (* Assignment *)
 fun eval (c@[s, w], expr) {
@@ -192,4 +195,3 @@ public fun evalExpr (input, expr) {
     [c, _] -> c.snd.getOutput
   esac
 }
-

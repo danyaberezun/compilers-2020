@@ -9,7 +9,7 @@ import List;
 -- A hashtable to keep a source code location information.
 -- The keys in this table are some (boxed) values, and values are
 -- pairs [line, column]
-local srcTab = emptyHashTab (1024, hash, compare);
+local srcTab = emptyHashTab (1024, hash, flatCompare);
 
 -- A custom combinator to additionally add location info
 public fun located (p) {
