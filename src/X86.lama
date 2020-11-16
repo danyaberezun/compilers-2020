@@ -347,6 +347,27 @@ fun suffix (op) {
   esac
 }
 
+fun operationType(op)
+{
+  case op of
+    "<"  -> ">,<"
+  | "<=" -> ">,<"
+  | "==" -> ">,<"
+  | "!=" -> ">,<"
+  | ">=" -> ">,<"
+  | ">"  -> ">,<"
+  | "&&" -> "&&, !!"
+  | "!!" -> "&&, !!"
+  | "+"  -> "+-*"
+  | "-"  -> "+-*"
+  | "*"  -> "+-*"
+  | "/"  -> "/"
+  | "%"  -> "%"
+  | _    -> "?"
+  esac
+}
+
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -363,6 +384,58 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST(n) -> 
+			case env.allocate of
+			  [s, env] -> [env, code <+ Mov (L(n), s)]
+			esac
+		| LD(x) ->
+			case env.addGlobal(x).allocate of
+			  [s, env] -> [env, code <+> move (env.loc(x), s) ]
+			esac
+		| LDA(x) -> 
+			case env.addGlobal(x).allocate of
+			  [s, env] -> [env, code <+ Lea(env.loc(x), eax) <+ Mov(eax, s)]
+			esac
+		| ST(x) ->
+			case env.addGlobal(x).pop of
+			  [s, env] -> [env, code <+> move (s, env.loc(x))]
+			esac
+		| STI -> 
+			case env.pop2 of
+			  [s, adr, env1] -> 
+				case env1.allocate of [s2, env2] ->
+					[env2, code <+> move (s, I(0, adr)) <+> move(s, s2)]
+				esac
+			esac
+		| DROP -> 
+			[env.pop[1], code]
+		| LABEL(l) -> 
+			[if env.isBarrier then env.retrieveStack(l) else env fi, code <+ Label(l)]
+		| JMP (l) ->
+			[setBarrier(setStack(env, l)), code <+ Jmp(l)]
+		| CJMP(c, l) ->
+			case env.pop of [s, env] -> 
+				[env.setStack(l), code <+ Mov(L(0), eax) <+ Binop("cmp", eax, s) <+ CJmp(c, l)]
+			esac
+		| BINOP(op) ->
+			case env.pop2 of
+			  [s1, s2, env] ->
+				case env.allocate of
+				  [s, env] ->
+					case operationType(op) of
+					  "/"  	   	-> [env, code <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(eax, s)]
+					| "%"  	   	-> [env, code <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(edx, s)]
+					| "&&, !!" 	-> [env, code <+ Mov(L(0), eax) <+ Mov(L(0), edx)
+											  <+ Binop("cmp", L(0), s1) <+ Set(suffix("!="), "%al")  -- <+ Mov(eax, s1)
+											  <+ Binop("cmp", L(0), s2) <+ Set(suffix("!="), "%dl")  -- <+ Mov(eax, s2)
+											  <+ Binop(op, eax, edx) <+ Mov(edx, s)]
+					| ">,<"    	-> [env, code <+ Mov(L(0), eax) <+ Mov(s2, edx) 
+											  <+ Binop("cmp", s1, edx) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+					| "+-*"  	-> [env, code <+ Mov(s2, eax) <+ Binop(op, s1, eax) <+ Mov(eax, s)]
+					| _ 		-> failure ("unknown operation %s\n", op)
+					esac
+				esac
+			esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
