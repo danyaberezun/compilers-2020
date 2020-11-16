@@ -14,15 +14,19 @@ import Fun;
 -- string representation.
 public fun showSMInsn (i) {
   case i of
-    READ         -> sprintf ("READ")
-  | WRITE        -> sprintf ("WRITE")
+    READ         -> "READ"
+  | WRITE        -> "WRITE"
   | BINOP (s)    -> sprintf ("BINOP %s", s)
   | LD    (x)    -> sprintf ("LD %s", x)
+  | LDA   (x)    -> sprintf ("LDA %s", x)
   | ST    (x)    -> sprintf ("ST %s", x)
+  | STI          -> "STI"
   | CONST (n)    -> sprintf ("CONST %d", n)
   | LABEL (s)    -> sprintf ("LABEL %s", s)
   | JMP   (l)    -> sprintf ("JMP %s", l)
   | CJMP  (c, l) -> sprintf ("CJMP %s, %s", c, l)
+  | DUP          -> "DUP"
+  | DROP         -> "DROP"
   esac
 }
 
@@ -103,6 +107,12 @@ fun initEvalEnv (insns) {
 -- Accessor function
 fun fromLabel (env, lab) {
   env [0] (lab)
+}
+
+-- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
+-- returns a final configuration
+fun eval (env, c, insns) {
+  failure ("SM eval not implemented\n")
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output

@@ -8,7 +8,7 @@ import Ostap;
 import Parser;
 import Matcher;
 import Lexer;
-import Stmt;
+import Expr;
 import SM;
 import X86;
 import Manifest;
@@ -26,6 +26,7 @@ fun parseArgs (args) {
       SM -> smDump ::= true
     esac
   }
+
   fun setMode (m) {
     case deref (mode) of
       Comp -> mode ::= m
@@ -56,7 +57,6 @@ fun parseArgs (args) {
          }
       })(args);
 
-
   [fun () {deref (mode)},
    fun () {case deref(infile) of #unboxed -> failure ("input file name not set\n") | fn -> fn esac},
    fun () {deref (smDump)}
@@ -86,10 +86,10 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
                             | arg      -> f (stringInt (arg) : acc) esac
                           }
                         }) ({}));
-          
+
        iter (fun (x) {printf ("%d\n", x)},
              case mode of
-               Int -> evalStmt (input, program)
+               Int -> evalExpr (input, program)
              | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
              esac)
     esac
