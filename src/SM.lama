@@ -93,21 +93,6 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list (of, possibly, lists)
--- of stack machine instructions
-fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
-}
-
--- Compiles a statement into a stack machine code.
--- Takes a statement, returns a list of stack machine
--- instructions.
-public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
-}
-
-
 
 fun eval (c, insns) {
   case c of
