@@ -43,7 +43,7 @@ fun initEvalEnv (insns) {
         }) $ [emptyMap (compare), insns];
   
   [fun (l) {
-     case findMap (map, l) of Some (insns) -> insns esac
+     case findMap (map, l) of Some (insns) -> insns | _ -> failure("No lable %s\n", l) esac
   }]
 }
 
@@ -54,12 +54,32 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, c@[stack, mp, world], insns) {
+  case insns of
+    {} -> c |
+    i:insns -> case [i, stack] of
+      [BINOP(op), arg2:arg1:stack] ->
+        eval(env, [apply(op, arg1, arg2):stack, mp, world], insns) |
+      [READ, _] -> case readWorld(world) of [x, world] ->
+          eval(env, [x:stack, mp, world], insns)
+        esac |
+      [WRITE, arg:stack] -> eval(env, [stack, mp, writeWorld(arg, world)], insns) |
+      [LD (x), _] -> eval(env, [mp(x):stack, mp, world], insns) |
+      [ST (x), arg:stack] -> eval(env, [stack, mp <- [x, arg], world], insns) |
+      [CONST (x), _] -> eval(env, [x:stack, mp, world], insns) |
+      [LABEL (l), _] -> eval(env, c, insns) |
+      [JMP (l), _] -> eval(env, c, env.fromLabel(l)) |
+      [CJMP ("z", l), arg:stack] ->
+        if arg then eval(env, c, insns) else eval(env, c, env.fromLabel(l)) fi |
+      [CJMP ("nz", l), arg:stack] ->
+        if arg == 0 then eval(env, c, insns) else eval(env, c, env.fromLabel(l)) fi
+    esac 
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
+  -- printf("%s\n", insns.string);
   eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
@@ -97,12 +117,73 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+    return case expr of
+    Binop(op, e1, e2) -> compileExpr(e1) +++ compileExpr(e2) +++ singleton(BINOP(op)) |
+    Var(x) -> singleton(LD(x)) |
+    Const(x) -> singleton(CONST(x))
+    esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  fun inner(stmt, env) {
+    -- printf("%s\n", stmt.string);
+    case stmt of
+      Assn (x, e) -> [compileExpr(e) +++ singleton(ST (x)), env] |
+      Seq (s1, s2) -> case inner(s1, env) of
+        [instr1, env] -> case inner(s2, env) of 
+          [instr2, env] -> [instr1 +++ instr2, env]
+        esac
+      esac |
+      Skip -> [{}, env] |
+      Read (x) -> [{READ, ST (x)}, env] |
+      Write (e) -> [compileExpr(e) +++ singleton(WRITE), env] |
+      If (cond, s1, s2) -> case env.genLabels(2) of
+        [l1, l2, env] -> case inner(s1, env) of
+          [instr1, env] -> case inner(s2, env) of
+            [instr2, env] ->
+              [
+                compileExpr(cond) +++ singleton(CJMP ("z", l1)) +++
+                instr1 +++ {JMP (l2), LABEL (l1)} +++
+                instr2 +++ singleton(LABEL (l2))
+              , env]
+          esac
+        esac
+      esac |
+      While (cond, stmt) -> case env.genLabels(2) of
+        [l1, l2, env] -> case inner(stmt, env) of
+          [body, env] ->
+            [
+              {JMP (l2), LABEL (l1)} +++ body +++ singleton(LABEL (l2)) +++
+              compileExpr(cond) +++ singleton(CJMP ("nz", l1))
+            , env]
+        esac
+      esac |
+      Repeat (stmt, cond) -> case env.genLabel of
+        [l, env] -> case inner(stmt, env) of
+          [body, env] ->
+            [
+              singleton(LABEL (l)) +++ body +++ compileExpr(cond) +++ singleton(CJMP ("z", l))
+            , env]
+        esac
+      esac
+    esac
+  }
+  -- printf("%s\n", inner(stmt, initCompEnv())[0].string);
+  -- reduce jump chains
+  case inner(stmt, initCompEnv())[0] of
+    instr -> case initEvalEnv(instr) of
+      env -> map(fun (i) {
+          case i of
+            JMP (l) -> case env.fromLabel(l) of 
+              _ : JMP (ol) : _ -> JMP (ol) |
+              _ -> i
+            esac |
+            _ -> i
+          esac
+        }, instr)
+    esac
+  esac
 }
