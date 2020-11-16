@@ -122,7 +122,7 @@ local primary    = memo $ eta syntax (
                                                                                                          }} |
 (* Assignment *)
                                       $(failure ("the rest of primary parsing in not implemented\n"))),
-      scopeExpr = memo $ eta $ syntax ($failure ("scope expression parsing is not implemented\n")),
+      scopeExpr = memo $ eta (syntax ($(failure ("scope expression parsing is not implemented\n")))),
 (* End *)
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
