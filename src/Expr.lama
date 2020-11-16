@@ -14,5 +14,27 @@ import State;
 --        Binop (string, expr, expr)
 
 public fun evalExpr (st, expr) {
-  failure ("evalExpr not implemented\n")
+	-- printf("%s\n", expr.string);
+	case expr of
+		  Var (s1) -> st(s1)
+		| Const (s1) -> s1
+		| Binop (op, s1, s2) ->
+			case op of
+				  "*"  -> (evalExpr(st, s1) *  evalExpr(st, s2))
+				| "/"  -> (evalExpr(st, s1) /  evalExpr(st, s2))
+				| "%"  -> (evalExpr(st, s1) %  evalExpr(st, s2))
+				| "+"  -> (evalExpr(st, s1) +  evalExpr(st, s2))
+				| "-"  -> (evalExpr(st, s1) -  evalExpr(st, s2))
+				| "==" -> (evalExpr(st, s1) == evalExpr(st, s2))
+				| "!=" -> (evalExpr(st, s1) != evalExpr(st, s2))
+				| "<=" -> (evalExpr(st, s1) <= evalExpr(st, s2))
+				| "<"  -> (evalExpr(st, s1) <  evalExpr(st, s2))
+				| ">=" -> (evalExpr(st, s1) >= evalExpr(st, s2))
+				| ">"  -> (evalExpr(st, s1) >  evalExpr(st, s2))
+				| "&&" -> (evalExpr(st, s1) && evalExpr(st, s2))
+				| "!!" -> (evalExpr(st, s1) !! evalExpr(st, s2))
+				| _    -> failure("Operation %s not found.\n", op)
+		| _ -> failure("Expression %s not found.", expr)
+		esac
+	esac
 }
