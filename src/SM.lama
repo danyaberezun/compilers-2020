@@ -52,10 +52,46 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
+fun compznz (x, znz) {
+  case znz of
+    "z" -> x == 0
+  | "nz" -> x != 0
+  esac
+}
+
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, c@[s, st, w@[i, o]], insns) {
+  case insns of
+    {} -> c
+  | BINOP (b) : p -> 
+    case s of x : y : ss ->
+      eval (env, [binopParser (b, y, x) : ss, st, w], p) 
+    esac
+  | CONST (n) : p -> eval (env, [n : s, st, w], p)
+  | READ      : p -> 
+    case i of x : it -> 
+      eval (env, [x : s, st, [it, o]], p)
+    esac
+  | WRITE     : p -> 
+    case s of x : ss ->
+      eval (env, [ss, st, [i, x : o]], p) 
+    esac
+  | LD    (x) : p -> eval (env, [st (x) : s, st, w], p)
+  | ST    (x) : p -> 
+    case s of y : ss ->
+      eval (env, [s, (st <- [x, y]), w], p) 
+    esac
+  | LABEL (l)      : p -> eval (env, c, p)
+  | JMP   (l)      : p -> eval (env, c, env.fromLabel (l))
+  | CJMP  (znz, l) : p -> 
+    case s of x : ss ->
+      if compznz (x, znz) 
+      then  eval (env, c, env.fromLabel(l))
+      else  eval (env, c, p)
+      fi
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -97,12 +133,87 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of 
+    Var   (x)         -> singleton (LD (x))
+  | Const (n)         -> singleton (CONST (n))
+  | Binop (b, e1, e2) -> compileExpr (e1) +++ compileExpr (e2) +++ singleton (BINOP (b))
+  esac
 }
 
+fun last (l) {
+  case l of
+    {}     -> [{}]
+  | x : {} -> [{}, x]
+  | x : t  -> case last (t) of [a, b] -> [x : a, b] esac
+  esac
+}
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  fun cSM (stmt, env) {
+    case stmt of
+      Assn (x, expr)    -> [compileExpr (expr) +++ singleton (ST (x)), env]
+    | Read (x)          -> [{READ, ST (x)}, env]
+    | Write (expr)      -> [compileExpr (expr) +++ singleton (WRITE), env]
+    | Skip              -> [{}, env]
+    | Seq (s1, s2)      -> 
+      case cSM (s1, env) of
+        [ins, env] ->
+          case cSM (s2, env) of
+            [ins1, env] -> [ins +++ ins1, env]
+          esac
+      esac
+    | If (expr, s1, s2) -> 
+      case env.genLabels(2) of
+        [ls2, lfi, env] ->
+          case cSM (s1, env) of
+            [ins, env] ->
+              case cSM (s2, env) of
+                [ins1, env] ->
+                [compileExpr (expr)      +++
+                (CJMP ("z", ls2) : {})   +++ 
+                (case last (ins) of
+                    [ins, LABEL (l)] -> 
+                    ins               +++ 
+                    {JMP (l), LABEL (ls2)} +++
+                    ins1              +++ 
+                    (LABEL (l) : {})
+                  | _                -> 
+                    ins +++
+                    {JMP (lfi), LABEL (ls2)} +++ 
+                    ins1              +++ 
+                    (LABEL (lfi) : {})
+                esac), env]
+              esac
+          esac
+      esac 
+    | While (expr, s) ->
+      case env.genLabels(2) of
+        [l1, l2, env] ->
+          case cSM (s, env) of
+            [ins, env] -> 
+            [{JMP (l2), LABEL (l1)} +++
+            ins                     +++
+            (LABEL (l2) : {})       +++
+            compileExpr (expr)      +++
+            (CJMP ("nz", l1) : {}), env]
+          esac
+      esac
+    | Repeat (s, expr) ->
+      case env.genLabel of
+        [l, env] ->
+          case cSM (s, env) of
+            [ins, env] ->
+              [(LABEL (l) : {})  +++
+              ins                +++
+              compileExpr (expr) +++
+              (CJMP ("z", l) : {}), env]
+          esac
+      esac
+  esac
+  }
+  cSM (stmt, initCompEnv ())[0]
 }
+
+(*printf ("%s", last ({3, 4, 5, 6}).string)*)
