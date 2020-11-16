@@ -288,6 +288,13 @@ fun binaryOperation(op, y, x, result) {
   fi
 }
 
+fun logicalOperation(op, y, x, result) {
+  if memOpnd (x) && memOpnd(y)
+  then singletonBuffer(Mov (y, eax)) <+ Binop(op, x, eax) <+> booleanOperation("!=", eax, L(0), result)
+  else singletonBuffer(Binop(op, x, y)) <+> booleanOperation("!=", y, L(0), result)
+  fi
+}
+
 fun booleanOperation(op, y, x, result) {
   if memOpnd (x) && memOpnd(y)
   then singletonBuffer(Mov (y, edx)) <+ Mov (L(0), eax) <+ Binop ("cmp", x, edx) <+ Set (suffix(op), "%al") <+ Mov(eax, result)
@@ -336,8 +343,8 @@ fun compile (env, code) {
                 | "<=" -> [env, code <+> booleanOperation(op, x, y, s)]
                 | ">" -> [env, code <+> booleanOperation(op, x, y, s)]
                 | ">=" -> [env, code <+> booleanOperation(op, x, y, s)]
-                | "&&" -> [env, code <+> binaryOperation(op, x, y, s)]
-                | "!!" -> [env, code <+> binaryOperation(op, x, y, s)]
+                | "&&" -> [env, code <+> logicalOperation("*", x, y, s)]
+                | "!!" -> [env, code <+> logicalOperation("+", x, y, s)]
                 | "/" -> [env, code <+> div(x, y, s)]
                 | "%" -> [env, code <+> mod(x, y, s)]
               esac
