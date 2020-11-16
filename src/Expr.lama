@@ -1,5 +1,4 @@
 -- Expression evaluator
-
 import List;
 import State;
 import World;
@@ -49,8 +48,15 @@ public fun evalOp (op, l, r) {
 --        Ref    (string)             |
 --        Const  (int)                |
 --        Binop  (string, expr, expr) |
+--        Scope  (def list, expr)     |
 --        Call   (string, expr list)  |
 --        Ignore (expr)
+--
+-- A definition is either a local variable definition or a function
+-- definition:
+--
+-- def = Local (string list)                |
+--       Fun   (string, string list, expr)
 
 -- Helper function: checks that given name designates a regular variable in
 -- a given state
@@ -94,15 +100,76 @@ fun evalList (c, exprs) {
   esac
 }
 
-(* Assignment *)
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+fun evalDef (c@[s, w], def_list) {
+  case def_list of
+    {}                            -> c
+  | Local (names)            : dt -> evalDef ([addNames    (s, names), w],            dt)
+  | Fun   (name, args, body) : dt -> evalDef ([addFunction (s, name, args, body), w], dt) 
+  esac
 }
-(* End *)
+
+fun assignNames (c@[s, w], names, values) {
+  case names of
+    {}        -> c
+  | name : nt -> case values of val : vt -> assignNames ([s.addName(name, val), w], nt, vt) esac
+  esac
+}
+
+fun eval (c@[s, w], expr) {
+  case expr of
+    Const (z)         -> [c, z]
+  | Var   (x)         -> [c, s.lookup(x, 0)]
+  | Ref   (x)         -> [c, Ref (x)]
+  | Binop (op, l, r)  -> 
+    case evalList (c, {l, r}) of
+      [c, {v, w}] -> [c, evalOp (op, v, w)]
+    esac
+  | Skip              -> [c, None]
+  | Assn  (l, r)      ->
+    case evalList (c, {l, r}) of
+      [c@[s, w], {Ref (x), v}] -> [[s <- [x, v], w], v]
+    esac
+  | Read  (x)         -> case w of [z : it, o] -> [[s <- [x, z], [it, o]], None] esac
+  | Write (expr)      ->
+    case eval (c, expr) of
+      [[s, [i, o]], v] -> [[s , [i, v : o]], None]
+    esac
+  | Seq   (s1, s2)    -> eval (eval (c, s1)[0], s2)
+  | If    (e, s1, s2) -> 
+    case eval (c, e) of
+      [c, v] -> eval (c, if v then s1 else s2 fi)
+    esac
+  | While (e, st)     -> 
+    case eval (c, e) of
+      [c, v] -> if v then eval (eval (c, st)[0], While (e, st)) else [c, None] fi
+    esac
+  | Repeat (st, e)      ->
+    case eval (eval (c, st)[0], e) of
+      [c, v] -> if v then [c, None] else eval (c, Repeat (st, e)) fi
+    esac
+  | Scope (def_list, e) ->
+    case eval (evalDef ([s.enterScope, w], def_list), e) of
+      [[s, w], v] -> [[s.leaveScope, w], v]
+    esac
+  | Call (func, e_list) -> 
+    case s.lookup(func, 0) of 
+      Fun (args, body) ->
+      case evalList (c, e_list) of
+        [[s, w], vl] ->
+        case eval (assignNames ([s.enterFunction, w], args, vl), body) of
+          [[s0, w0], v] -> [[leaveFunction (s, getGlobal (s0)), w0], v]
+        esac
+      esac
+    esac
+  | Ignor (e)         -> [eval (c, e)[0], None]
+  esac
+}
+
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
   case eval ([emptyState (), createWorld (input)], expr) of
-    [c, _] -> c.snd.getOutput
+    [c, _] ->  c.snd.getOutput
   esac
 }
+

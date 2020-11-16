@@ -62,6 +62,10 @@ fun list0 (item) {
   list0By (item, s(","))
 }
 
+fun list0w (item) {
+  list0By (item, s (rWhiteSpace))
+}
+
 -- Helper parser: parses a non-empty list of items separated by ","
 fun list (item) {
   listBy (item, s(","))
@@ -106,23 +110,64 @@ fun distributeScope (expr, exprConstructor) {
 }
 
 local primary    = memo $ eta syntax (
-                                      -- decimal constant
-                                      loc=pos x=decimal                                 {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
+  -- decimal constant
+  loc=pos x=decimal 
+    {fun (a) {assertValue (a, Const (stringInt (x)), loc)}} |
 
-                                      -- identifier
-                                      x=lident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? {fun (a) {
-                                                                                                            case args of
-                                                                                                              None -> case a of
-                                                                                                                        Ref  -> Ref (x)
-                                                                                                                      | Void -> Ignore (Var (x))
-                                                                                                                      | _    -> Var (x)
-                                                                                                                      esac
-                                                                                                            | Some (args) -> assertValue (a, Call (x, args))
-                                                                                                            esac
-                                                                                                         }} |
-(* Assignment *)
-                                      $(failure ("the rest of primary parsing in not implemented\n"))),
-(* End *)
+  -- identifier
+  loc=pos x=lident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? 
+    {fun (a) {
+      case args of
+        None -> case a of
+                  Ref  -> Ref (x)
+                | Void -> Ignore (Var (x))
+                | _    -> Var (x)
+                esac
+      | Some (args) -> assertValue (a, Call (x, args), loc)
+      esac
+    }}                                                                                                        |
+  loc=pos e=inbr[s("("), exp, s(")")]          {fun (a) {e (a)}}                                              |
+  loc=pos e=inbr[s("{"), scopeExpr, s("}")]    {fun (a) {e (a)}}                                              |
+  loc=pos kSkip                                {fun (a) {assertVoid (a, Skip, loc)}}                          |
+  loc=pos kWrite x=inbr[s("("), exp, s(")")]   {fun (a) {assertVoid (a, Write (x (Val)), loc)}}               |
+  loc=pos kRead x=inbr[s("("), lident, s(")")] {fun (a) {assertVoid (a, Read (x), loc)}}                      |
+  loc=pos kWhile cond=exp kDo s1=scopeExpr kOd       {fun (a) {assertVoid (a, While (cond (Val), s1 (Void)), loc)}} |
+  loc=pos kFor s1=scopeExpr s[","] e=exp s[","] s2=exp kDo s3=exp kOd 
+                                               {fun (a) {
+                                                case s1 (Void) of
+                                                  Scope (defs, expr) -> assertVoid (a, 
+                                                Scope (defs, 
+                                                  Seq (expr,
+                                                  While (e (Val), Seq (s3 (Void), s2 (Void))))
+                                                      ), loc)
+                                                esac
+                                               }}          |
+  loc=pos kRepeat s1=scopeExpr kUntil e=inbr[s("("), exp, s(")")]
+                                               {fun (a) {
+                                                 case s1 (Void) of
+                                                  Scope (defs, expr) ->
+                                                 assertVoid (a, Scope (defs, Repeat (expr, e (Val))), loc)
+                                                 esac}}   |
+  loc=pos kIf e=exp kThen s1=exp s2=else_exp   {fun (a) {If (e (Val), s1 (a), s2 (a))}}),
+      else_exp = memo $ eta syntax (
+  loc=pos kFi                                  {fun (a) {assertVoid (a, Skip, loc)}}  |
+  loc=pos kElse s=exp kFi                      {fun (a) {s (a)}} |
+  loc=pos kElif e=exp kThen s1=exp s2=else_exp {fun (a) {If (e (Val), s1 (a), s2 (a))}}),
+      defsparse = eta syntax (
+         def=list0w[
+          syntax (
+            kLocal l=list[ syntax (
+              x=lident {[x, None]} |
+              x=lident s["="] e=basic {[x, Some (e (Val))]}
+            )] s[";"] {Local (l)} |
+            kFun name=lident args=inbr[s("("), list0(lident), s(")")] body=inbr[s("{"), scopeExpr, s("}")] {Fun (name, args, body (Weak))}
+          )
+        ]
+      ),
+      scopeExpr = memo $ eta syntax (
+         loc=pos defs=defsparse {fun (a) {assertVoid (a, expandScope (defs, Skip), loc)}} | 
+         defs=defsparse e=exp {fun (a) {expandScope (defs, e (a))}}
+      ),
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
                                                             fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
@@ -134,23 +179,6 @@ local primary    = memo $ eta syntax (
                                       [Left , map (binop, {"*", "/", "%"})]
                                      },
                                      primary)),
-      scopeExpr  = memo $ eta syntax (ds=definition* e=exp? {fun (a) {fun (e) {
-                                                                        case ds of
-                                                                          {} -> e
-                                                                        | _  -> expandScope (ds, e) 
-                                                                        esac
-                                                                      } (case e of 
-                                                                           Some (e) -> e (a)
-                                                                         | _        -> Skip
-                                                                         esac)
-                                                                      }}),
-      definition = memo $ eta syntax (kLocal ds=list[syntax (lident (s["="] e=basic {e (Val)})?)] s[";"] {Local (ds)} |
-                                      kFun name=lident
-                                           args=inbr[s("("), list0 (lident), s(")")]
-                                           body=inbr[s("{"), scopeExpr, s("}")] {
-                                           Fun (name, args, body (Weak))
-                                      }
-                                     ),                                    
       exp        = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
 
 -- Public top-level parser
