@@ -6,6 +6,7 @@ import State;
 import Expr;
 import Buffer;
 import Fun;
+import Util;
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -70,5 +71,5 @@ public fun compileSM (stmt) {
       | Seq (s1, s2) -> {compileImpl (s1), compileImpl (s2)}
       esac
   }
-  deepFlatten (compileImpl (stmt))
+  myDeepFlatten (compileImpl (stmt))
 }
