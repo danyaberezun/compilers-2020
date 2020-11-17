@@ -43,7 +43,7 @@ fun initEvalEnv (insns) {
         }) $ [emptyMap (compare), insns];
   
   [fun (l) {
-     case findMap (map, l) of Some (insns) -> insns esac
+     case findMap (map, l) of Some (insns) -> insns | _ -> failure("No label %s\n", l) esac
   }]
 }
 
@@ -55,23 +55,31 @@ fun fromLabel (env, lab) {
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c, insns) {
+--   printf("kek");
   case insns of
     {} -> c
   | i : is -> case c of [stack, state, w] -> 
         case i of 
-          CONST (n) -> [n : stack, state, w]
-        | BINOP (op) -> case stack of lhs : rhs : t ->  [evalOp (op, lhs, rhs) : t, state, w] esac
-        | LD (x) -> [state (x) : stack, state, w]
-        | ST (x) -> case stack of h : t -> [t, state <- [x, h], w] esac
-        | READ -> case readWorld(w) of [h, w1] -> [h : stack, state, w1] esac
-        | WRITE -> case stack of h : t -> [t, state, writeWorld (h, w)] esac
-        esac.eval(is)
+          CONST (n) -> eval(env, [n : stack, state, w], is)
+        | BINOP (op) -> eval(env, case stack of lhs : rhs : t ->  [evalOp (op, lhs, rhs) : t, state, w] esac, is)
+        | LD (x) -> eval(env, [state (x) : stack, state, w], is)
+        | ST (x) -> eval(env, case stack of h : t -> [t, state <- [x, h], w] esac, is)
+        | READ -> eval(env, case readWorld(w) of [h, w1] -> [h : stack, state, w1] esac, is)
+        | WRITE -> eval(env, case stack of h : t -> [t, state, writeWorld (h, w)] esac, is)
+        | LABEL (l) -> eval(env, c, is)
+        | JMP (l) -> eval(env, c, env.fromLabel(l))
+        | CJMP ("z", l) -> eval(env, c,  case stack of h : t -> if h then c else env.fromLabel(l) fi esac)
+        | CJMP ("nz", l) -> eval(env, c,  case stack of h : t -> if h == 0 then c else env.fromLabel(l) fi esac)
+        | _ -> failure("very strange")
+        esac
     esac
+    | _ -> failure("very strange")
   esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
+--   printf("%s\n", insns.string);
   eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
@@ -120,13 +128,36 @@ fun compileExpr (expr) {
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  fun compileImpl(stmt) {
+  fun compileImpl(stmt, env) {
       case stmt of
-        Read (x) -> {READ, ST (x)}
-      | Write (e) -> {compileExpr (e), WRITE}
-      | Assn (x, e) -> {compileExpr (e), ST (x)}
-      | Seq (s1, s2) -> {compileImpl (s1), compileImpl (s2)}
+        Read (x) -> [{READ, ST (x)}, env]
+      | Write (e) -> [{compileExpr (e), WRITE}, env]
+      | Assn (x, e) -> [{compileExpr (e), ST (x)}, env]
+      | Seq (s1, s2) -> case compileImpl(s1, env) of 
+            [is1, env] -> case compileImpl(s2, env) of 
+                [is2, env] -> [{is1, is2}, env]
+            esac
+        esac
+      | Skip -> [{}, env]
+      | If (cond, s1, s2) -> case env.genLabels(2) of 
+            [l1, l2, env] -> case compileImpl(s1, env) of 
+                [is1, env] -> case compileImpl(s2, env) of 
+                    [is2, env] -> [{compileExpr(cond), CJMP("z", l1), is1, JMP(l2), LABEL(l1), is2, LABEL(l2)}, env]
+                esac
+            esac
+        esac
+      | While (cond, stmt) -> case env.genLabels(2) of
+            [l1, l2, env] -> case compileImpl(stmt, env) of
+              [body, env] -> [{JMP (l2), LABEL (l1), body, LABEL(l2), compileExpr(cond), CJMP ("nz", l1)}, env]
+            esac
+        esac
+      | Repeat (stmt, cond) -> case env.genLabel of
+            [l, env] -> case compileImpl(stmt, env) of
+              [body, env] -> [{LABEL(l), body, compileExpr(cond), CJMP ("z", l)}, env]
+            esac
+        esac
       esac
   }
-  flatten (compileImpl (stmt))
+  printf("mem");
+  deepFlatten (compileImpl (stmt, initCompEnv())[0])
 }
