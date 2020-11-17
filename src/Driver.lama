@@ -26,7 +26,6 @@ fun parseArgs (args) {
       SM -> smDump ::= true
     esac
   }
-  
   fun setMode (m) {
     case deref (mode) of
       Comp -> mode ::= m
@@ -68,7 +67,6 @@ fun peepSM (args, smCode) {
   dumpSM (args, lazy (showSM (smCode)));
   smCode
 }
-
 local args = parseArgs (arrayList (sysargs).tl);
 
 -- The main part: parses input file, invokes interpreter/stack machine interpreter/x86
