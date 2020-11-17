@@ -49,7 +49,6 @@ fun parseArgs (args) {
          }
       })(args);
 
-
   [fun () {deref (mode)},
    fun () {case deref(infile) of #unboxed -> failure ("input file name not set\n") | fn -> fn esac}
   ]        

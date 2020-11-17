@@ -1,0 +1,12 @@
+*.o
+!runtime.o
+*.s
+*.i
+lama-impl
+test00*
+test00*.s
+test00*.log
+generated*****
+generated*****.input
+generated*****.s
+generated*****.log
