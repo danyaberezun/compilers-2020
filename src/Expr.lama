@@ -5,6 +5,7 @@ import State;
 import World;
 import Lexer;
 import Parser;
+import Collection;
 
 -- As association map which maps "\otimes" into "\oplus"
 local ops = {
@@ -86,6 +87,16 @@ fun addNames (state, names) {
 fun addFunction (state, name, args, body) {
   state.addName (name, Fun (args, body))
 }
+
+fun addDefs (state, defs) {
+  fun addDef (state, d) {
+    case d of
+      Local(args) -> addNames(state, args)
+		| Fun(name, args, body) -> addFunction(state, name, args, body)
+    esac
+  }
+  foldl (addDef, state, defs)
+}
                                         
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values
@@ -110,6 +121,26 @@ fun eval (c@[s, w@[inp, outp]], expr) {
 				  [[ns <- [z, val], nw], val]
 				esac
 			esac
+	| Scope (defs, expr) ->
+      case addDefs(enterScope(s), defs) of newS ->
+        case eval([newS, w], expr) of [[newS, newW], val] ->
+          [[leaveScope(newS), newW], val]
+        esac
+      esac
+	| Call(fname, args) -> {
+	  case lookup(s, fname) of f@Fun(fArgs, body) ->
+			case evalList(c, args) of [[s, w], evArgs] ->
+				local funState = foldl(
+				  fun (res, [k, v]) { addName(res, k, v) },
+					enterFunction(s),
+					reverse(zip(fArgs, evArgs))
+				);
+				case eval([funState, w], body) of [[ns, nw], val] ->
+				  [[leaveFunction(s, getGlobal(ns)), nw], val]
+				esac
+			esac
+		esac
+	}
   | Seq (head, tail) ->
     case eval(c, head) of [nc, val] ->
       case eval(nc, tail) of [nnc, val2] -> [nnc, val2] esac
@@ -140,7 +171,7 @@ fun eval (c@[s, w@[inp, outp]], expr) {
         esac
 			esac
     esac
-  | Var (x) -> [c, s(x)]
+  | Var (x) -> [c, lookup(s, x)]
   | Ref (z) -> [c, Ref (z)]
   | Const (const) -> [c, const]
   | Binop (op, a, b) ->
@@ -155,10 +186,11 @@ fun eval (c@[s, w@[inp, outp]], expr) {
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
-  case eval ([emptyState, createWorld (input)], expr) of
+  case eval ([emptyState (), createWorld (input)], expr) of
     [c, _] -> c.snd.getOutput
   esac
 }
+
 
 public fun calculate(op, x, y) {
   case op of

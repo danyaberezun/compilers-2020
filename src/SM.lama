@@ -209,30 +209,29 @@ public fun compileSM0 (stmt, env) {
 	  case compileSM0(expr, env) of [compE, env] ->
 		  [compE +++ singleton(WRITE), env]
 		esac
-	| w@While (e, b) -> {
+	| w@While (e, b) ->
 	  case genLabels(env, 2) of [l1, l2, env] ->
 		  case compileSM0(e, env) of [compE, env] ->
-			  case compileSM0(b, env) of [compB, env] -> {
+			  case compileSM0(b, env) of [compB, env] ->
 				  local joined = (LABEL(l1):compE) +++ (CJMP("z",l2):{})
 				    +++ compB
 					  +++ (JMP(l1):LABEL(l2):{});
 				  [joined, env]
-				} esac
+				esac
 			esac
 		esac
-	}
 	| If (e, b1, b2) ->
 	  case genLabels(env, 2) of [le, lfi, env] ->
 			case compileSM0(e, env) of [compE, env] ->
 			  case compileSM0(b1, env) of [compB1, env] ->
-			    case compileSM0(b2, env) of [compB2, env] -> {
+			    case compileSM0(b2, env) of [compB2, env] ->
 				    local joined = compE +++ (CJMP("z", le):{}) 
 				                     +++ compB1 +++ (JMP(lfi)
 				    							 :LABEL(le):{})
 				    							   +++ compB2 +++
 				    							 (LABEL(lfi):{});
 				    [joined, env]
-					} esac
+					esac
 			  esac
 		  esac
 		esac
@@ -245,9 +244,9 @@ public fun compileSM0 (stmt, env) {
 			esac
 	  esac
   | Ignore (expr) ->
-    case compileSM0(expr, env) of [compExpr, env] -> {
+    case compileSM0(expr, env) of [compExpr, env] ->
       [compExpr +++ singleton(DROP), env]
-    } esac
+    esac
   | wat -> failure("Can't parse command: %s\n", wat.string)
   esac
 }
