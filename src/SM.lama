@@ -120,7 +120,7 @@ fun compileExpr (expr) {
   case expr of 
     Var (x) -> LD (x)
   | Const (n) -> CONST (n)
-  | Binop(op, lhs, rhs) -> {compileExpr(rhs), compileExpr(lhs), BINOP (op)}
+  | Binop(op, lhs, rhs) -> compileExpr(rhs) +++ compileExpr(lhs) +++ singleton( BINOP (op))
   esac
 }
 
@@ -131,33 +131,34 @@ public fun compileSM (stmt) {
   fun compileImpl(stmt, env) {
       case stmt of
         Read (x) -> [{READ, ST (x)}, env]
-      | Write (e) -> [{compileExpr (e), WRITE}, env]
-      | Assn (x, e) -> [{compileExpr (e), ST (x)}, env]
+      | Write (e) -> [compileExpr(e) +++ singleton(WRITE), env]
+      | Assn (x, e) -> [compileExpr (e) +++ singleton(ST (x)), env]
       | Seq (s1, s2) -> case compileImpl(s1, env) of 
             [is1, env] -> case compileImpl(s2, env) of 
-                [is2, env] -> [{is1, is2}, env]
+                [is2, env] -> [is1 +++ is2, env]
             esac
         esac
       | Skip -> [{}, env]
       | If (cond, s1, s2) -> case env.genLabels(2) of 
             [l1, l2, env] -> case compileImpl(s1, env) of 
                 [is1, env] -> case compileImpl(s2, env) of 
-                    [is2, env] -> [{compileExpr(cond), CJMP("z", l1), is1, JMP(l2), LABEL(l1), is2, LABEL(l2)}, env]
+                    [is2, env] -> [compileExpr(cond) +++  singleton(CJMP("z", l1)) +++
+                     is1 +++ {JMP(l2), LABEL(l1)} +++ is2 +++ singleton(LABEL(l2)), env]
                 esac
             esac
         esac
       | While (cond, stmt) -> case env.genLabels(2) of
             [l1, l2, env] -> case compileImpl(stmt, env) of
-              [body, env] -> [{JMP (l2), LABEL (l1), body, LABEL(l2), compileExpr(cond), CJMP ("nz", l1)}, env]
+              [body, env] -> [{JMP (l2), LABEL (l1)} +++ body +++ singleton(LABEL(l2)) +++ compileExpr(cond) +++
+              singleton(CJMP ("nz", l1)), env]
             esac
         esac
       | Repeat (stmt, cond) -> case env.genLabel of
             [l, env] -> case compileImpl(stmt, env) of
-              [body, env] -> [{LABEL(l), body, compileExpr(cond), CJMP ("z", l)}, env]
+              [body, env] -> [singleton(LABEL(l)) +++ body +++ compileExpr(cond) +++ singleton(CJMP ("z", l)), env]
             esac
         esac
       esac
   }
-  printf("mem");
-  deepFlatten (compileImpl (stmt, initCompEnv())[0])
+  compileImpl (stmt, initCompEnv())[0]
 }
