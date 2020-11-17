@@ -350,7 +350,14 @@ fun compile (env, code) {
         						| _    -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y) <+ Mov(L(0),eax) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
         					esac
         			esac
-        	esac	
+        	esac
+
+          | LABEL (lb) -> [env, code <+ Label (lb)]
+		      | JMP (lb) -> [env, code <+ Jmp (lb)]
+		      | CJMP (cond, lb) ->
+			                case env.pop of
+				                  [s, env] -> [env, code <+ Mov (L(0), eax) <+ Binop("cmp", s, eax) <+ CJmp (cond, lb)]
+			                esac
         esac
       }, [env, emptyBuffer ()], code)
   }
