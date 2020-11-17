@@ -103,7 +103,6 @@ fun evalList (c, exprs) {
 }
 
 fun eval (c@[s, w], expr) {
-  -- printf("%s\n", expr.string);
   case expr of
     Assn (dest, exp) -> case evalList(c, {exp, dest}) of
       [[s, w], val:ref:_] -> [[s <- [ref, val], w], val]

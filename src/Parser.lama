@@ -143,7 +143,7 @@ local primary  = memo $ eta syntax (
         )
       }
     } |
-    name=lident args=inbr[s("("), list0(exp), s(")")] {fun (a) {Call (name, map(fun (e) {e (Val)}, args))}} |
+    name=lident args=inbr[s("("), list0(exp), s(")")] {fun (a) {assertValue(a, Call (name, map(fun (e) {e (Val)}, args)), loc)}} |
     inbr[s("("), exp, s(")")] |
     inbr[s("{"), scopeExpr, s("}")])
   ,

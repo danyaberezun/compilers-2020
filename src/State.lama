@@ -80,7 +80,7 @@ fun makeState (scopes) {
       case scopes of
         {s} -> singleton (global)
       | s : scopes -> s : replaceGlobal (scopes)
-      esac    
+      esac
     }
 
     makeState (replaceGlobal (scopes))

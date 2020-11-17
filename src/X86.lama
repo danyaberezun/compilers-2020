@@ -146,8 +146,16 @@ fun envBarrier(env) {
   env[5]
 }
 
-fun makeEnv (stack, stackSlots, globals, unusedLocals, attributes, barrier) {
-  mapArray(ref, [stack, stackSlots, globals, unusedLocals, attributes, barrier])
+fun envFLabel(env) {
+  env[6]
+}
+
+fun envNLocals(env) {
+  env[7]
+}
+
+fun makeEnv (stack, stackSlots, globals, unusedLocals, attributes, barrier, fLabel, nLocals) {
+  mapArray(ref, [stack, stackSlots, globals, unusedLocals, attributes, barrier, fLabel, nLocals])
 }
 
 fun copy(env) {
@@ -195,8 +203,8 @@ fun push (env, y) {
 }
 
 -- Decrease number of used places in registers and on stack on demand
-fun dealloc(unusedLocals, x, curStack) {
-    if (regOpnd(x) !! stackOpnd(x)) &&
+fun dealloc(unusedLocals, x, curStack, nl) {
+    if (regOpnd(x) !! (stackOpnd(x) && x[0] >= nl)) &&
       compare(find(fun (y) {compare(x, y) == 0}, curStack), None) == 0
     then
       if regOpnd(x) then
@@ -216,7 +224,7 @@ fun pop (env) {
   case deref(envStack(env)) of
     x : stack ->
       envStack(env) ::= stack;
-      envUnusedLocals(env) ::= dealloc(deref(env.envUnusedLocals), x, stack);
+      envUnusedLocals(env) ::= dealloc(deref(env.envUnusedLocals), x, stack, deref(envNLocals(env)));
       [x, env]
   esac
 }
@@ -228,8 +236,8 @@ fun pop2 (env) {
   case deref(envStack(env)) of
     x : y : stack ->
       envStack(env) ::= stack;
-      envUnusedLocals(env) ::= dealloc(deref(env.envUnusedLocals), x, stack);
-      envUnusedLocals(env) ::= dealloc(deref(env.envUnusedLocals), y, stack);
+      envUnusedLocals(env) ::= dealloc(deref(env.envUnusedLocals), x, stack, deref(envNLocals(env)));
+      envUnusedLocals(env) ::= dealloc(deref(env.envUnusedLocals), y, stack, deref(envNLocals(env)));
       [x, y, env]
   esac
 }
@@ -246,15 +254,19 @@ fun addGlobal (env, name) {
     env
   else
     envGlobals(env) ::= addSet (deref(env.envGlobals), globalName (env, name));
-    case env.setAttribute(env.loc(name), "CompileTimeValue", 0) of
-      env -> env.setAttribute(env.loc(name), "Bool", true)
+    case env.setAttribute(env.loc(Glb (name)), "CompileTimeValue", 0) of
+      env -> env.setAttribute(env.loc(Glb (name)), "Bool", true)
     esac
   fi
 }
 
 -- References a global variable
-fun loc (env, name) {
-  M (globalName (env, name))
+fun loc (env, alloc) {
+  case alloc of
+    Glb (x) -> M (globalName (env, x))
+  | Arg (i) -> S (-3-i)
+  | Loc (i) -> S (i)
+  esac
 }
 
 -- Gets a list of global variables from the environment
@@ -463,6 +475,49 @@ fun setBarrier (env) {
   env
 }
 
+-- Sets the label of current function
+fun enterFunction (env, fLabel, nl) {
+    envStack(env) ::= {};
+    envStackSlots(env) ::= nl;
+    envUnusedLocals(env) ::= {R (0), R (1), R(2), R(3)};
+    envAttributes(env) ::= emptyMap(compare);
+    envFLabel(env) ::= fLabel;
+    envBarrier(env) ::= false;
+    envNLocals(env) ::= nl;
+    env
+}
+
+-- Gets the label of current function
+fun currentFunction (env) {
+    return deref(envFLabel(env))
+}
+
+-- Gets the list of live registers past given symbolic stack depth
+fun liveRegisters (env, depth) {
+    fun inner (d, acc, st) {
+      case st of
+        {}             -> acc
+      | (r@R (_)) : tl -> inner (d+1, if d >= depth then addSet(acc, r) else acc fi, tl)
+      | _         : tl -> inner (d+1, acc, tl)
+      esac
+    }
+
+    elements(inner (0, emptySet(compare), deref(envStack(env))))
+}
+
+-- Gets a local static size for the current function
+fun staticSize (env) {
+    deref(envStackSlots(env))
+}
+
+fun temporalOpnd(env, op) {
+  case op of
+    R (_) -> true |
+    S (p) -> p >= deref(envNLocals(env)) |
+    _ -> false
+  esac
+}
+
 -- Creates an initial environment
 fun initEnv () {
   makeEnv (
@@ -471,7 +526,9 @@ fun initEnv () {
     emptySet (compare),
     {R (0), R (1), R(2), R(3)},
     emptyMap(compare),
-    false
+    false,
+    "",
+    0
   )
 }
 
@@ -492,18 +549,22 @@ fun dataDef (name) {
 }
 
 -- Generates function prologue
-fun prologue (size) {
-  singletonBuffer (Push (ebp)) <+
+fun prologue (fLabel) {
+  singletonBuffer (Push  (ebp)) <+
   Mov   (esp, ebp) <+
-  Binop ("-", L (wordSize*size), esp)
+  Binop ("-", M (sprintf ("$%s_SIZE", fLabel)), esp)  
 }
 
 -- Generates function epilogue
-fun epilogue () {
-  singletonBuffer (Mov (ebp, esp)) <+
-  Pop   (ebp) <+
-  Binop ("^", eax, eax) <+
-  Ret
+fun epilogue (env) {
+  local metaDef = Meta (sprintf ("\t.set\t%s_SIZE,\t%d\n", env.currentFunction, env.staticSize * wordSize));
+
+  if compare (env.currentFunction, "main") == 0
+  then [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Binop ("^", eax, eax) <+ Ret <+ metaDef]
+  else case env.pop of
+         [y, env] -> [env, singletonBuffer (Mov (y, eax)) <+ Mov (ebp, esp) <+ Pop (ebp) <+ Ret <+ metaDef]
+       esac
+  fi
 }
 
 -- Checks if an operand resides on a stack
@@ -553,15 +614,6 @@ fun regOpnd (opnd) {
 fun globalOpnd (opnd) {
   case opnd of
     M (_) -> true
-  | _     -> false
-  esac
-}
-
--- Checks if an operand resides in local variable
-fun localOpnd (opnd) {
-  case opnd of
-    S (_) -> true
-  | R (_) -> true
   | _     -> false
   esac
 }
@@ -689,12 +741,12 @@ fun isBool(val) {
   esac
 }
 
-fun moveToLocals(env, code, x) {
+fun moveToTemporals(env, code, x) {
   case 
     foldl(fun ([env, code, newStack], op) {
-        if compare(op, M (x)) == 0 then
-          case allocate(env) of -- TODO: use only one allocation
-            [s, env] -> [copyAttributes(env, M (x), s), code <+> move(M (x), s), s : newStack]
+        if compare(op, x) == 0 then
+          case allocate(env) of
+            [s, env] -> [copyAttributes(env, x, s), code <+> move(x, s), s : newStack]
           esac
         else
           [env, code, op : newStack]
@@ -743,31 +795,32 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+        -- printf("%s\n", deref(envStack(env)).string);
         -- printf("%s\n", i.string);
         case i of
           READ ->
             case allocate(env) of
               [s, env] -> [env.dropAttributes(s), code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
+            esac
         | WRITE ->
             case pop(env) of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
         | ST (x) ->
-            case moveToLocals(env, code, x) of
-              [env, code] -> case addGlobal(env, x) of
-                  env -> case peek(env) of
-                    s -> [copyAttributes(env, s, loc(env, x)), code <+> move(s, loc(env, x))]
-                  esac
+          case moveToTemporals(env, code, loc(env, x)) of
+            [env, code] -> case case x of Glb(x) -> addGlobal(env, x) | _ -> env esac of
+                env -> case peek(env) of
+                  s -> [copyAttributes(env, s, loc(env, x)), code <+> move(s, loc(env, x))]
                 esac
-            esac
+              esac
+          esac
         | LD (x) ->
-            case addGlobal(env, x) of
+            case case x of Glb(x) -> addGlobal(env, x) | _ -> env esac of
               env -> [push(env, loc(env, x)), code]
             esac
         | LDA (x) ->
-            case moveToLocals(env, code, x) of
-              [env, code] -> case addGlobal(env, x) of
+            case moveToTemporals(env, code, loc(env, x)) of
+              [env, code] -> case case x of Glb(x) -> addGlobal(env, x) | _ -> env esac of
                 env -> [push(env, P (loc(env, x))), code]
               esac
             esac
@@ -800,7 +853,7 @@ fun compile (env, code) {
             case 
               case pop2(env) of
                 [op2, op1, env] ->
-                if commutativeOper(op) && localOpnd(op2) then
+                if commutativeOper(op) && temporalOpnd(env, op2) then
                   [op1, op2, env]
                 else
                   [op2, op1, env]
@@ -916,7 +969,7 @@ fun compile (env, code) {
                     ]
                   esac
                 else -- TODO: maybe optimize
-                  case if localOpnd(op1) then [op1, push(push(env, op2), op1)] else allocate(push(env, op2)) fi of
+                  case if temporalOpnd(env, op1) then [op1, push(push(env, op2), op1)] else allocate(push(env, op2)) fi of
                     [s, env] -> [dropAttributes(case pop2(env) of [x, op2, env] -> push(env, x) esac, s), code <+>
                       move(op1, s) <+>
                       if memOpnd(op2) && memOpnd(s) then
@@ -940,7 +993,7 @@ fun compile (env, code) {
                   [
                     foldl(
                       fun (env, var) {
-                        dropAttributes(env, M (globalName(env, var)))
+                        dropAttributes(env, loc(env, var))
                       },
                       env,
                       case findMap(loopVars, l) of
@@ -977,6 +1030,13 @@ fun compile (env, code) {
             ]
         esac
         | DROP -> [pop(env)[1], code]
+        | CALL (f, na) -> case call(env, f, na) of
+          [env, callCode] ->  
+            env := foldl(fun (env, s) { dropAttributes(env, M (s)) }, env, getGlobals(env)); -- TODO: drop not all
+            [env, code <+> callCode]
+        esac
+        | BEGIN (f, _, nl) -> [enterFunction(env, f, nl), code <+> prologue(f)]
+        | END -> case epilogue(env) of [env, ep] -> [env, code <+> ep] esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
