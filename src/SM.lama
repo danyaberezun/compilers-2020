@@ -60,7 +60,7 @@ case insns of
 	{} -> c
 	 | head : rest_prog -> case head of
 					BINOP (op) -> case stack of 
-								second : first : stack -> eval (env, [evalOp (op, first, second) : stack, map, world], rest_prog)
+								second : first : stack -> eval (env, [apply (op, first, second) : stack, map, world], rest_prog)
 						      esac
 					| CONST (n) -> eval (env, [n : stack, map, world], rest_prog)
 					| WRITE -> case stack of
