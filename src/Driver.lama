@@ -70,11 +70,13 @@ fun peepSM (args, smCode) {
 }
 
 local args = parseArgs (arrayList (sysargs).tl);
+-- local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
 
 -- The main part: parses input file, invokes interpreter/stack machine interpreter/x86
 -- code generator
 case parseString (parse |> bypass (end), fread (args.getInFile)) of
   Succ (program) ->
+    -- fprintf (stderr, "Recognized program: ""%s""\n", program.string);
     case args.getMode of
       Comp -> compileX86 (args, peepSM (args, compileSM (program)))
     | mode ->
