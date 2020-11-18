@@ -55,20 +55,38 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-    return foldl(fun ([stack, s, w], instr) {
-        -- printf("Instr: %s\n", instr.string);
-        case [instr, stack] of
-        [BINOP(op), arg2:arg1:other] -> [singleton(apply(op, arg1, arg2)) +++ other, s, w] |
-        [ST(x), arg:other] -> [other, s <- [x, arg], w] |
-        [LD(x), _] -> [singleton(s(x)) +++ stack, s, w] |
-        [READ, _] -> fun (stack, s, [n, w]) {
-            [singleton(n) +++ stack, s, w]
-        } (stack, s, readWorld(w)) |
-        [WRITE, arg:other] -> [other, s, writeWorld(arg, w)] |
-        [CONST(x), _] -> [singleton(x) +++ stack, s, w]
-        esac
-    }, c, insns)
+fun eval (env, c@[stack, map, world@[input, output]], insns) {
+case insns of
+	{} -> c
+	 | head : rest_prog -> case head of
+					BINOP (op) -> case stack of 
+								second : first : stack -> eval (env, [evalOp (op, first, second) : stack, map, world], rest_prog)
+						      esac
+					| CONST (n) -> eval (env, [n : stack, map, world], rest_prog)
+					| WRITE -> case stack of
+								first : stack -> eval (env, [stack, map, writeWorld (first, world)], rest_prog)
+						   esac
+					| READ -> eval (env, [fst (readWorld (world)) : stack, map, snd (readWorld (world))], rest_prog)
+					| ST (x) -> case stack of
+								first : stack -> eval (env, [stack, map <- [x, first], world], rest_prog)
+						    esac
+					| LD (x) -> eval (env, [map (x) : stack, map, world], rest_prog)
+					| LABEL (l) -> eval (env, c, rest_prog)
+					| JMP (l) -> eval (env, c, fromLabel(env, l))
+					| CJMP (cond, l) -> case stack of
+								shead : tail -> case cond of
+										"z" -> case shead of 
+											0 -> eval (env, c, fromLabel (env, l))
+											| _ -> eval (env, c, rest_prog)
+											esac
+										| "n" -> case shead of
+											0 -> eval (env, c, rest_prog)
+											| _ -> eval (env, c, fromLabel (env, l))
+											  esac
+										esac
+							esac
+				esac
+esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
