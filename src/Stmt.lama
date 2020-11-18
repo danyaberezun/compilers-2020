@@ -3,7 +3,10 @@
 import State;
 import Expr;
 import World;
+<<<<<<< HEAD
 import List;
+=======
+>>>>>>> ff6a36ef87312498ac1836bb655c98ad46834c76
 
 -- Evaluates a statement "stmt" in a configuration "c".
 -- A configuration is a pair of a state "s" and a world "w".
@@ -19,7 +22,6 @@ import List;
 --        if     (expr, stmt, stmt) |
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
-
 
 fun eval (c, stmt) {
  -- failure ("Stmt eval not implemented\n")
@@ -37,6 +39,7 @@ fun eval (c, stmt) {
        | _       -> failure("Statement %s not found. \n", stmt)
      esac
   esac 
+
 }
 
 -- Evaluates a program with a given input and returns an output
