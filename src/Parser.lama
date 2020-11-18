@@ -30,7 +30,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
           [Nona, map(binop, {"==", "<=", ">=", "<", ">", "!="})],
           [Left, map(binop, {"+", "-"})],
           [Left, map(binop, {"*", "/", "%"})]
-      }, primary)(id);
+      }, primary);
 
 local elseBranch = memo $ eta syntax(
     kFi {Skip}|
