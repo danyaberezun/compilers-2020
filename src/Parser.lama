@@ -44,7 +44,7 @@ local stmt = memo $ eta syntax (
 local ifParser = memo $ eta syntax(
 	   -kFi {Skip} |
        -kElse smth -kFi |
-       -kElif cond=exp kThen s1=smth s2=ifParser {If (cond, s1, s2)}),
+       -kElif cond=exp kThen s1=smth s2=ifParser {If (cond, s1, s2)});
 local smth = memo $ eta syntax (
 	   stmt |
 	   s1=stmt s[";"] s2=smth {Seq(s1, s2)});
