@@ -1,5 +1,3 @@
-SHELL := /bin/bash
-
 FILES=$(wildcard *.lama)
 ALL=$(sort $(FILES:.lama=.o))
 LAMAC=lamac
@@ -24,4 +22,3 @@ X86.o: SM.o Manifest.o
 
 clean:
 	rm -Rf *.s *.o *.i *~ *.html *.sm lama-impl
-
