@@ -1,4 +1,4 @@
-SHELL := /bin/bash
+ SHELL := /bin/bash
 
 FILES=$(wildcard *.lama)
 ALL=$(sort $(FILES:.lama=.o))
@@ -24,4 +24,3 @@ X86.o: SM.o Manifest.o
 
 clean:
 	rm -Rf *.s *.o *.i *~ *.html *.sm lama-impl
-
