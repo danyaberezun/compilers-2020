@@ -5,7 +5,6 @@ public fun emptyState (x) {
   0
   --failure ("undefined variable ""%s""\n", x)
 }
-
 -- Putting a binding into a state
 public infix <- before : (st, [x, v]) {
   fun (y) {
