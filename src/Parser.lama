@@ -35,8 +35,19 @@ local stmt = memo $ eta syntax (
        kRead x = inbr[s("("), lident, s(")")] {Read(x)} |
        x = lident s[":="] y = exp {Assn(x, y)} |
        x = stmt s[";"] y = stmt end {Seq(x, y)} |
-       kSkip {Skip});
-  
+       kSkip {Skip} |
+	   kIf cond=exp kThen s1=smth s2=ifParser  {If (cond, s1, s2)} |
+	   kWhile cond=exp kDo s=smth kOd  {While (cond, s)}   |
+	   kRepeat s=smth kUntil cond=exp  {Repeat (s, cond)}  |
+	   kFor s1=smth s[","] e=exp s[","] s2=smth kDo body=smth kOd {Seq (s1, While(e, Seq(body, s2)))});
 
+local ifParser = memo $ eta syntax(
+	   -kFi {Skip} |
+       -kElse smth -kFi |
+       -kElif cond=exp kThen s1=smth s2=ifParser {If (cond, s1, s2)}),
+local smth = memo $ eta syntax (
+	   stmt |
+	   s1=stmt s[";"] s2=smth {Seq(s1, s2)});
+  
 -- Public top-level parser
 public parse = stmt;
