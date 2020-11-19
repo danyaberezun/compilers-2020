@@ -16,7 +16,9 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
-
+--        if     (expr, stmt, stmt) |
+--        While  (expr, stmt)       |
+--        Repeat (stmt, expr)
 
 fun eval (c@[s, w], stmt) {
     case stmt of
