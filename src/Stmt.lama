@@ -22,17 +22,17 @@ import World;
 fun eval (configuration, stmt) {
 	case configuration of [st, [i, o]] ->
 		case stmt of
-			Assn   (x, expr)      -> [(st <- [x, evalExpr (st, expr)]), [i, o]]
+		    Assn   (x, expr)      -> [(st <- [x, evalExpr (st, expr)]), [i, o]]
 		  | Seq    (s1, s2) 	  -> eval (eval (configuration, s1), s2)
-		  | Skip         	      -> configuration
-		  | Read   (x)     	      -> case i of 
-								                z : it -> [st <- [x, z], [it, o]]
-							         esac
-		  | Write  (expr) 	      -> [st, [i, evalExpr (st, expr) : o]]
+		  | Skip         	  -> configuration
+		  | Read   (x)     	  -> case i of 
+							z : it -> [st <- [x, z], [it, o]]
+					     esac
+		  | Write  (expr) 	  -> [st, [i, evalExpr (st, expr) : o]]
 		  | If     (expr, s1, s2) -> if (evalExpr (configuration[0], expr)) then eval (configuration, s1) else eval (configuration, s2) fi
 		  | While  (expr, s)      -> if (evalExpr (configuration[0], expr)) then eval (configuration, Seq(s, stmt)) else eval (configuration, Skip) fi
 		  | Repeat (s, expr)      -> local c1 = eval (configuration, s);
-									 if (evalExpr (c1[0], expr)) then eval (c1, Skip) else eval (c1, Repeat(s, expr)) fi
+					     if (evalExpr (c1[0], expr)) then eval (c1, Skip) else eval (c1, Repeat(s, expr)) fi
 		  | _                     -> failure("Statement %s not found. \n", stmt)
 		  esac
 	esac 
