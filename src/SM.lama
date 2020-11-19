@@ -139,28 +139,31 @@ fun compileExpr (expr) {
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
+ fun compileEnv(env, stmt) {
   case stmt of
     Skip              -> [env, {}]
 	| Assn   (x, expr)  -> compileExpr (expr) +++ singleton (ST (x))
 	| Read   (x)        -> {READ,                 ST (x)           }
 	| Write  (expr)     -> compileExpr (expr) +++ singleton (WRITE)
 	| Seq    (s1, s2)   -> compileSM (s1)     +++ compileSM (s2)
-  | While  (expr, s)  -> case genLabels (env, 2) of [label1, label2, env1] ->
+  	| While  (expr, s)  -> case genLabels (env, 2) of [label1, label2, env1] ->
                                                           case compileEnv (env1, s) of [env2, insts] ->
                                                                       [env2, {JMP (label2), LABEL(label1)} +++ insts +++ singleton (LABEL (label2)) +++ compileExpr (expr) +++ singleton (CJMP ("nz", label1))]
                                                           esac
-                         esac
-  | Repeat (s, expr)  -> case genLabels (env, 1) of [label, env1] ->
+                               esac
+  	| Repeat (s, expr)  -> case genLabels (env, 1) of [label, env1] ->
                                                           case compileEnv (env1, s) of [env2, insts] ->
                                                                       [env2, singleton (LABEL (label)) +++ insts +++ compileExpr (expr) +++ singleton (CJMP ("z", label))]
                                                           esac
-                         esac
-  | If (expr, s1, s2) -> case genLabels (env, 2) of [lbl_else, lbl_fi, env1] ->
+                               esac
+  	| If (expr, s1, s2) -> case genLabels (env, 2) of [lbl_else, lbl_fi, env1] ->
                                                           case compileEnv(env1, s1) of [env2, stmt1] ->
                                                                       case compileEnv(env2, s2) of [env3, stmt2] ->
                                                                             [env3, compileExpr (expr) +++ singleton (CJMP ("z", lbl_else )) +++ stmt1 +++ singleton (JMP (lbl_fi)) +++ singleton (LABEL (lbl_else)) +++ stmt2 +++ singleton(LABEL (lbl_fi))]
                                                                       esac
                                                           esac
-                         esac
+                               esac
 	esac
+ }
+ compileEnv (initCompEnv (), stmt)[1]
 }
