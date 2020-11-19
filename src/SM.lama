@@ -8,7 +8,10 @@ import World;
 import State;
 import Expr;
 import Buffer;
+<<<<<<< HEAD
 import Fun;
+=======
+>>>>>>> upstream/A07-scopes-functions-int
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -34,6 +37,7 @@ public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
 
+<<<<<<< HEAD
 fun computeExpr (oper, s1, s2) {
   case oper of
      "+"  -> s1 + s2
@@ -52,6 +56,8 @@ fun computeExpr (oper, s1, s2) {
   esac
 }
 
+=======
+>>>>>>> upstream/A07-scopes-functions-int
 -- Evaluation environment: keeps a mapping between labels and (sub)programs
 fun initEvalEnv (insns) {
   local map =
@@ -77,6 +83,7 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
+<<<<<<< HEAD
 fun eval (env, c, insns) {
   while size(insns) > 0 do
     case insns[0] of
@@ -104,6 +111,13 @@ fun eval (env, c, insns) {
   od;
   c
 }
+=======
+(* Assignment *)
+fun eval (env, c, insns) {
+  failure ("SM eval not implemented\n")
+}
+(* End *)
+>>>>>>> upstream/A07-scopes-functions-int
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
@@ -140,6 +154,7 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
+<<<<<<< HEAD
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
@@ -200,3 +215,13 @@ fun compileSM2 (env, stmt) {
 public fun compileSM (stmt){
   compileSM2(initCompEnv(),stmt)[1]
 }
+=======
+-- Compiles an expression into a stack machine code.
+-- Takes an expression, returns a list of stack machine
+-- instructions.
+(* Assignment *)
+public fun compileSM (stmt) {
+  failure ("compileSM not implemented\n")
+}
+(* End *)
+>>>>>>> upstream/A07-scopes-functions-int

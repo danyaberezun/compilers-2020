@@ -6,6 +6,7 @@ import Fun;
 import Collection;
 import List;
 
+<<<<<<< HEAD
 
 -- A hashtable to keep a source code location information.
 -- The keys in this table is a (boxed) value, and values are
@@ -15,6 +16,16 @@ local srcTab = emptyHashTab (1024, hash, compare);
 -- A custom combinator to additionally add location info
 public fun located (p) {
   loc |> fun (l) {p @ fun (x) {srcTab := addHashTab (srcTab, x, l); x}}
+=======
+-- A hashtable to keep a source code location information.
+-- The keys in this table are some (boxed) values, and values are
+-- pairs [line, column]
+local srcTab = emptyHashTab (1024, hash, flatCompare);
+
+-- A custom combinator to additionally add location info
+public fun located (p) {
+  syntax(l=pos x=p {srcTab := addHashTab (srcTab, x, l); x})
+>>>>>>> upstream/A07-scopes-functions-int
 }
 
 -- Retrieves location info; fail if no info found
@@ -39,7 +50,13 @@ local keywords =
            "od",
            "for",
            "repeat",
+<<<<<<< HEAD
            "until"});
+=======
+           "until",
+           "local",
+           "fun"});
+>>>>>>> upstream/A07-scopes-functions-int
 
 -- Regular expression definitions
 public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\\)\\)*", "whitespace"),
@@ -58,13 +75,23 @@ public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*
        rOd          = createRegexp ("od\\b", """od"""),
        rRepeat      = createRegexp ("repeat\\b", """repeat"""),
        rUntil       = createRegexp ("until\\b", """until"""),
+<<<<<<< HEAD
        rFor         = createRegexp ("for\\b", """for""");
+=======
+       rFor         = createRegexp ("for\\b", """for"""),
+       rLocal       = createRegexp ("local\\b", """for"""),
+       rFun         = createRegexp ("fun\\b", """for""");
+>>>>>>> upstream/A07-scopes-functions-int
       
 local whiteSpace = token (rWhiteSpace);
 
 -- Public parsers for concrete tokens
 -- Generic token parser; t is either a string or a regular expression
+<<<<<<< HEAD
 public fun s (t) {memo $ whiteSpace |> lift (token (t))}
+=======
+public fun s (t) {memo $ syntax (-whiteSpace token[t])}
+>>>>>>> upstream/A07-scopes-functions-int
 
 -- Some individual tokens
 public kRead    = s (rRead),
@@ -81,6 +108,7 @@ public kRead    = s (rRead),
        kRepeat  = s (rRepeat),
        kUntil   = s (rUntil),
        kFor     = s (rFor),
+<<<<<<< HEAD
        decimal  = s (rDecimal),
        pos      = memo $ whiteSpace |> lift (loc),
        end      = memo $ whiteSpace |> lift (eof),
@@ -97,3 +125,39 @@ public kRead    = s (rRead),
                                 }
                               });
 
+=======
+       kLocal   = s (rLocal),
+       kFun     = s (rFun),
+       decimal  = s (rDecimal),
+       pos      = memo $ syntax (-whiteSpace loc),
+       end      = memo $ syntax (-whiteSpace eof),
+       lident   = memo $ syntax (-whiteSpace located[
+                                   fun (k) {
+                                     fun (s) {
+                                       k (case s.matchRegexp (rLident) of
+                                            a@Succ (v, _) -> if memSet (keywords, v)
+                                                             then Fail ("lowercase identifier expected", s.getLine, s.getCol)
+                                                             else a
+                                                             fi
+                                          | a             -> a
+                                          esac)
+                                     }
+                                   }
+       
+                                ]);
+
+(*
+         whiteSpace |> lift (fun (k) {
+                               fun (s) {
+                                 k (case s.matchRegexp (rLident) of
+                                      a@Succ (v, _) -> if memSet (keywords, v)
+                                                       then Fail ("lowercase identifier expected", s.getLine, s.getCol)
+                                                       else a
+                                                       fi
+                                    | a             -> a
+                                    esac)
+                                }
+                              });
+
+*)
+>>>>>>> upstream/A07-scopes-functions-int

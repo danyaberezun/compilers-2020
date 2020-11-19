@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+local n;
+
+>>>>>>> upstream/A07-scopes-functions-int
 read (n);
 while n >= 0 do
   if n > 1

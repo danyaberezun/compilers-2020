@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+local n, i, fib_1, fib_2, fib;
+>>>>>>> upstream/A07-scopes-functions-int
 read (n);
 
 i     := 2;

@@ -8,9 +8,15 @@ check: $(TESTS)
 
 $(TESTS): %: %.lama
 	@echo $@
+<<<<<<< HEAD
 	@LAMA_RUNTIME=../../runtime $(LAMAC) $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
 	@cat $@.input | $(LAMAC) -i $< > $@.log && diff $@.log orig/$@.log
 	@cat $@.input | $(LAMAC) -s $< > $@.log && diff $@.log orig/$@.log
+=======
+	@cat $@.input | $(LAMAC) -i $< > $@.log && diff $@.log orig/$@.log
+#	@cat $@.input | $(LAMAC) -s $< > $@.log && diff $@.log orig/$@.log
+#	@LAMA_RUNTIME=../../runtime $(LAMAC) $< && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
+>>>>>>> upstream/A07-scopes-functions-int
 
 clean:
 	rm -f *.log *.s *~

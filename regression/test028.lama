@@ -1,2 +1,7 @@
+<<<<<<< HEAD
+=======
+local x, y;
+
+>>>>>>> upstream/A07-scopes-functions-int
 write ((read (x); x) + (read (y); y))
 

@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+local n, c, p;
+
+>>>>>>> upstream/A07-scopes-functions-int
 read (n);
 
 c := 1;
@@ -5,10 +10,17 @@ p := 2;
 
 while c do
 
+<<<<<<< HEAD
   cc := 1;
 
   while cc do
     q := 2;
+=======
+  local cc = 1;
+
+  while cc do
+    local q = 2;
+>>>>>>> upstream/A07-scopes-functions-int
 
     while q * q <= p && cc do
       cc := p % q != 0;
@@ -18,6 +30,7 @@ while c do
     if cc then cc := 0 else p := p + 1; cc := 1 fi   
   od;
 
+<<<<<<< HEAD
   d := p;
   i := 0;
 
@@ -38,5 +51,27 @@ while c do
   p := p + 1;
   c := n != 1
 
+=======
+  {
+   local d = p,
+         i = 0,
+         q = n / d,
+         m = n % d;
+
+   while q > 0 && m == 0 do
+     i := i + 1;
+     d := d * p;
+     m := n % d;
+     if m == 0 then q := n / d else skip fi
+   od;
+
+   write (p);
+   write (i);
+
+   n := n / (d / p);
+   p := p + 1;
+   c := n != 1
+  }
+>>>>>>> upstream/A07-scopes-functions-int
 od
 
