@@ -6,15 +6,14 @@ import Fun;
 import Collection;
 import List;
 
-
 -- A hashtable to keep a source code location information.
--- The keys in this table is a (boxed) value, and values are
+-- The keys in this table are some (boxed) values, and values are
 -- pairs [line, column]
-local srcTab = emptyHashTab (1024, hash, compare);
+local srcTab = emptyHashTab (1024, hash, flatCompare);
 
 -- A custom combinator to additionally add location info
 public fun located (p) {
-  loc |> fun (l) {p @ fun (x) {srcTab := addHashTab (srcTab, x, l); x}}
+  syntax(l=pos x=p {srcTab := addHashTab (srcTab, x, l); x})
 }
 
 -- Retrieves location info; fail if no info found
@@ -39,7 +38,9 @@ local keywords =
            "od",
            "for",
            "repeat",
-           "until"});
+           "until",
+           "local",
+           "fun"});
 
 -- Regular expression definitions
 public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\\)\\)*", "whitespace"),
@@ -58,13 +59,15 @@ public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*
        rOd          = createRegexp ("od\\b", """od"""),
        rRepeat      = createRegexp ("repeat\\b", """repeat"""),
        rUntil       = createRegexp ("until\\b", """until"""),
-       rFor         = createRegexp ("for\\b", """for""");
+       rFor         = createRegexp ("for\\b", """for"""),
+       rLocal       = createRegexp ("local\\b", """for"""),
+       rFun         = createRegexp ("fun\\b", """for""");
       
 local whiteSpace = token (rWhiteSpace);
 
 -- Public parsers for concrete tokens
 -- Generic token parser; t is either a string or a regular expression
-public fun s (t) {memo $ whiteSpace |> lift (token (t))}
+public fun s (t) {memo $ syntax (-whiteSpace token[t])}
 
 -- Some individual tokens
 public kRead    = s (rRead),
@@ -81,18 +84,37 @@ public kRead    = s (rRead),
        kRepeat  = s (rRepeat),
        kUntil   = s (rUntil),
        kFor     = s (rFor),
+       kLocal   = s (rLocal),
+       kFun     = s (rFun),
        decimal  = s (rDecimal),
-       pos      = memo $ whiteSpace |> lift (loc),
-       end      = memo $ whiteSpace |> lift (eof),
-       lident   = memo $       
+       pos      = memo $ syntax (-whiteSpace loc),
+       end      = memo $ syntax (-whiteSpace eof),
+       lident   = memo $ syntax (-whiteSpace located[
+                                   fun (k) {
+                                     fun (s) {
+                                       k (case s.matchRegexp (rLident) of
+                                            a@Succ (v, _) -> if memSet (keywords, v)
+                                                             then Fail ("lowercase identifier expected", s.getLine, s.getCol)
+                                                             else a
+                                                             fi
+                                          | a             -> a
+                                          esac)
+                                     }
+                                   }
+       
+                                ]);
+
+(*
          whiteSpace |> lift (fun (k) {
-                                fun (s) {
-                                  k (case s.matchRegexp (rLident) of
-                                       a@Succ (v, _) -> if memSet (keywords, v)
-                                                        then Fail ("lowercase identifier expected", s.getLine, s.getCol)
-                                                        else a
-                                                        fi
-                                     | a             -> a
-                                     esac)
+                               fun (s) {
+                                 k (case s.matchRegexp (rLident) of
+                                      a@Succ (v, _) -> if memSet (keywords, v)
+                                                       then Fail ("lowercase identifier expected", s.getLine, s.getCol)
+                                                       else a
+                                                       fi
+                                    | a             -> a
+                                    esac)
                                 }
                               });
+
+*)
