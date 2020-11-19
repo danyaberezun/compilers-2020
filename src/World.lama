@@ -22,8 +22,4 @@ public fun readWorld ([n:input, output]) {
 -- Gets an output from a world
 public fun getOutput ([_, output]) {
   reverse (output)
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> upstream/A07-scopes-functions-int

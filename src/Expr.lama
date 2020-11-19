@@ -3,11 +3,6 @@
 import List;
 import State;
 import World;
-<<<<<<< HEAD
-=======
-import Lexer;
-import Parser;
->>>>>>> upstream/A07-scopes-functions-int
 
 -- As association map which maps "\otimes" into "\oplus"
 local ops = {
@@ -40,11 +35,7 @@ public fun evalOp (op, l, r) {
 --
 -- A expression is represented by a data structure of the following shape:
 --
-<<<<<<< HEAD
 -- expr = Assn   (expr, expr)         |
-=======
--- expr = Assn   (string, expr)       |
->>>>>>> upstream/A07-scopes-functions-int
 --        Seq    (expr, expr)         |
 --        Skip                        |
 --        Read   (string)             |
@@ -56,49 +47,8 @@ public fun evalOp (op, l, r) {
 --        Ref    (string)             |
 --        Const  (int)                |
 --        Binop  (string, expr, expr) |
-<<<<<<< HEAD
 --        Ignore (expr)
 
-=======
---        Scope  (def list, expr)     |
---        Call   (string, expr list)  |
---        Ignore (expr)
---
--- A definition is either a local variable definition or a function
--- definition:
---
--- def = Local (string list)                |
---       Fun   (string, string list, expr)
-
--- Helper function: checks that given name designates a regular variable in
--- a given state
-fun checkVar (state, name) {
-  case state.lookup (name) of
-    Var (_) -> skip
-  | _       -> error (sprintf ("the name ""%s"" does not designate a variable", name), getLoc (name))
-  esac
-}
-
--- Helper function: checks that given name designates a function in
--- a given state
-fun checkFun (state, name) {
-  case state.lookup (name) of
-    Fun (_, _) -> skip
-  | _          -> error (sprintf ("the name ""%s"" does not designate a function", name), getLoc (name))
-  esac
-}
-
--- Helper function: adds a bunch of regular variables current scope
-fun addNames (state, names) {
-  foldl (fun (s, name) {s.addName (name, Var (0))}, state, names)
-}
-
--- Helper function: adds a function in current scope
-fun addFunction (state, name, args, body) {
-  state.addName (name, Fun (args, body))
-}
-                                        
->>>>>>> upstream/A07-scopes-functions-int
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values
 fun evalList (c, exprs) {
@@ -113,7 +63,6 @@ fun evalList (c, exprs) {
   esac
 }
 
-<<<<<<< HEAD
 fun eval (c@[s, w], expr) {
   --if compare(expr.string,"If()") skip
   --else printf("%s\n",expr.string)
@@ -167,16 +116,3 @@ public fun evalExpr (input, expr) {
     [c, _] -> c.snd.getOutput
   esac
 }
-=======
-(* Assignment *)
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
-}
-
--- Evaluates a program with a given input and returns an output
-public fun evalExpr (input, expr) {
-  case eval ([emptyState (), createWorld (input)], expr) of
-    [c, _] -> c.snd.getOutput
-  esac
-}
->>>>>>> upstream/A07-scopes-functions-int
