@@ -1,7 +1,0 @@
-<<<<<<< HEAD
-=======
-local x;
-
->>>>>>> upstream/A07-scopes-functions-int
-read (x);
-write (if x then 3 else 5 fi)

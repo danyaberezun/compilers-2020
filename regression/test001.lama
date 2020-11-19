@@ -1,9 +1,0 @@
-<<<<<<< HEAD
-=======
-local x, y, z;
-
->>>>>>> upstream/A07-scopes-functions-int
-read (x);
-read (y);
-z := x * y * 3;
-write (z)
