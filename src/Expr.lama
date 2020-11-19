@@ -31,6 +31,7 @@ public fun evalOp (op, expr1, expr2) {
 	esac
 }
 
+
 public fun evalExpr (st, expr) {
   	case expr of 
   	   Var   (x)  -> st(x)           |
