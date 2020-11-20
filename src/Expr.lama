@@ -13,6 +13,7 @@ import State;
 --        Const (int)                |
 --        Binop (string, expr, expr)
 
+
 public fun binop(op, l, r){
 	case op of
 
@@ -42,4 +43,5 @@ public fun evalExpr (st, expr) {
   	| Binop (op, l, r)  -> binop(op, evalExpr(st, l), evalExpr(st, r))
 
   esac
+
 }

@@ -20,6 +20,7 @@ import World;
 --        Repeat (stmt, expr)
 
 fun eval (c, stmt) {
+
   
   case stmt of
 
@@ -43,6 +44,7 @@ fun eval (c, stmt) {
 
 
 	esac
+
 }
 
 -- Evaluates a program with a given input and returns an output
