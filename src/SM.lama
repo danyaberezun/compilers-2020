@@ -58,20 +58,20 @@ fun eval (env, configuration, insns) {
 	case configuration of
     [stack, st, world@[i, o]] -> case insns of
         {} -> configuration
-      | READ      	      : tail -> case i of 
-							                            x : it     -> eval (env, [x : stack, st, [it, o]], tail) -- 
-						                        esac
-      | WRITE     	      : tail -> case stack of 
-							                            x : ss     -> eval (env, [ss, st, [i, x : o]], tail)
-						                        esac
+      | READ      	  : tail -> case i of 
+					x : it     -> eval (env, [x : stack, st, [it, o]], tail) 
+				    esac
+      | WRITE     	  : tail -> case stack of 
+					x : ss     -> eval (env, [ss, st, [i, x : o]], tail)
+				    esac
       | BINOP (str)       : tail -> case stack of 
-							                            x : y : ss -> eval (env, [binopTranslate (str, y, x) : ss, st, world], tail) 
-						                        esac
-      | LD    (x) 	      : tail -> eval (env, [st (x) : stack, st, world], tail)
-      | ST    (x) 	      : tail -> case stack of 
-							                            y : ss     -> eval (env, [stack, (st <- [x, y]), world], tail) 
-						                        esac
-      | CONST (n) 	      : tail -> eval (env, [n : stack, st, world], tail)
+					x : y : ss -> eval (env, [binopTranslate (str, y, x) : ss, st, world], tail) 
+				    esac
+      | LD    (x) 	  : tail -> eval (env, [st (x) : stack, st, world], tail)
+      | ST    (x) 	  : tail -> case stack of 
+					y : ss     -> eval (env, [stack, (st <- [x, y]), world], tail) 
+				    esac
+      | CONST (n) 	  : tail -> eval (env, [n : stack, st, world], tail)
       | LABEL (stack)     : tail -> eval (env, configuration, tail)
       | JMP   (lbl)       : tail -> eval (env, configuration, fromLabel(env, lbl))
       | CJMP  (cond, lbl) : tail -> case stack of cmp : ss -> case cond of 
@@ -86,7 +86,7 @@ fun eval (env, configuration, insns) {
                                                               esac
                                     esac
                                   esac
-  esac
+  	esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
