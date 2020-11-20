@@ -19,36 +19,41 @@ import World;
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
 
-fun eval (c@[state, world], stmt) {
+fun eval (configuration, stmt) {
+  local state = configuration.fst;
+  local world = configuration.snd;
   case stmt of
-    Assn (name, value) -> [evalAndAssign (state, name, value), world]
-  | Seq (stmt1, stmt2) -> eval (eval (c, stmt1), stmt2)
-  | Skip               -> c
-  | Read (name)        -> case readWorld (world) of
-                            [value, newWorld] -> [state <- [name, value], newWorld]
-			              esac
-  | Write (expr)       -> [state, writeWorld (evalExpr (state, expr), world)]
-  | If (expr, stmt1, stmt2) ->
-    if evalExpr (state, expr)
-    then eval (c, stmt1)
-    else eval (c, stmt2)
-    fi
-  | w@While (expr, stmt) ->
-    if evalExpr (state, expr) then eval(eval(c, stmt), w)
-    else c
-    fi
-  | r@Repeat (stmt, expr) ->
-    case eval (c, stmt) of
-      c_@[state_, _] ->
-        if evalExpr (state_, expr) then c_
-        else eval(c_, r)
-        fi
-    esac
+    Seq (stmt1, stmt2) -> return eval (eval (configuration, stmt1), stmt2)
+  | Skip -> configuration
+  | Read (var) ->
+      -- как делать destructuring assignment?
+      case readWorld (world) of
+        [value, world2] -> return [state <- [var, value], world2]
+      esac
+  | Write (expr) ->
+    local value = evalExpr (state, expr);
+    local world2 = writeWorld (value, world);
+    return [state, world2]
+  | Assn (var, expr) ->
+    local value = evalExpr (state, expr);
+    return [state <- [var, value], world]
+  | If (expr, stmtThen, stmtElse) ->
+    local value = evalExpr(state, expr);
+    return eval(configuration, if value then stmtThen else stmtElse fi)
+  | While (expr, stmt) ->
+    return evalWhile(expr, stmt, fun (value) { value != 0 }, configuration)
+  | Repeat (stmt, expr) ->
+    local configuration1 = eval(configuration, stmt);
+    return evalWhile(expr, stmt, fun (value) { value == 0 }, configuration1)
   esac
 }
 
-fun evalAndAssign (state, name, value) {
-  state <- [name, evalExpr (state, value)]
+fun evalWhile (expr, stmt, continue, configuration) {
+  local value = evalExpr(configuration.fst, expr);
+  if continue(value)
+  then evalWhile(expr, stmt, continue, eval(configuration, stmt))
+  else configuration
+  fi
 }
 
 -- Evaluates a program with a given input and returns an output
