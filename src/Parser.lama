@@ -1,4 +1,6 @@
+
 -- Parser
+
 
 import Ostap;
 import Lexer;
@@ -11,6 +13,7 @@ import Matcher;
 fun inbr (l, p, r) {
   syntax (-l p -r)
 }
+
 
 fun operator_descriptor (str) {
   [s (str), fun (l, op, r) {Binop (op, l, r)}]
@@ -69,6 +72,7 @@ local semicolon_operator = singleton (
   )]
 );
 local stmt = memo $ eta (expr (semicolon_operator, stmt1));
+
 
 -- Public top-level parser
 public parse = stmt;

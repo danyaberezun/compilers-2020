@@ -19,6 +19,7 @@ import World;
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
 
+
 fun eval (configuration, stmt) {
   local state = configuration.fst;
   local world = configuration.snd;
@@ -54,6 +55,7 @@ fun evalWhile (expr, stmt, continue, configuration) {
   then evalWhile(expr, stmt, continue, eval(configuration, stmt))
   else configuration
   fi
+
 }
 
 -- Evaluates a program with a given input and returns an output

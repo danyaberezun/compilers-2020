@@ -8,13 +8,17 @@ import Fun;
 import Manifest;
 
 -- Assembler language interface
+
 -- The registers:
+
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
 
 -- We can not freely operate with all register; only with 4 by now
 local nRegs = regs.length - 5;
 
+
 -- For convenience we define the following synonyms for the registers:
+
 local ebx = R (0),
       ecx = R (1),
       esi = R (2),
@@ -26,6 +30,7 @@ local ebx = R (0),
 
 -- We need to know the word size to calculate offsets correctly
 local wordSize = 4;
+
 
 -- We need to distinguish the following operand types:
 --    R (int)    -- hard register
@@ -40,6 +45,8 @@ local wordSize = 4;
 --   IDiv  (opnd)               -- x86 integer division, see instruction set reference
 --   Cltd                       -- see instruction set reference
 --   Set   (string, string)     -- sets a value from flags; the first operand is the
+=======
+
 --                                 suffix, which determines the value being set, the
 --                                 the second --- (sub)register name
 --   Jmp   (string)             -- unconditional jump to a label
@@ -47,6 +54,7 @@ local wordSize = 4;
 --   Label (string)             -- a label
 --   Push  (opnd)               -- pushes the operand on the hardware stack
 --   Pop   (opnd)               -- pops from the hardware stack to the operand
+
 --   Call  (string)             -- calls a function by its name
 --   Ret                        -- returns from a function
 --   Meta  (string)             -- metainformation (declarations, etc.)
@@ -54,13 +62,16 @@ local wordSize = 4;
 -- Machine instruction printer
 fun insnString (insn) {
 
+
   fun binopString (op) {
     case op of
       "+"   -> "addl"
     | "-"   -> "subl"
     | "*"   -> "imull"
     | "&&"  -> "andl"
+
     | "!!"  -> "orl"
+
     | "^"   -> "xorl"
     | "cmp" -> "cmpl"
     esac
@@ -107,12 +118,12 @@ fun makeEnv (stack, stackSlots, globals) {
   -- Returns a string representation of the environment
   fun envString () {
     sprintf ("Stack     : %s\nStackSlots: %d\nGlobals   : %s\n", stack.string, stackSlots, elements (globals).string)
-  }
-
+}
   -- Allocates a new position on the symbolic stack;
   -- returns a pair: a location for allocated item and
   -- an updated environment
   fun allocate () {
+
     case
       case stack of
         {}        -> [ebx, 0]
@@ -152,8 +163,7 @@ fun makeEnv (stack, stackSlots, globals) {
   -- References a global variable
   fun loc (name) {
     M (globalName (name))
-  }
-
+}
   -- Gets a list of global variables from the environment
   fun getGlobals () {
     globals.elements
@@ -245,7 +255,9 @@ fun stackOpnd (opnd) {
   case opnd of
     S (_) -> true
   | _     -> false
+
   esac
+
 }
 
 -- Checks if an operand resides in memory
@@ -290,11 +302,14 @@ fun compile (env, code) {
           READ ->
             case env.allocate of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
+
             esac
+
         | WRITE ->
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+
         | CONST (v) ->
             case env.allocate of
               [s, env] -> [env, code <+ Mov (L (v), s)]
@@ -362,10 +377,12 @@ fun compile (env, code) {
                 esac
               esac
             esac
+
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
   }
+
 
   compile (env, code)
 }
@@ -381,8 +398,10 @@ public fun compileX86 (args, code) {
                        | path     -> path
                        esac ++ "/runtime.o";
 
+
        fwrite (asmFile,
                map (insnString,
+
                     getBuffer $
                       singletonBuffer (Meta ("\t.global\tmain\n")) <+>
                       dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>

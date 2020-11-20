@@ -13,6 +13,7 @@ import State;
 --        Const (int)                |
 --        Binop (string, expr, expr)
 
+
 public fun evalExpr (state, expr) {
   case expr of
     Var (var) -> return state (var)
@@ -40,4 +41,5 @@ public fun evalBinop (op, value1, value2) {
   | "&&" -> return value1 && value2
   | "!!" -> return value1 !! value2
   esac
+
 }
