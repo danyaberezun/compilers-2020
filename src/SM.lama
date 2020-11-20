@@ -141,10 +141,10 @@ fun compileExpr (expr) {
 public fun compileSM (stmt) {
  fun compileEnv(env, stmt) {
   case stmt of
-    Skip              -> [env, {}]
-	| Assn   (x, expr)  -> compileExpr (expr) +++ singleton (ST (x))
-	| Read   (x)        -> {READ,                 ST (x)           }
-	| Write  (expr)     -> compileExpr (expr) +++ singleton (WRITE)
+   	  Skip              -> [env, {}]
+	| Assn(x, expr)     -> [env, compileExpr(expr) +++ singleton(ST(x))]
+        | Read(x)           -> [env, {READ, ST(x)}]
+        | Write(expr)       -> [env, compileExpr(expr) +++ singleton(WRITE)]
 	| Seq    (s1, s2)   -> 
 	      case compileEnv(env, s1) of
                     [env, s1] -> case compileEnv(env, s2) of
