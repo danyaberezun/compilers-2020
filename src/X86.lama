@@ -289,6 +289,37 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | LD (x) -> 
+            case env.addGlobal(x).allocate of 
+              [s, env] -> [ env, code <+> move(env.loc(x), s) ]
+            esac
+        | ST (x) ->
+            case env.addGlobal(x).pop of
+              [s, env] -> [ env, code <+ Mov(s, env.loc(x)) ]
+            esac
+        | CONST (n) ->
+            case env.allocate of 
+              [s, env] -> [ env, code <+ Mov(L(n), s) ]
+            esac
+        | BINOP (op) ->
+            case env.pop2 of
+            	[y, x, env] -> 
+                case env.allocate of
+              	  [s, env] ->
+                     case op of
+                      "/"  -> [ env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, s) ]
+                    | "%"  -> [ env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, s) ]
+                    | "+"  -> [ env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s) ]
+                    | "-"  -> [ env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s) ]
+                    | "*"  -> [ env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s) ]
+                    | "&&" -> [ env, code <+ Mov (x, edx) <+ Binop ("*", y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s) ]
+                    | "!!" -> [ env, code <+ Mov (x, edx) <+ Binop (op, y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s) ]
+                    | "^"  -> [ env, code <+ Mov (x, edx) <+ Binop (op, y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s) ]
+                    | _ 	 -> [ env, code <+ Mov(y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+	      		        esac
+             	  esac
+            esac
+        | SKIP -> [ env, code ]
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
