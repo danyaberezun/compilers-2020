@@ -4,5 +4,5 @@
 regression/*.log
 regression/test???*
 regression/deep-expressions/
-regression/expresions/
+regression/expressions/
 
