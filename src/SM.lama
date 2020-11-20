@@ -54,8 +54,34 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, c, insns)
+{
+  local stack;
+  local st;
+  local wrld;
+  stack := configuration [0];
+  st := configuration [1];
+  wrld := configuration [2];
+  
+  case insns of 
+      {} -> configuration
+  | x:xs -> {
+
+      configuration := 
+        case x of 
+          BINOP (op) -> case stack of 
+                          y:x:stack -> [(evalExpr (st, Binop (op, Const (x), Const (y)))):stack, st, wrld]
+                        esac
+        |  READ      -> case readWorld (wrld) of [z, wrld] -> [z:stack, st, wrld] esac
+        | WRITE      -> case stack of z:stack -> [stack, st, writeWorld (z, wrld)] esac
+        |    ST (x)  -> case stack of z:stack -> [stack, st <- [x, z], wrld] esac
+        |    LD (x)  -> [st(x):stack, st, wrld]
+        | CONST (n)  -> [n:stack, st, wrld]
+        esac;
+
+      eval (env, configuration, xs)
+    }
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -96,13 +122,25 @@ fun genLabels (env, n) {
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
-fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+fun compileExpr (expr) 
+{
+  case expr of
+    Var (x)          -> return singleton(LD(x))
+  | Const (n)        -> return singleton(CONST(n))
+  | Binop (op, l, r) -> return compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
-public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+public fun compileSM (stmt) 
+{
+  case stmt of
+    Assn (x, expr)    -> return compileExpr(expr) +++  singleton(ST(x))
+  | Seq (st1, st2)     -> return compileSM(st1) +++ compileSM(st2)
+  | Skip               -> return {}
+  | Read (x)           -> return singleton(READ) +++ singleton(ST(x))
+  | Write (expr)       -> return compileExpr(expr) +++ singleton(WRITE)
+  esac
 }
