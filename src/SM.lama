@@ -54,19 +54,25 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
--- Stack machine interpreter. Takes an SM-configuration and a program,
--- returns a final configuration
-fun eval (c@[stack, state, w], insns) {
+fun eval (env, c@[stack, state, w], insns) {
 
-  case insns of
-    BINOP (op) : p -> eval( [evalOp(op, stack[1][0], stack[0]) : stack[1][1], state, w], p )
-  | CONST (n)  : p -> eval( [n : stack, state, w], p )
-  | READ       : p -> local new_w = readWorld(w);
-                      eval( [new_w[0] : stack, state, new_w[1]], p )
-  | WRITE      : p -> eval( [stack[1], state, writeWorld(stack[0], w)], p )
-  | LD    (x)  : p -> eval( [state(x) : stack, state, w], p )
-  | ST    (x)  : p -> eval( [stack[1], state <- [x, stack[0]], w], p )
-  | {} -> c
+  case insns of {} -> c | insn : p ->
+    case insn of
+      READ          -> local new_w = readWorld(w); eval( env, [new_w[0] : stack, state, new_w[1]], p )
+    | WRITE         -> eval( env, [stack[1], state, writeWorld(stack[0], w)], p )
+    | BINOP (op)    -> eval( env, [evalOp(op, stack[1][0], stack[0]) : stack[1][1], state, w], p )
+    | CONST (n)     -> eval( env, [n : stack, state, w], p )
+    | LD    (x)     -> eval( env, [state(x) : stack, state, w], p )
+    | ST    (x)     -> eval( env, [stack[1], state <- [x, stack[0]], w], p )
+    | LABEL (s)     -> eval( env, c, p )
+    | JMP   (l)     -> eval( env, c, fromLabel(env, l) )
+    | CJMP  (con, l)-> eval( env, c,  case stack of head:r ->
+                                        case con of 
+                                          "nz" -> if head then fromLabel(env, l) else p fi 
+                                        | _    -> if head then p else fromLabel(env, l) fi
+                                        esac
+                                      esac )
+    esac
   esac
 }
 
@@ -113,7 +119,7 @@ fun compileExpr (expr) {
   case expr of
     Var (str)         -> singleton( LD(str) )
   | Const (int)       -> singleton( CONST(int) )
-  | Binop (op, l, r)  -> compileExpr(l) +++ compileExpr(r) +++ singleton( BINOP(op) )
+  | Binop (op, l, r)  -> compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
   esac
 }
 
@@ -122,11 +128,39 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
 
-  case stmt of
-    Assn (x, expr)      -> compileExpr(expr) +++ singleton( ST(x) )
-  | Seq (stmt1, stmt2)  -> compileSM(stmt1) +++ compileSM(stmt2)
-  | Skip                -> {}
-  | Read (x)            -> { READ, ST(x) }
-  | Write (expr)        -> compileExpr(expr) +++ singleton( WRITE )
-  esac
+  fun compileEnv(env, stmt) {
+    case stmt of
+      Assn (x, expr)      ->  [ env, compileExpr(expr) +++ (ST(x):{}) ]
+    | Skip                ->  [ env, {} ]
+    | Read (x)            ->  [ env, (READ:{})+++(ST(x):{}) ]
+    | Write (expr)        ->  [ env, compileExpr(expr) +++ (WRITE:{}) ]
+
+    | Seq (stmt1, stmt2)  ->  case compileEnv(env, stmt1) of [env1, s1] -> 
+                                case compileEnv(env1, stmt2) of [env2, s2] -> 
+                                  [ env2, s1+++s2 ] 
+                                esac
+                              esac
+
+    | If (expr, s1, s2)   ->  case genLabels(env, 2) of [el, exit, env1] ->
+                                case compileEnv(env1, s1) of [env2, stmt1] ->
+                                case compileEnv(env2, s2) of [env3, stmt2] ->
+                                  [ env3, compileExpr(expr)+++(CJMP("z", el):{})+++stmt1+++(JMP(exit):{})+++(LABEL(el):{})+++stmt2+++(LABEL(exit):{}) ]
+                                esac
+                                esac
+                              esac
+
+    | While (expr, stmt)  ->  case genLabels(env, 2) of [le,ls,env1] -> 
+                                case compileEnv(env1, stmt) of [env2, s] ->
+                                  [ env2, { JMP(le), LABEL(ls) } +++ s +++ (LABEL(le):{}) +++ compileExpr(expr) +++ singleton(CJMP("nz", ls)) ]
+                                esac
+                              esac
+
+    | Repeat (stmt, expr) ->  case compileEnv(env, stmt) of [env1, s] ->
+                                case genLabel(env1) of [rep, env2] ->
+                                  [ env2, (LABEL(rep):{})+++s+++compileExpr(expr)+++(CJMP("z", rep):{}) ]
+                                esac
+                              esac
+    esac
+  }
+  compileEnv(initCompEnv(), stmt)[1]
 }
