@@ -13,6 +13,8 @@ import SM;
 import X86;
 import Manifest;
 
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+
 -- Parses a command-line arguments, represented as a list, and
 -- returns an environment. The environment's interface is
 -- defined in the unit Manifest
@@ -75,6 +77,7 @@ local args = parseArgs (arrayList (sysargs).tl);
 -- code generator
 case parseString (parse |> bypass (end), fread (args.getInFile)) of
   Succ (program) ->
+    -- fprintf (stderr, "Recognized program: ""%s""\n", program.string);
     case args.getMode of
       Comp -> compileX86 (args, peepSM (args, compileSM (program)))
     | mode ->
