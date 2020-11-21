@@ -118,7 +118,7 @@ fun eval (c@[s, w], expr) {
 public fun evalExpr (input, expr) {
   case eval ([emptyState, createWorld (input)], expr) of
     [c, v] ->
-              fprintf (stderr, "Expression ""%s"" evaluated to ""%s""\n", expr.string, v.string);
+              -- fprintf (stderr, "Expression ""%s"" evaluated to ""%s""\n", expr.string, v.string);
               c.snd.getOutput
   esac
 }

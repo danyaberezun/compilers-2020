@@ -9,6 +9,9 @@ import State;
 import Expr;
 import Buffer;
 import Fun;
+import Ref;
+
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -68,8 +71,8 @@ fun eval (env, c, insns) {
               "*"  -> v1 * v2
             | "+"  -> v1 + v2
             | "-"  -> v1 - v2
-            | "/"  -> v1 / v2
-            | "%"  -> v1 % v2
+            | "/"  -> if (v2) then v1 / v2 else 0 fi
+            | "%"  -> if (v2) then v1 % v2 else 0 fi
             | "==" -> v1 == v2
             | "!=" -> v1 != v2
             | "<"  -> v1 < v2
@@ -82,39 +85,49 @@ fun eval (env, c, insns) {
   }
 
   fun evalInstruction(c, instruction) {
-    -- printf ("SM instruction to eval: ""%s""\n", instruction.string);
-    case instruction of
+    -- local ignore = fprintf (stderr, "SM instruction to eval: ""%s"", stack: ""%s""\n", instruction.string, c[0].string);
+    local res = case instruction of
         READ -> local res = readWorld(c[2]); -- pair (value * world)
               [res[0]:c[0], c[1], res[1]]
       | WRITE -> case c[0] of v:vs -> [vs, c[1], writeWorld(v, c[2])] esac
       | LD (name) -> [(c[1](name)):c[0], c[1], c[2]]
       | LDA(name) -> [Ref(name):c[0], c[1], c[2]]
       | DROP      -> case c[0] of v:vs           -> [  vs, c[1]             , c[2]] esac
-      | ST (name) -> case c[0] of v:vs           -> [v:vs, c[1] <- [name, v], c[2]] esac
+      | ST (name) -> case c[0] of v:vs           -> [  vs, c[1] <- [name, v], c[2]] esac
       | STI       -> case c[0] of v:Ref(name):vs -> [v:vs, c[1] <- [name, v], c[2]] esac
       | BINOP (op) -> case c[0] of v2:v1:vs -> [applyOp(op, v1, v2):vs, c[1], c[2]] esac
       | CONST (val) -> [val:c[0], c[1], c[2]]
       | LABEL (_) -> c
-    esac
+    esac;
+    res
   }
 
-  case insns of
+  local config = ref(c);
+  local instructions = ref(insns);
+  while 1 do
+    case deref(instructions) of
       instruction:continuation -> case instruction of
-        JMP (l) -> eval(env, c, env.fromLabel(l))
-      | CJMP (znz, l) -> case c[0] of
-                  v:vs -> local ok = case znz of Z -> v == 0 | _ -> v != 0 esac;
-                          if ok then eval(env, [vs, c[1], c[2]], env.fromLabel(l))
-                                else eval(env, [vs, c[1], c[2]], continuation)
-                          fi
-                  esac
-      | _      -> eval(env, evalInstruction(c, instruction), continuation)
-      esac
-    | _ -> c
-  esac
+          JMP (l) -> instructions ::= env.fromLabel(l)
+        | CJMP (znz, l) -> case deref(config)[0] of
+                    v:vs -> local ok = case znz of Z -> v == 0 | _ -> v != 0 esac;
+                            if ok then config ::= [vs, deref(config)[1], deref(config)[2]];
+                                       instructions ::= env.fromLabel(l)
+                                  else config ::= [vs, deref(config)[1], deref(config)[2]];
+                                       instructions ::= continuation
+                            fi
+                    esac
+        | _      -> config ::= evalInstruction(deref(config), instruction);
+                    instructions ::= continuation
+        esac
+      | _ -> return(deref(config))
+    esac
+  od
+
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
+  -- fprintf (stderr, "Evaluating SM code: ""%s"" ", insns.string);
   eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
@@ -163,8 +176,8 @@ public fun compileSM (stmt) {
     -- printf ("Statement to compile to SM: ""%s""\n", stmt.string);
     case stmt of
         Assn (name, expr) -> case compileExpr(labelGenerator, name, None) of
-          [lg, sm] -> case compileExpr(lg, expr, endLabel) of
-            [lg2, sm2] -> [lg2, sm +++ sm2 +++ singleton(STI)]
+          [lg, sm] -> case compileExpr(lg, expr, None) of
+            [lg2, sm2] -> [lg2, sm +++ sm2 +++ singleton(STI) +++ maybeJump(endLabel)]
           esac
         esac
       | Seq (expr1, expr2) -> case compileExpr(labelGenerator, expr1, None) of
@@ -180,8 +193,8 @@ public fun compileSM (stmt) {
       | If (cond, s1, s2) -> case endLabel of
              Some(l2) -> case labelGenerator.genLabels(1) of
                [l1, lg] -> case compileExpr(lg, cond, None) of
-                 [lg1, sm_expr] -> case compileExpr(lg1, s1, endLabel) of
-                   [lg2, sm1] -> case compileExpr(lg2, s2, endLabel) of
+                 [lg1, sm_expr] -> case compileExpr(lg1, s1, Some(l2)) of
+                   [lg2, sm1] -> case compileExpr(lg2, s2, Some(l2)) of
                      [lg3, sm2] -> [lg3, sm_expr +++ singleton(CJMP(Z, l1))
                                          +++ sm1 +++ singleton(LABEL(l1)) +++ sm2]
                      esac
@@ -217,22 +230,21 @@ public fun compileSM (stmt) {
                     esac
                   esac
                esac
-      | Var (name) -> [labelGenerator, singleton(LD (name))]
-      | Ref (name) -> [labelGenerator, singleton(LDA (name))]
-      | Const (val) -> [labelGenerator, singleton(CONST (val))]
+      | Var (name) -> [labelGenerator, singleton(LD (name)) +++ maybeJump(endLabel)]
+      | Ref (name) -> [labelGenerator, singleton(LDA (name)) +++ maybeJump(endLabel)]
+      | Const (val) -> [labelGenerator, singleton(CONST (val)) +++ maybeJump(endLabel)]
       | Binop (op, expr1, expr2) -> case compileExpr(labelGenerator, expr1, None) of
                  [lg1, sm1] -> case compileExpr(lg1, expr2, None) of
-                   [lg2, sm2] -> [lg2, sm1 +++ sm2 +++ singleton(BINOP (op))]
+                   [lg2, sm2] -> [lg2, sm1 +++ sm2 +++ singleton(BINOP (op)) +++ maybeJump(endLabel)]
                  esac
                esac
       | Ignore (expr)  -> case compileExpr(labelGenerator, expr, None) of
-              [lg2, sm] -> [labelGenerator, sm +++ singleton(DROP)]
+              [lg2, sm] -> [labelGenerator, sm +++ singleton(DROP) +++ maybeJump(endLabel)]
             esac
     esac
   }
 
   local code = compileExpr(initCompEnv(), stmt, None)[1];
-  -- local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
-  -- fprintf(stderr, "State machine code: %s\n", code.string);
+  -- fprintf(stderr, "Stack machine code: %s\n", code.string);
   code
 }

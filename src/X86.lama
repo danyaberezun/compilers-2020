@@ -426,11 +426,11 @@ fun compile (env, code) {
             case env.allocate of
               [s, updenv] -> [updenv, code <+ Mov (L (val), s)]
             esac
-        | LABEL (label)    -> [env, code <+ Label(label)]
-        | JMP (label)      -> [env, code <+ Jmp  (label)]
+        | LABEL (label)    -> [env.retrieveStack(label), code <+ Label(label)]
+        | JMP (label)      -> [env.setStack(label), code <+ Jmp  (label)]
         | CJMP (znz, label) ->
             case env.pop of
-              [zv, env2] -> [env, code <+ Mov(zv, eax) <+ Binop("&&", eax, eax) <+ CJmp  (case znz of Z -> "z" | NZ -> "nz" esac, label)]
+              [zv, env2] -> [env2.setStack(label), code <+ Mov(zv, eax) <+ Binop("&&", eax, eax) <+ CJmp  (case znz of Z -> "z" | NZ -> "nz" esac, label)]
             esac
         | LDA (name) ->
             case env.allocate of
@@ -439,7 +439,7 @@ fun compile (env, code) {
         | STI ->
             case env.pop2 of
               [val, ref, updenv] -> case updenv.allocate of
-                 [s, updupdenv] -> [env, code <+ Mov(val, eax) <+ Mov(ref, ebx)  <+ Mov (eax, I(0, ebx)) <+> move(val, s)]
+                 [s, updupdenv] -> [updupdenv, code <+ Push(ebx) <+ Mov(val, eax) <+ Mov(ref, ebx)  <+ Mov (eax, I(0, ebx)) <+> move(val, s) <+ Pop(ebx)]
               esac
             esac
         | DROP ->

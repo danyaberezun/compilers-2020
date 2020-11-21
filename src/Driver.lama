@@ -13,6 +13,8 @@ import SM;
 import X86;
 import Manifest;
 
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+
 -- Parses a command-line arguments, represented as a list, and
 -- returns an environment. The environment's interface is
 -- defined in the unit Manifest
@@ -70,7 +72,6 @@ fun peepSM (args, smCode) {
 }
 
 local args = parseArgs (arrayList (sysargs).tl);
--- local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
 
 -- The main part: parses input file, invokes interpreter/stack machine interpreter/x86
 -- code generator
