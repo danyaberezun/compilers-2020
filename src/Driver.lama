@@ -8,11 +8,7 @@ import Ostap;
 import Parser;
 import Matcher;
 import Lexer;
-<<<<<<< HEAD
 import Expr;
-=======
-import Stmt;
->>>>>>> A05-control-flow-sm-x86
 import SM;
 import X86;
 import Manifest;
@@ -90,21 +86,12 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
                             | arg      -> f (stringInt (arg) : acc) esac
                           }
                         }) ({}));
-<<<<<<< HEAD
 
        iter (fun (x) {printf ("%d\n", x)},
              case mode of
                Int -> evalExpr (input, program)
              | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
              esac) 
-=======
-          
-       iter (fun (x) {printf ("%d\n", x)},
-             case mode of
-               Int -> evalStmt (input, program)
-             | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
-             esac)
->>>>>>> A05-control-flow-sm-x86
     esac
 | x@Fail (err, line, col) ->   
    failure ("%s at %d:%d\n", err.hd, line, col)

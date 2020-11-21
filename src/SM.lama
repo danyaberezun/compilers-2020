@@ -8,16 +8,12 @@ import World;
 import State;
 import Expr;
 import Buffer;
-<<<<<<< HEAD
 import Fun;
-=======
->>>>>>> A05-control-flow-sm-x86
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
 public fun showSMInsn (i) {
   case i of
-<<<<<<< HEAD
     READ         -> "READ"
   | WRITE        -> "WRITE"
   | BINOP (s)    -> sprintf ("BINOP %s", s)
@@ -25,22 +21,12 @@ public fun showSMInsn (i) {
   | LDA   (x)    -> sprintf ("LDA %s", x)
   | ST    (x)    -> sprintf ("ST %s", x)
   | STI          -> "STI"
-=======
-    READ         -> sprintf ("READ")
-  | WRITE        -> sprintf ("WRITE")
-  | BINOP (s)    -> sprintf ("BINOP %s", s)
-  | LD    (x)    -> sprintf ("LD %s", x)
-  | ST    (x)    -> sprintf ("ST %s", x)
->>>>>>> A05-control-flow-sm-x86
   | CONST (n)    -> sprintf ("CONST %d", n)
   | LABEL (s)    -> sprintf ("LABEL %s", s)
   | JMP   (l)    -> sprintf ("JMP %s", l)
   | CJMP  (c, l) -> sprintf ("CJMP %s, %s", c, l)
-<<<<<<< HEAD
   | DUP          -> "DUP"
   | DROP         -> "DROP"  
-=======
->>>>>>> A05-control-flow-sm-x86
   esac
 }
 
@@ -73,10 +59,6 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-<<<<<<< HEAD
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
-=======
 fun eval (env, c@[stack, state, w], insns) {
 
   case insns of {} -> c | insn : p ->
@@ -86,7 +68,10 @@ fun eval (env, c@[stack, state, w], insns) {
     | BINOP (op)    -> eval( env, [evalOp(op, stack[1][0], stack[0]) : stack[1][1], state, w], p )
     | CONST (n)     -> eval( env, [n : stack, state, w], p )
     | LD    (x)     -> eval( env, [state(x) : stack, state, w], p )
+    -- | LDA   (x)     -> 
     | ST    (x)     -> eval( env, [stack[1], state <- [x, stack[0]], w], p )
+    -- | STI   (x)     -> 
+    -- | DROP          -> 
     | LABEL (s)     -> eval( env, c, p )
     | JMP   (l)     -> eval( env, c, fromLabel(env, l) )
     | CJMP  (con, l)-> eval( env, c,  case stack of head:r ->
@@ -95,9 +80,9 @@ fun eval (env, c@[stack, state, w], insns) {
                                         | _    -> if head then p else fromLabel(env, l) fi
                                         esac
                                       esac )
+    | _ -> failure("%s is not yet implemented\n", insn)
     esac
   esac
->>>>>>> A05-control-flow-sm-x86
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -136,12 +121,6 @@ fun genLabels (env, n) {
 }
 
 -- Compiles an expression into a stack machine code.
-<<<<<<< HEAD
--- Takes an expression, returns a list of stack machine
--- instructions.
-public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
-=======
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
@@ -193,5 +172,4 @@ public fun compileSM (stmt) {
     esac
   }
   compileEnv(initCompEnv(), stmt)[1]
->>>>>>> A05-control-flow-sm-x86
 }

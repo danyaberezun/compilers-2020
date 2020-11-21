@@ -10,13 +10,8 @@ check: $(TESTS) expr_tests
 
 $(TESTS): %: %.lama
 	@echo $@
-<<<<<<< HEAD
 	@ulimit -s -S 32768; cat $@.input | $(LAMAC) $@.lama -i > $@.log && diff $@.log orig/$@.log 
 	@ulimit -s -S 32768; cat $@.input | $(LAMAC) $@.lama -s > $@.log && diff $@.log orig/$@.log
-=======
-	cat $@.input | $(LAMAC) $@.lama -i > $@.log && diff $@.log orig/$@.log 
-	cat $@.input | $(LAMAC) $@.lama -s > $@.log && diff $@.log orig/$@.log
->>>>>>> A05-control-flow-sm-x86
 	$(LAMAC) $@.lama && cat $@.input | ./$@ > $@.log && diff $@.log orig/$@.log
 
 expr_tests:
@@ -24,10 +19,6 @@ expr_tests:
 	make -C deep-expressions
 
 clean:
-<<<<<<< HEAD
 	$(RM) *.s *.i *~ $(LOGS) $(TESTS) *.run *.sm
-=======
-	$(RM) *.s *.i *~ $(LOGS) $(TESTS) *.run
->>>>>>> A05-control-flow-sm-x86
 	make -C expressions clean
 	make -C deep-expressions clean
