@@ -55,7 +55,7 @@ public fun evalOp (op, l, r) {
 fun unboxRef(expr) {
   case expr of
     Ref (name) -> name
-  | x          -> failure ("Parser expected a reference")
+  | x          -> failure (sprintf("Parser expected a reference, got %s instead", expr.string))
   esac
 }
 local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
@@ -64,9 +64,8 @@ local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
 -- Returns the final configuration and the list of values
 fun evalList (c, exprs) {
   case foldl (fun ([c, vals], e) {
-                fprintf (stderr, "evalList A \n");
                 case eval (c, e) of
-                  [c, val] ->  fprintf (stderr, "evalList B \n"); [c, val : vals]
+                  [c, val] ->  [c, val : vals]
                 esac
               },
               [c, {}],
@@ -79,13 +78,13 @@ fun evalList (c, exprs) {
 fun eval (c@[s, w], expr) {
   case expr of
      Assn   (expr1, expr2)        ->
-       case evalList(c, [expr1, expr2]) of
-         [[s, w], [nameB, valB]] -> [[s <- [unboxRef(nameB), valB], w], valB]
+       case evalList(c, {expr1, expr2}) of
+         [[s, w], {nameB, valB}] -> [[s <- [unboxRef(nameB), valB], w], valB]
        esac
-   | Seq    (expr1, expr2)        -> case evalList(c, [expr1, expr2]) of [c, [_, v2]] -> [c, v2] esac
+   | Seq    (expr1, expr2)        -> case evalList(c, {expr1, expr2}) of [c, {_, v2}] -> [c, v2] esac
    | Skip                         -> [c, Bot]
    | Read   (nameB)               -> case readWorld(w) of
-                                       [value, world] -> [[s <- [unboxRef(nameB), value], world], Bot]
+                                       [value, world] -> [[s <- [nameB, value], world], Bot]
                                      esac
    | Write  (expr)                -> case eval(c, expr) of
                                        [[s, w], valB] -> [[s, writeWorld(valB, w)], Bot]
@@ -102,13 +101,13 @@ fun eval (c@[s, w], expr) {
                                                      else [c, Bot]
                                                      fi
                                      esac
-   | Repeat (body, cond)          -> eval (c, Seq(body, While (Binop("==", cond, 0), body))) -- new semantics for repeat
+   | Repeat (body, cond)          -> eval (c, Seq(body, While (Binop("==", cond, Const (0)), body))) -- new semantics for repeat
    | Var    (name)                -> [c, s(name)]
    | Ref    (name)                -> [c, Ref(name)]
    | Const  (val)                 -> [c, val]
    | Binop  (str, expr1, expr2)   ->
-       case evalList(c, [expr1, expr2]) of
-         [c, [v1, v2]] -> [c, evalOp(str, v1, v2)]
+       case evalList(c, {expr1, expr2}) of
+         [c, {v1, v2}] -> [c, evalOp(str, v1, v2)]
        esac
    | Ignore (expr)                -> case eval(c, expr) of [c, _] -> [c, Bot] esac
   esac

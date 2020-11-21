@@ -51,6 +51,8 @@ fun binop (op) {
                         }
   ]
 }
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+-- fprintf(stderr, "State machine code: %s\n", code.string);
 
 local primary  = memo $ eta syntax (
                                     -- decimal constant
@@ -69,9 +71,11 @@ local primary  = memo $ eta syntax (
                                     loc=pos kSkip                                     {  fun(a) { assertVoid (a, Skip, loc)           } } |
                                     loc=pos kIf cond=exp kThen s1=exp s2=ifTailParser {  fun(a) { If (cond(Val), s1(a), s2(a))        } } |
                                     loc=pos kWhile cond=exp kDo s=exp kOd             {  fun(a) {assertVoid (a, While  (cond(Val), s(Void)), loc) } } |
-                                    loc=pos kRepeat s=exp kUntil cond=exp             {  fun(a) {assertVoid (a, Repeat (s(Void), cond(Val)), loc) } } |
+                                    loc=pos kRepeat s=exp kUntil cond=primary         {  fun(a) {assertVoid (a, Repeat (s(Void), cond(Val)), loc) } } |
                                     loc=pos kFor e1=exp s[","] e2=exp s[","] e3=exp kDo s=exp kOd
-                                       { fun (a) { assertVoid(a, Seq (e1(Void), While(e2(Val), Seq(s(Void), e3(Void)))), loc) } }
+                                       { fun (a) { assertVoid(a, Seq (e1(Void), While(e2(Val), Seq(s(Void), e3(Void)))), loc) } } |
+                                    -- nested expressions
+                                    inbr[s("("), exp, s(")")]
                                     ),
            ifTailParser = memo $ eta syntax(loc=pos -kFi              { fun(a) { case a of
                                                                                    Void -> Skip

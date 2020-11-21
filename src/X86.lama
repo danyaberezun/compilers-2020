@@ -333,6 +333,12 @@ fun move (from, to) {
   else singletonBuffer (Mov (from, to))
   fi
 }
+fun lea (from, to) {
+  if memOpnd (from) && memOpnd (to)
+  then singletonBuffer (Lea (from, eax)) <+ Mov (eax, to)
+  else singletonBuffer (Lea (from, to))
+  fi
+}
 
 -- Gets a suffix for Set instruction from
 -- source language comparison operator
@@ -345,6 +351,33 @@ fun suffix (op) {
   | ">=" -> "ge"
   | ">"  -> "g"
   esac
+}
+
+
+
+-- use this function to abstract memory-memory operations
+fun mkBinopMemToMem(op, s1, s2) {
+  if memOpnd (s1) && memOpnd (s2) then
+      singletonBuffer (Push (eax)) <+
+      Mov(s2, eax) <+
+      Binop(op, s1, eax) <+
+      Mov(eax, s2) <+
+      Pop(eax)
+  else singletonBuffer (Binop(op, s1, s2))
+  fi
+}
+
+fun compileCmpStatement(env, code, op, op1, op2, s) {
+  [env, code <+ Push(eax) <+ Binop ("^", eax, eax) <+> mkBinopMemToMem ("cmp", op1, op2) <+ Set (suffix(op), "%al") <+ Mov(eax, s) <+ Pop(eax)]
+}
+
+fun compileLogicStatement(env, code, op, op1, op2, s) {
+  [env, code <+ Push(eax)
+             -- complains about operands size, so I test each operand against itself and check zero flag
+             <+ Mov(op1, eax) <+ Binop("&&", eax, eax) <+ Mov(L(0), eax) <+ Set ("nz", "%al") <+ Mov (eax, op1) -- cannot move to s here, because s==op2 :(
+             <+ Mov(op2, eax) <+ Binop("&&", eax, eax) <+ Mov(L(0), eax) <+ Set ("nz", "%al")
+             <+> mkBinopMemToMem (op, op1, eax) <+ Mov (eax, s)
+             <+ Pop(eax)]
 }
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
@@ -362,6 +395,56 @@ fun compile (env, code) {
         | WRITE ->
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
+            esac
+        | LD (name) ->
+            case env.allocate of
+              [s, updenv] -> [updenv.addGlobal(name), code <+> move(updenv.loc(name), s)]
+            esac
+        | ST (name) ->
+            case env.pop of
+              [s, updenv] -> [updenv.addGlobal(name), code  <+> move (s, updenv.loc(name))]
+            esac
+        | BINOP (op) ->
+            case env.pop2 of
+              [op1, op2, updenv] -> case updenv.allocate of
+                [s, updupdenv] -> case op of
+                    "<"  -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | "<=" -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | "==" -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | "!=" -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | ">=" -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | ">"  -> compileCmpStatement(updupdenv, code, op, op1, op2, s)
+                  | "/" -> [updupdenv, code <+ Push(eax) <+ Push(edx) <+> move(op2, eax) <+ Cltd <+ IDiv (op1) <+> move (eax, s) <+ Pop(edx) <+ Pop(eax)]
+                  | "%" -> [updupdenv, code <+ Push(eax) <+ Push(edx) <+> move(op2, eax) <+ Cltd <+ IDiv (op1) <+> move (edx, s) <+ Pop(edx) <+ Pop(eax)]
+                  | "!!" -> compileLogicStatement(updupdenv, code, op, op1, op2, s)
+                  | "&&" -> compileLogicStatement(updupdenv, code, op, op1, op2, s)
+                  | _ -> [updupdenv, code <+> mkBinopMemToMem (op, op1, op2) <+> move (op2, s)]
+                esac
+              esac
+            esac
+        | CONST (val) ->
+            case env.allocate of
+              [s, updenv] -> [updenv, code <+ Mov (L (val), s)]
+            esac
+        | LABEL (label)    -> [env, code <+ Label(label)]
+        | JMP (label)      -> [env, code <+ Jmp  (label)]
+        | CJMP (znz, label) ->
+            case env.pop of
+              [zv, env2] -> [env, code <+ Mov(zv, eax) <+ Binop("&&", eax, eax) <+ CJmp  (case znz of Z -> "z" | NZ -> "nz" esac, label)]
+            esac
+        | LDA (name) ->
+            case env.allocate of
+              [s, updenv] -> [updenv.addGlobal(name), code <+> lea(updenv.loc(name), s)]
+            esac
+        | STI ->
+            case env.pop2 of
+              [val, ref, updenv] -> case updenv.allocate of
+                 [s, updupdenv] -> [env, code <+ Mov(val, eax) <+ Mov(ref, ebx)  <+ Mov (eax, I(0, ebx)) <+> move(val, s)]
+              esac
+            esac
+        | DROP ->
+            case env.pop of
+              [s, updenv] -> [updenv, code]
             esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
