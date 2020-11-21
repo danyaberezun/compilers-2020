@@ -7,10 +7,13 @@ import Fun;
 import Matcher;
 
 -- A parser of "something" in brackets; l, r are left and right
+
 -- brackets as strings, p --- a parser of "something"
+
 fun inbr (l, p, r) {
   syntax (-l p -r)
 }
+
 
 
 -- Primary expression
@@ -47,3 +50,4 @@ local stmt = memo $ eta syntax (
 
 -- Public top-level parser
 public parse = stmt;
+

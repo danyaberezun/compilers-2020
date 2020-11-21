@@ -295,6 +295,7 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+
         | CONST (n) ->
             case env.allocate of
               [s, env] -> [env, code <+ Mov (L (n), s)]
@@ -330,6 +331,7 @@ fun compile (env, code) {
                                esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
        esac
+
       }, [env, emptyBuffer ()], code)
   }
 

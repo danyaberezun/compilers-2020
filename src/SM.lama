@@ -54,6 +54,7 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
+
 fun eval (env, configuration, insns) {
 	case configuration of
     [stack, st, world@[i, o]] -> case insns of
@@ -87,6 +88,7 @@ fun eval (env, configuration, insns) {
                                     esac
                                   esac
   	esac
+
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output

@@ -36,6 +36,7 @@ fun eval (configuration, stmt) {
 		  | _                     -> failure("Statement %s not found. \n", stmt)
 		  esac
 	esac 
+
 }
 
 -- Evaluates a program with a given input and returns an output
