@@ -2,6 +2,7 @@
 
 import List;
 import State;
+<<<<<<< HEAD
 import World;
 
 -- As association map which maps "\otimes" into "\oplus"
@@ -72,5 +73,43 @@ fun eval (c@[s, w], expr) {
 public fun evalExpr (input, expr) {
   case eval ([emptyState, createWorld (input)], expr) of
     [c, _] -> c.snd.getOutput
+=======
+
+
+public fun evalOp (op, l, r) {
+  
+  case op of
+    "+"   -> l + r
+  | "-"   -> l - r
+  | "*"   -> l * r
+  | "/"   -> l / r
+  | "%"   -> l % r
+  | "=="  -> l == r
+  | "!="  -> l != r
+  | "<"   -> l < r
+  | "<="  -> l <= r
+  | ">"   -> l > r
+  | ">="  -> l >= r
+  | "&&"  -> l && r
+  | "!!"  -> l !! r
+  esac
+}
+
+-- The evaluator itself: takes a state and an expression,
+-- returns integer value
+--
+-- An expression is represented by a data structure of the following shape:
+--
+-- expr = Var   (string)             |
+--        Const (int)                |
+--        Binop (string, expr, expr)
+
+public fun evalExpr (st, expr) {
+
+  case expr of 
+    Var   (x)         -> st (x)
+  | Const (n)         -> n
+  | Binop (op, l, r)  -> evalOp (op, evalExpr(st, l), evalExpr(st, r))
+>>>>>>> A05-control-flow-sm-x86
   esac
 }
