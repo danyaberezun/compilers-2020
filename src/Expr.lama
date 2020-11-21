@@ -3,6 +3,24 @@
 import List;
 import State;
 
+public fun evalOp (op, lhs, rhs) {
+  case op of
+    "+" -> lhs + rhs
+  | "-" -> lhs - rhs
+  | "*" -> lhs * rhs
+  | "/" -> lhs / rhs
+  | "%" -> lhs % rhs
+  | "==" -> lhs == rhs
+  | ">=" -> lhs >= rhs
+  | "<=" -> lhs <= rhs
+  | ">" -> lhs > rhs
+  | "<" -> lhs < rhs
+  | "!=" -> lhs != rhs
+  | "&&" -> lhs && rhs
+  | "!!" -> lhs !! rhs
+  esac
+}
+
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
@@ -13,31 +31,10 @@ import State;
 --        Const (int)                |
 --        Binop (string, expr, expr)
 
-public fun evalExpr (state, expr) {
+public fun evalExpr (st, expr) {
   case expr of
-    Var (var) -> return state (var)
-  | Const (value) -> return value
-  | Binop (op, expr1, expr2) ->
-      local value1 = evalExpr (state, expr1);
-      local value2 = evalExpr (state, expr2);
-      return evalBinop (op, value1, value2)
-  esac
-}
-
-public fun evalBinop (op, value1, value2) {
-  case op of
-    "*"  -> return value1 *  value2
-  | "+"  -> return value1 +  value2
-  | "-"  -> return value1 -  value2
-  | "/"  -> return value1 /  value2
-  | "%"  -> return value1 %  value2
-  | "<"  -> return value1 <  value2
-  | "<=" -> return value1 <= value2
-  | ">"  -> return value1 >  value2
-  | ">=" -> return value1 >= value2
-  | "==" -> return value1 == value2
-  | "!=" -> return value1 != value2
-  | "&&" -> return value1 && value2
-  | "!!" -> return value1 !! value2
+    Var (x) -> st (x)
+  | Const (n) -> n
+  | Binop (op, lhs, rhs) -> evalOp(op, evalExpr(st, lhs), evalExpr(st, rhs))
   esac
 }

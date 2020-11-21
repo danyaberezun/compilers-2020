@@ -19,41 +19,19 @@ import World;
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
 
-fun eval (configuration, stmt) {
-  local state = configuration.fst;
-  local world = configuration.snd;
-  case stmt of
-    Seq (stmt1, stmt2) -> return eval (eval (configuration, stmt1), stmt2)
-  | Skip -> configuration
-  | Read (var) ->
-      -- как делать destructuring assignment?
-      case readWorld (world) of
-        [value, world2] -> return [state <- [var, value], world2]
-      esac
-  | Write (expr) ->
-    local value = evalExpr (state, expr);
-    local world2 = writeWorld (value, world);
-    return [state, world2]
-  | Assn (var, expr) ->
-    local value = evalExpr (state, expr);
-    return [state <- [var, value], world]
-  | If (expr, stmtThen, stmtElse) ->
-    local value = evalExpr(state, expr);
-    return eval(configuration, if value then stmtThen else stmtElse fi)
-  | While (expr, stmt) ->
-    return evalWhile(expr, stmt, fun (value) { value != 0 }, configuration)
-  | Repeat (stmt, expr) ->
-    local configuration1 = eval(configuration, stmt);
-    return evalWhile(expr, stmt, fun (value) { value == 0 }, configuration1)
+fun eval (c, stmt) {
+  case c of [s, w] ->
+    case stmt of
+      Read (x)     -> case readWorld (w) of [h, w1] -> [s <- [x, h], w1] esac
+    | Write (e)    -> [s, writeWorld (evalExpr (s, e), w)]
+    | Assn (x, e)  -> [s <- [x, evalExpr (s, e)], w]
+    | If (cond, s1, s2) -> if evalExpr(s, cond) then eval(c, s1) else eval(c, s2) fi
+    | wh@While (cond, st) -> if evalExpr(s, cond) then eval(eval(c, st), wh) else c fi
+    | r@Repeat (st, cond) -> case eval(c, st) of c@[s, w] -> if evalExpr(s, cond) then c else eval(c, r) fi esac
+    | Skip -> c
+    | Seq (s1, s2) -> eval (eval (c, s1), s2)
+    esac
   esac
-}
-
-fun evalWhile (expr, stmt, continue, configuration) {
-  local value = evalExpr(configuration.fst, expr);
-  if continue(value)
-  then evalWhile(expr, stmt, continue, eval(configuration, stmt))
-  else configuration
-  fi
 }
 
 -- Evaluates a program with a given input and returns an output
