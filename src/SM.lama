@@ -91,59 +91,6 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
-
-
--- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
--- returns a final configuration
-(* Assignment *)
-(*
-fun eval (env, c, insns) {
-	if size(insns) <= 0 then c 
-	else
-		case c of [st, sigma, w] ->
-			case insns[0] of
-			  BINOP(op) 	-> 
-					case st of a : b : tl ->
-						eval(env, [singleton(binopCalc(op, b, a)) +++ tl, sigma, w], insns[1])
-					esac 
-			| CONST  (n)  	-> 
-					eval(env, [singleton(n) +++ st, sigma, w], insns[1])
-			| LD     (x)   	-> 
-					eval(env, [singleton(sigma(x)) +++ st, sigma, w], insns[1])
-			| LDA    (x)  	-> 
-					eval(env, [singleton(Ref(x)) +++ st, sigma, w], insns[1])
-			| ST     (x)   	-> 
-					eval(env, [st[1], sigma <- [x, st[0]], w], insns[1])
-			| STI			->
-					case st of v : Ref(x) : st2 -> 
-						eval(env, [v:st2, sigma <- [x, v], w], insns[1])
-					esac
-			| DROP 			->
-					eval(env, [st[1], sigma, w], insns[1])
-			| READ        	-> 
-					local r = readWorld(w); 
-					eval(env, [singleton(r[0]) +++ st, sigma, r[1]], insns[1])
-			| WRITE       	-> 
-					local r = writeWorld(st[0], w); 
-					eval(env, [st[1], sigma, r], insns[1])
-			| LABEL (s)		-> eval(env, c, insns[1])
-			| JMP   (l)		-> eval(env, c, fromLabel(env, l))
-			| CJMP  (c, l)	-> 
-				case st of a : tl ->
-					if ((compare(c, "z")==0 && a==0) !! (compare(c, "nz")==0 && a))
-					then eval(env, [tl, sigma, w], fromLabel(env, l))
-					else eval(env, [tl, sigma, w], insns[1])
-					fi
-				esac
-			| _            	-> printf("??\n"); c
-			esac
-		esac
-	fi
-}
-*)
-(* End *)
-
-
 -- Stack machine interpreter. Takes an environment, a world and a program,
 -- returns a final output
 fun eval (env, w, insns) {
@@ -188,10 +135,69 @@ fun eval (env, w, insns) {
     inner (n, {}, list)
   }
 
+
   -- Core interpreter: takes a configuration and a program, returns a configuration
   (* Assignment *)
   fun eval (c@[st, cst, s, w], insns) {
-    failure ("SM interpreter is not implemented\n")
+    if size(insns) <= 0 then c 
+	else
+		case insns[0] of
+		  BINOP(op) 	-> 
+			case st of a : b : tl ->
+				eval([binopCalc(op, b, a) : tl, cst, s, w], insns[1])
+			esac 
+		| CONST  (n)  	-> 
+			eval([n : st, cst, s, w], insns[1])
+		| LD     (x)   	-> 
+			eval([lookup(s, x) : st, cst, s, w], insns[1])
+		| LDA    (x)  	-> 
+			eval([Ref(x) : st, cst, s, w], insns[1])
+		| ST     (x)   	-> 
+			assign(s, x, st[0]);
+			eval([st[1], cst, s, w], insns[1])
+		| STI			->
+			case st of v : Ref(x) : st2 -> 
+				assign(s, x, v);
+				eval([v:st2, cst, s, w], insns[1])
+			esac
+		| DROP 			->
+			eval([st[1], cst, s, w], insns[1])
+		| READ        	-> 
+			case readWorld(w) of [x, w1] ->
+				eval([x : st, cst, s, w1], insns[1])
+			esac
+		| WRITE       	-> 
+			eval([st[1], cst, s, writeWorld(st[0], w)], insns[1])
+		| LABEL (_)		-> eval(c, insns[1]) 
+		| JMP   (l)		-> eval(c, fromLabel(env, l))
+		| CJMP  (c, l)	-> 
+			case st of a : tl ->
+				if ((compare(c, "z")==0 && a==0) !! (compare(c, "nz")==0 && a))
+				then eval([tl, cst, s, w], fromLabel(env, l))
+				else eval([tl, cst, s, w], insns[1])
+				fi
+			esac
+		| GLOBAL (x)	-> 
+			assign(s, Glb(x), 0);
+			eval([st, cst, s, w], insns[1])
+		| CALL (f, a) 	-> 
+			eval([st, [s, insns[1]] : cst, s, w], fromLabel(env, f))
+		| BEGIN (f, a, l) -> 
+			case take(st, a) of [st2, vals] ->
+				local s = makeState(a, l), i;
+				for i:=0, i  < a, i := i+1 do
+					assign(s, Arg(i), vals[0]);
+					vals := vals[1]
+				od;
+				eval([st2, cst, s, w], insns[1])
+			esac
+		| END 			->
+			case cst of
+			  {} -> c
+			| [s1, insns1] : tl -> eval([st, tl, s1, w], insns1)
+			esac
+		esac
+	fi
   }
   (* End *)
   
@@ -385,12 +391,82 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
-(*
+-- Helper function: adds a bunch of arguments
+fun addArgs (env, names) {
+  foldl (fun (env, name) {addArg (env, name)}, env, names)
+}
 
-fun compileSM1 (env, stmt, lEnd) {
-	case stmt of
-	  Var(x) 		  -> [env, singleton(LD(x))]
-	| Ref(x) 		  -> [env, singleton(LDA(x))]
+-- Helper function: adds a bunch of locals
+fun addVars (env, names) {
+  foldl (fun (env, name) {addVar (env, name)}, env, names)
+}
+
+-- Compiles an expression into a stack machine code.
+-- Takes an expression, returns a list of stack machine
+-- instructions.
+
+
+(* Assignment *)
+
+-- Some guidelines for compiling functions and scopes.
+--
+-- 1. use env.beginScope/env.endScope properly;
+-- 2. in each scope traverse the definitions twice:
+--    a. first, add all bindings into symbolic state,
+--       using end.addVar/env.addFun;
+--    b. do not forget to generate GLOBAL instructions for
+--       top-level variable declarations;
+--    c. on the secord traversal add functions themselves for
+--       future code generation (use env.rememberFun).
+-- 3. the overall flow for codegeneration:
+--    a. generate the code for thetopmost expression (the progrman itself);
+--    b. take list of nested functions definitions via env.getFuns and
+--       generate the code for each function;
+--    c. repeat b. until no function definitions appear.
+-- 4. when compiling functions, do not forget to create proper
+--    environment (use env.beginFun) and register arguments
+--    (use env.addArg).
+
+fun addDefs(env, defs) {
+	if size(defs) == 0 then [env, {}, {}]
+	else
+		case defs[0] of
+		  Local (vars) 			-> 
+			if isGlobal(env) then 
+				local globs = foldr(fun (l, x) {
+					GLOBAL(x) : l
+					}, {}, vars);
+				case addDefs(addVars(env, vars), defs[1]) of [env1, f, d] ->
+					[env1, f, globs +++ d]
+				esac
+			else addDefs(addVars(env, vars), defs[1])
+			fi
+		| Fun (name, args, body) ->
+			case genFunLabel(env, name) of [fLabel, env1] ->
+				case addDefs(addFun(env1, name, fLabel, size(args)), defs[1]) of [env2, f, d] ->
+					[env2, [fLabel, args, body] : f, d]
+				esac
+			esac
+		esac
+	fi
+}
+
+fun compileSMList(env, exprs){
+	case exprs of
+	  {} 		-> [env, {}]
+	| expr : tl	->
+		case compileSM1(env, expr, "") of [env1, insns] -> 
+			case compileSMList(env1, tl) of [env2, insns2] ->
+				[env2, insns +++ insns2]
+			esac
+		esac
+	esac
+}
+
+fun compileSM1 (env, expr, lEnd) {
+	case expr of
+	  Var(x) 		  -> [env, singleton(LD (lookupVar(env, x)))]
+	| Ref(x) 		  -> [env, singleton(LDA(lookupVar(env, x)))]
 	| Ignore(e)		  -> 
 		case compileSM1(env, e, lEnd) of [env1, insns] ->
 			[env1, insns +++ singleton(DROP)]
@@ -402,14 +478,15 @@ fun compileSM1 (env, stmt, lEnd) {
 				[env2, insns1 +++ insns2 +++ singleton(BINOP(op))]
 			esac
 		esac
-	| Assn(x, e)	  ->  -- [env, compileExpr(e) +++ singleton(ST(x))]
+	| Assn(x, e)	  -> 
 		case compileSM1(env, x, "") of [env1, insns1] -> 
 			case compileSM1(env1, e, "") of [env2, insns2] -> 
 				[env2, insns1 +++ insns2 +++ singleton(STI)]
 			esac
 		esac
-	| Read(x)     	  -> [env, singleton(READ) +++ singleton(ST(x))]
-	| Write(e)	      -> -- [env, compileExpr(e) +++ singleton(WRITE)]
+	| Read(x)     	  -> 
+		[env, singleton(READ) +++ singleton(ST(lookupVar(env, x)))]
+	| Write(e)	      -> 
 		case compileSM1(env, e, "") of [env1, insns] -> 
 			[env1, insns +++ singleton(WRITE)]
 		esac
@@ -460,50 +537,57 @@ fun compileSM1 (env, stmt, lEnd) {
 				esac
 			esac
 		esac
-	| _               -> printf("Can't recognize stmt instruction %s\n", stmt.string);
-					   [env, {}]
+	| Scope(defs, e)  -> 
+		case addDefs(beginScope(env), defs) of [env1, funs, insnsDef] ->
+			case foldl(fun (env, [fLabel, args, body]){
+					rememberFun(env, fLabel, args, body)
+				}, env1, funs) of env2 ->
+				case compileSM1(env2, e, "") of [env3, insns] ->
+					[endScope(env3), insnsDef +++ insns]
+				esac
+			esac
+		esac
+	| Call (f, exprs) -> 
+		  case compileSMList(env, exprs) of [env1, insns1] ->
+			case lookupFun(env1, f) of Fun(fLabel, n) ->
+				[env1, insns1 +++ singleton(CALL(fLabel, n))]
+			esac
+		esac
+	| Fun (fLabel, args, body, fEnv) ->
+	  case compileSM1(addArgs(beginFun(env, fEnv), args), body, "") of
+		[env1, insnsf] ->
+			[env1, {LABEL(fLabel), 
+					BEGIN(fLabel, size(args), getLocals(env1))} +++
+					insnsf +++
+					singleton(END)]
+	  esac
 	esac
 }
 
-*)
-
--- Helper function: adds a bunch of arguments
-fun addArgs (env, names) {
-  foldl (fun (env, name) {addArg (env, name)}, env, names)
-}
-
--- Helper function: adds a bunch of locals
-fun addVars (env, names) {
-  foldl (fun (env, name) {addVar (env, name)}, env, names)
-}
-
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list of stack machine
--- instructions.
-
-
-(* Assignment *)
-
--- Some guidelines for compiling functions and scopes.
---
--- 1. use env.beginScope/env.endScope properly;
--- 2. in each scope traverse the definitions twice:
---    a. first, add all bindings into symbolic state,
---       using end.addVar/env.addFun;
---    b. do not forget to generate GLOBAL instructions for
---       top-level variable declarations;
---    c. on the secord traversal add functions themselves for
---       future code generation (use env.rememberFun).
--- 3. the overall flow for codegeneration:
---    a. generate the code for thetopmost expression (the progrman itself);
---    b. take list of nested functions definitions via env.getFuns and
---       generate the code for each function;
---    c. repeat b. until no function definitions appear.
--- 4. when compiling functions, do not forget to create proper
---    environment (use env.beginFun) and register arguments
---    (use env.addArg).
 
 public fun compileSM (expr) {
-  compileSM1(initCompEnv(), expr, "")[1]
+	case compileSM1(initCompEnv(), expr, "") of [env, code] ->
+		local flag = 1;
+		code := ({ LABEL("main"), BEGIN("main", 0, getLocals(env))} +++
+		  code +++ singleton(END));
+		
+		while (flag) do
+			case getFuns(env) of [funs, env1] ->
+				if size(funs) == 0 then flag := 0
+				else
+					case foldl(fun([en, c], f) {
+						case compileSM1(en, f, "") of [en2, c2] ->
+							[en2, c +++ c2]
+						esac
+					  }, [env1, code], funs) of [env2, code2] ->
+						env  := env2;
+						code := code2
+					esac
+				fi
+			esac
+		od;
+		--printf("%s\n", showSM(code));
+		code
+  esac
 }
 (* End *)

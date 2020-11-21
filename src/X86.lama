@@ -461,7 +461,6 @@ fun operationType(op)
   esac
 }
 
-
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -482,16 +481,17 @@ fun compile (env, code) {
 			case env.allocate of
 			  [s, env] -> [env, code <+ Mov (L(n), s)]
 			esac
+		| GLOBAL(x) -> [env.addGlobal(x), code]
 		| LD(x) ->
-			case env.addGlobal(x).allocate of
+			case env.allocate of
 			  [s, env] -> [env, code <+> move (env.loc(x), s) ]
 			esac
 		| LDA(x) -> 
-			case env.addGlobal(x).allocate of
+			case env.allocate of
 			  [s, env] -> [env, code <+ Lea(env.loc(x), eax) <+ Mov(eax, s)]
 			esac
 		| ST(x) ->
-			case env.addGlobal(x).pop of
+			case env.pop of
 			  [s, env] -> [env, code <+> move (s, env.loc(x))]
 			esac
 		| STI -> 
@@ -547,8 +547,20 @@ fun compile (env, code) {
          -- 1. generate proper prologue for BEGIN instruction (use "prologue" helper); use
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
+         
+		| CALL (fLabel, a) ->
+			case call(env, fLabel, a) of [env1, codef] ->
+				[env1, code <+> codef]
+			esac
+		| BEGIN (fLabel, a, l) ->
+			[enterFunction(env, fLabel, l), code <+> prologue(fLabel)]
+		| END -> 
+			case epilogue(env) of [env1, code1] ->
+				[env1, code <+> code1]
+			esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
+        
         esac
       }, [env, emptyBuffer ()], code)
   }
