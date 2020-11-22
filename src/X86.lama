@@ -289,36 +289,6 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-        | CONST(n) ->
-            case env.allocate of
-              [s, env] -> [env, code <+ Mov (L(n), s)]
-            esac
-        | LD(x) ->
-            case env.addGlobal(x).allocate of
-              [s, env] -> [env, code <+> move (env.loc(x), s)]
-            esac
-        | ST(x) ->
-            case env.addGlobal(x).pop of
-              [s, env] -> [env, code <+> move (s, env.loc(x))]
-            esac
-        | BINOP (op) ->
-            case env.pop2 of
-              [y, x, env] -> case op of
-                  "+"  -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop("+", y, edx) <+ Mov(edx, env.allocate[0])]
-                | "-"  -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop("-", y, edx) <+ Mov(edx, env.allocate[0])]
-                | "*"  -> [env.allocate[1], code <+ Mov (x, eax) <+ Binop("*", y, eax) <+ Mov (eax, env.allocate[0])]
-                | "&&" -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("*", y, edx) <+ Binop ("cmp", L(0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, env.allocate[0])]
-                | "!!" -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("!!", y, edx) <+ Binop ("cmp", L(0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, env.allocate[0])]
-                | "/"  -> [env.allocate[1], code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (eax, env.allocate[0])]
-                | "%"  -> [env.allocate[1], code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (edx, env.allocate[0])]
-                | "<"    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                | "<="    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                | "=="    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                | "!="    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                | ">="    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                | ">"    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-              esac
-            esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
@@ -337,9 +307,9 @@ public fun compileX86 (args, code) {
                          #unboxed -> "../runtime/"
                        | path     -> path
                        esac ++ "/runtime.o";
-
+       
        fwrite (asmFile,
-               map (insnString,
+               map (insnString, 
                     getBuffer $
                       singletonBuffer (Meta ("\t.global\tmain\n")) <+>
                       dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
@@ -349,8 +319,8 @@ public fun compileX86 (args, code) {
                         code <+>
                         epilogue ()
                       )
-                    ).stringcat);
-
+                   ).stringcat);
+                    
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }
