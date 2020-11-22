@@ -1,9 +1,0 @@
-local x, y;
-
-read (x);
-write (x);
-read (y);
-write (y);
-if x then x else y fi := 18;
-write (x);
-write (y)
