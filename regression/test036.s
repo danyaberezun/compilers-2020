@@ -9,7 +9,7 @@ main:
 # BEGIN main, 0, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$main_SIZE,	%esp
 # GLOBAL i
 # GLOBAL n
 # GLOBAL result
@@ -89,12 +89,13 @@ L1:
 	popl	%ebp
 	xorl	%eax,	%eax
 	ret
+	.set	main_SIZE,	0
 # LABEL Lfib
 Lfib:
 # BEGIN Lfib, 1, 1
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$4,	%esp
+	subl	$Lfib_SIZE,	%esp
 # LD arg[0]
 	movl	8(%ebp),	%ebx
 # CONST 1
@@ -183,3 +184,4 @@ L3:
 	popl	%ebp
 	movl	%ebx,	%eax
 	ret
+	.set	Lfib_SIZE,	4

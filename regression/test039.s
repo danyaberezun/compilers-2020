@@ -9,7 +9,7 @@ main:
 # BEGIN main, 0, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$main_SIZE,	%esp
 # GLOBAL x
 # GLOBAL m
 # GLOBAL n
@@ -129,12 +129,13 @@ L1:
 	popl	%ebp
 	xorl	%eax,	%eax
 	ret
+	.set	main_SIZE,	0
 # LABEL Lack
 Lack:
 # BEGIN Lack, 2, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$Lack_SIZE,	%esp
 # LD arg[0]
 	movl	8(%ebp),	%ebx
 # CONST 0
@@ -255,3 +256,4 @@ L5:
 	popl	%ebp
 	movl	%ebx,	%eax
 	ret
+	.set	Lack_SIZE,	0

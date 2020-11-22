@@ -9,7 +9,7 @@ main:
 # BEGIN main, 0, 2
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$8,	%esp
+	subl	$main_SIZE,	%esp
 # GLOBAL s
 # GLOBAL n
 # GLOBAL p
@@ -239,3 +239,4 @@ L1:
 	popl	%ebp
 	xorl	%eax,	%eax
 	ret
+	.set	main_SIZE,	8

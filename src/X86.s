@@ -8321,15 +8321,15 @@ L675:
 # LD (Local (2)) / 
 
 	movl	-12(%ebp),	%ecx
-# LD (Local (3)) / 
+# LD (Local (5)) / 
 
-	movl	-16(%ebp),	%esi
-# CALL ("Lprologue1", 1, false) / 
+	movl	-24(%ebp),	%esi
+# CALL ("Lprologue", 1, false) / 
 
 	pushl	%ebx
 	pushl	%ecx
 	pushl	%esi
-	call	Lprologue1
+	call	Lprologue
 	addl	$4,	%esp
 	popl	%ecx
 	popl	%ebx
@@ -8425,10 +8425,10 @@ L690:
 # LD (Local (1)) / 
 
 	movl	-8(%ebp),	%ebx
-# CALL ("Lepilogue1", 1, false) / 
+# CALL ("Lepilogue", 1, false) / 
 
 	pushl	%ebx
-	call	Lepilogue1
+	call	Lepilogue
 	addl	$4,	%esp
 	movl	%eax,	%ebx
 # DUP / 

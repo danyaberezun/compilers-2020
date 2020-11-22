@@ -7,7 +7,7 @@ main:
 # BEGIN main, 0, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$main_SIZE,	%esp
 # GLOBAL x
 # READ
 	call	Lread
@@ -47,12 +47,13 @@ main:
 	popl	%ebp
 	xorl	%eax,	%eax
 	ret
+	.set	main_SIZE,	0
 # LABEL Ltest
 Ltest:
 # BEGIN Ltest, 2, 3
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$12,	%esp
+	subl	$Ltest_SIZE,	%esp
 # LDA loc[2]
 	leal	-12(%ebp),	%eax
 	movl	%eax,	%ebx
@@ -182,3 +183,4 @@ L1:
 	popl	%ebp
 	movl	%ebx,	%eax
 	ret
+	.set	Ltest_SIZE,	12

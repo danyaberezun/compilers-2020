@@ -355,12 +355,6 @@ fun prologue (fLabel) {
   Binop ("-", M (sprintf ("$%s_SIZE", fLabel)), esp)  
 }
 
-fun prologue1 (nl) {
-  singletonBuffer (Push  (ebp)) <+
-  Mov   (esp, ebp) <+
-  Binop ("-", L (wordSize * nl), esp)  
-}
-
 -- Generates function epilogue
 fun epilogue (env) {
   local metaDef = Meta (sprintf ("\t.set\t%s_SIZE,\t%d\n", env.currentFunction, env.staticSize * wordSize));
@@ -369,16 +363,6 @@ fun epilogue (env) {
   then [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Binop ("^", eax, eax) <+ Ret <+ metaDef]
   else case env.pop of
          [y, env] -> [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Mov (y, eax) <+ Ret <+ metaDef]
-       esac
-  fi
-}
-
--- Generates function epilogue
-fun epilogue1 (env) {
-  if compare (env.currentFunction, "main") == 0
-  then [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Binop ("^", eax, eax) <+ Ret]
-  else case env.pop of
-         [y, env] -> [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Mov (y, eax) <+ Ret]
        esac
   fi
 }
@@ -476,7 +460,7 @@ fun compile (env, code) {
   fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
-        local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n"); (*printf ("%s", showSMInsn (i));*)
+        local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
           READ ->
             case allocate (env) of
@@ -555,8 +539,8 @@ fun compile (env, code) {
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
                
-        | BEGIN (f, na, nl) -> [enterFunction (env, f, nl), code <+> prologue1 (nl)]
-        | END               -> case epilogue1 (env) of [env, p] -> [env, code <+> p] esac
+        | BEGIN (f, na, nl) -> [enterFunction (env, f, nl), code <+> prologue (f)]
+        | END               -> case epilogue (env) of [env, p] -> [env, code <+> p] esac
         | CALL (fLabel, na) -> case call (env, fLabel, na) of [env, p] -> [env, code <+> p] esac
         | GLOBAL (x)        -> [addGlobal (env, x), code]
         (* End *)

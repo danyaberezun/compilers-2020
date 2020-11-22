@@ -7,7 +7,7 @@ main:
 # BEGIN main, 0, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$main_SIZE,	%esp
 # GLOBAL x
 # READ
 	call	Lread
@@ -40,3 +40,4 @@ L1:
 	popl	%ebp
 	xorl	%eax,	%eax
 	ret
+	.set	main_SIZE,	0

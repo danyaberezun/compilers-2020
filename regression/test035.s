@@ -9,7 +9,7 @@ main:
 # BEGIN main, 0, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$main_SIZE,	%esp
 # GLOBAL n
 # GLOBAL i
 # GLOBAL result
@@ -89,12 +89,13 @@ L1:
 	popl	%ebp
 	xorl	%eax,	%eax
 	ret
+	.set	main_SIZE,	0
 # LABEL Lfact
 Lfact:
 # BEGIN Lfact, 1, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$Lfact_SIZE,	%esp
 # LD arg[0]
 	movl	8(%ebp),	%ebx
 # CONST 1
@@ -159,3 +160,4 @@ L3:
 	popl	%ebp
 	movl	%ebx,	%eax
 	ret
+	.set	Lfact_SIZE,	0

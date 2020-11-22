@@ -9,7 +9,7 @@ main:
 # BEGIN main, 0, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$main_SIZE,	%esp
 # GLOBAL x
 # GLOBAL a
 # GLOBAL b
@@ -48,12 +48,13 @@ main:
 	popl	%ebp
 	xorl	%eax,	%eax
 	ret
+	.set	main_SIZE,	0
 # LABEL Ltest1
 Ltest1:
 # BEGIN Ltest1, 0, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$Ltest1_SIZE,	%esp
 # LDA a
 	leal	global_a,	%eax
 	movl	%eax,	%ebx
@@ -68,12 +69,13 @@ Ltest1:
 	popl	%ebp
 	movl	%ebx,	%eax
 	ret
+	.set	Ltest1_SIZE,	0
 # LABEL Ltest2
 Ltest2:
 # BEGIN Ltest2, 1, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$Ltest2_SIZE,	%esp
 # LDA a
 	leal	global_a,	%eax
 	movl	%eax,	%ebx
@@ -88,3 +90,4 @@ Ltest2:
 	popl	%ebp
 	movl	%ebx,	%eax
 	ret
+	.set	Ltest2_SIZE,	0

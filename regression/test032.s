@@ -10,7 +10,7 @@ main:
 # BEGIN main, 0, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$main_SIZE,	%esp
 # GLOBAL x
 # GLOBAL a
 # GLOBAL b
@@ -94,12 +94,13 @@ main:
 	popl	%ebp
 	xorl	%eax,	%eax
 	ret
+	.set	main_SIZE,	0
 # LABEL Ltest1
 Ltest1:
 # BEGIN Ltest1, 1, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$Ltest1_SIZE,	%esp
 # LD arg[0]
 	movl	8(%ebp),	%ebx
 # WRITE
@@ -113,12 +114,13 @@ Ltest1:
 	popl	%ebp
 	movl	%ebx,	%eax
 	ret
+	.set	Ltest1_SIZE,	0
 # LABEL Ltest2
 Ltest2:
 # BEGIN Ltest2, 1, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$Ltest2_SIZE,	%esp
 # LD arg[0]
 	movl	8(%ebp),	%ebx
 # WRITE
@@ -132,12 +134,13 @@ Ltest2:
 	popl	%ebp
 	movl	%ebx,	%eax
 	ret
+	.set	Ltest2_SIZE,	0
 # LABEL Ltest3
 Ltest3:
 # BEGIN Ltest3, 1, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$Ltest3_SIZE,	%esp
 # LD arg[0]
 	movl	8(%ebp),	%ebx
 # WRITE
@@ -151,12 +154,13 @@ Ltest3:
 	popl	%ebp
 	movl	%ebx,	%eax
 	ret
+	.set	Ltest3_SIZE,	0
 # LABEL Lprint
 Lprint:
 # BEGIN Lprint, 0, 0
 	pushl	%ebp
 	movl	%esp,	%ebp
-	subl	$0,	%esp
+	subl	$Lprint_SIZE,	%esp
 # LD a
 	movl	global_a,	%ebx
 # WRITE
@@ -182,3 +186,4 @@ Lprint:
 	popl	%ebp
 	movl	%ebx,	%eax
 	ret
+	.set	Lprint_SIZE,	0
