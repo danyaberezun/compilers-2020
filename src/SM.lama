@@ -71,5 +71,5 @@ public fun compileSM (stmt) {
       | Seq (s1, s2) -> {compileImpl (s1), compileImpl (s2)}
       esac
   }
-  myDeepFlatten (compileImpl (stmt))
+  deepFlatten (compileImpl (stmt))
 }
