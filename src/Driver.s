@@ -74,7 +74,13 @@ global_args:	.int	1
 
 # EXTERN ("global_pos") / 
 
+# EXTERN ("global_strlit") / 
+
+# EXTERN ("global_chrlit") / 
+
 # EXTERN ("global_decimal") / 
+
+# EXTERN ("global_kLength") / 
 
 # EXTERN ("global_kFun") / 
 
@@ -104,11 +110,9 @@ global_args:	.int	1
 
 # EXTERN ("global_kSkip") / 
 
-# EXTERN ("global_kWrite") / 
-
-# EXTERN ("global_kRead") / 
-
 # EXTERN ("Ls") / 
+
+# EXTERN ("global_rLength") / 
 
 # EXTERN ("global_rFun") / 
 
@@ -136,17 +140,19 @@ global_args:	.int	1
 
 # EXTERN ("global_rIf") / 
 
-# EXTERN ("global_rSkip") / 
-
-# EXTERN ("global_rWrite") / 
-
 # EXTERN ("global_rRead") / 
 
 # EXTERN ("global_rLident") / 
 
+# EXTERN ("global_rChar") / 
+
+# EXTERN ("global_rStrlit") / 
+
 # EXTERN ("global_rDecimal") / 
 
 # EXTERN ("global_rWhiteSpace") / 
+
+# EXTERN ("global_rSkip") / 
 
 # EXTERN ("LgetLoc") / 
 
@@ -1435,9 +1441,9 @@ L80:
 
 L84:
 
-# LINE (107) / 
+# LINE (108) / 
 
-	.stabn 68,0,107,.L11
+	.stabn 68,0,108,.L11
 
 .L11:
 

@@ -82,10 +82,6 @@ fun insnString (insn) {
     | I (n, x) -> sprintf ("%d(%s)", n, opndString (x))
     esac
   }
-<<<<<<< HEAD
-=======
-
->>>>>>> f78efd2e37dc6a749cb0fef56add0a8754f3684e
   case insn of
     Cltd               -> "\tcltd\n"
   | Set   (suf, s)     -> sprintf ("\tset%s\t%s\n", suf, s)

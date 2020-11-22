@@ -10,6 +10,7 @@ I,State;
 I,Parser;
 I,Lexer;
 I,Expr;
+I,Builtins;
 I,Buffer;
 F,showSMInsn;
 F,showSM;

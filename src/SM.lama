@@ -1,4 +1,5 @@
 -- Stack machine.
+import Ostap;
 import Ref;
 import Array;
 import List;
@@ -119,7 +120,7 @@ fun eval (env, w, insns) {
     fun inner (n, acc, list) {
       if n == 0
       then [list, acc]
-      else inner (n-1, list.hd : acc, list.tl)
+      else inner (n-1, hd(list) : acc, tl(list))
       fi
     }
 
@@ -129,7 +130,7 @@ fun eval (env, w, insns) {
 
   -- Core interpreter: takes a configuration and a program, returns a configuration
   (* Assignment *)
-  fun eval (c@[st, cst, s, w@[i, o]], insns) {
+  fun eval (c@[st, cst, s, w@[i, o]], insns) { (*printf("%s", insns.string);*)
     case insns of
       {} -> c
     | BINOP (b)      : p -> 
@@ -145,7 +146,7 @@ fun eval (env, w, insns) {
       case st of x : ss ->
         eval ([ss, cst, s, [i, x : o]], p) 
       esac
-    | LD    (x)      : p -> eval ([lookup (s, x) : st, cst, s, w], p)
+    | LD    (x)      : p -> (*printf("%s, %s", st.string, lookup (s, x).string);*) eval ([lookup (s, x) : st, cst, s, w], p)
     | ST    (x)      : p -> 
       case st of y : ss ->
         assign (s, x, y); eval ([ss, cst, s, w], p) 
@@ -183,6 +184,14 @@ fun eval (env, w, insns) {
       esac
     | CALL (f, _)    : p    -> eval ([st, [s, p] : cst, s, w], fromLabel(env, f))
     | GLOBAL (x)     : p    -> assign (s, Glb (x), 0); eval ([st, cst, s, w], p)
+    | BUILTIN (f, n) : p    -> 
+      case take (st, n) of 
+        [st, a] -> (*printf("%s, %s", a.string, st.string);*) case evalBuiltin (f, a , w) of [v, w] -> eval ([v : st, cst, s, w], p) esac
+      esac
+    | STA : p -> case st of v : id : arr : st -> arr[id] := v; eval ([v : st, cst, s, w], p) esac
+    | ELEM : p -> case st of id : arr : st -> eval([arr[id] : st, cst, s, w], p) esac
+    | ARRAY (n) : p -> case take (st, n) of [st, a] -> eval ([listArray (a) : st, cst, s, w], p) esac
+    | STRING (x) : p -> eval ([x : st, cst, s, w], p)
     esac
   }
   (* End *)
@@ -467,10 +476,14 @@ public fun compileSM (stmt) {
         [ins, env] -> [ins +++ (DROP : {}), env]
       esac
     | Assn  (x, expr)      ->
-      case cSM (x, env) of
-        [ins1, env] ->
-        case cSM (expr, env) of
-          [ins2, env] -> [ins1 +++ ins2 +++ (STI : {}), env]
+      case x of
+        ElemRef (earr, eid) ->
+        case cSM_list ({earr, eid, expr}, env) of
+          [inss, env] -> [inss +++ (STA : {}), env]
+        esac
+      | _ ->
+        case cSM_list ({x, expr}, env) of
+          [inss, env] -> [inss +++ (STI : {}), env]
         esac
       esac
     | Read  (x)            -> [{READ, ST (lookupVar (env, x))}, env]
@@ -544,10 +557,16 @@ public fun compileSM (stmt) {
       esac
     | Call (f, args)   ->
       case (cSM_list (args, env)) of
-        [inss, env] -> case lookupFun (env, f) of
-          Fun (fLabel, n) -> [deepFlatten (inss +++ (CALL (fLabel, n) : {})), env]
+        [inss, env] -> 
+        case f of 
+          "read" -> [inss +++ (BUILTIN ("read", 0) : {}), env] 
+        | "write" -> [inss +++ (BUILTIN ("write", 1) : {}), env] 
+        | _ -> 
+          case lookupFun (env, f) of
+            Fun (fLabel, n) -> [deepFlatten (inss +++ (CALL (fLabel, n) : {})), env]
+          esac 
         esac 
-      esac 
+      esac
     | Scope (defs, expr)  ->
       case foldl (addDef, [beginScope (env), {}, {}], defs) of
         [env, funs, glbs] -> 
@@ -556,7 +575,20 @@ public fun compileSM (stmt) {
                             rememberFun (env, fLabel, args, body)
                           }, env, funs)) of [ins, env] -> [{glbs, ins}, endScope (env)]
         esac
-    esac
+      esac
+    | String (x) -> [STRING (x) : {}, env]
+    | Array (els) -> 
+      case cSM_list (els, env) of
+        [inss, env] -> [inss +++ (ARRAY (els.length) : {}), env]
+      esac
+    | Elem (earr, eid) -> 
+      case cSM_list ({earr, eid}, env) of
+        [inss, env] -> [inss +++ (ELEM : {}), env]
+      esac
+    | Builtin (f, eargs) -> 
+      case cSM_list (eargs, env) of
+        [inss, env] -> [inss +++ (BUILTIN (f, eargs.length) : {}), env]
+      esac
   esac
   }
 
@@ -581,7 +613,7 @@ public fun compileSM (stmt) {
   }
   
   case cSM (stmt, initCompEnv ()) of
-    [inss, env] ->
+    [inss, env] -> printf ("%s, %s", inss.string, getFuns(env).string);
     deepFlatten (
       cFun (env, {LABEL ("main"), BEGIN ("main", 0, getLocals (env)), inss, END}) 
     )
@@ -589,11 +621,14 @@ public fun compileSM (stmt) {
 }
 (* End *)
 
-(*local i =
+local i =
 case parseString (
   parse |> bypass (end),
-  "fun ack (m, n) {  if m == 0 then n+1 else ack (0, 0)  fi} ack (0, 1)"
-) of Succ (p) -> compileSM (p) esac;
+  "fun test2 (b) {}"
+--"local x; x := read (); write (x)"
+) of Succ (p) -> p esac;
+local in = compileSM (i);
 
-printf ("%s",  showSM (i).string);
-printf ("%s", evalSM ({}, i).string)*)
+printf ("%s\n", i.string);
+printf ("%s\n",  showSM (in).string);
+printf ("%s\n", evalSM (5:{}, in).string)

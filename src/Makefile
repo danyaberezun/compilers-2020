@@ -11,13 +11,6 @@ all: Parser.o Lexer.o X86.o SM.o Manifest.o
 
 Parser.o: Lexer.o
 
-<<<<<<< HEAD
-State.o: Lexer.o Parser.o
-
-Expr.o: State.o 
-
-SM.o: State.o World.o Expr.o
-=======
 Builtins.o: World.o
 
 State.o: Lexer.o Parser.o
@@ -25,7 +18,6 @@ State.o: Lexer.o Parser.o
 Expr.o: State.o Builtins.o
 
 SM.o: State.o World.o Expr.o Parser.o Lexer.o Builtins.o
->>>>>>> f78efd2e37dc6a749cb0fef56add0a8754f3684e
 
 X86.o: SM.o Manifest.o
 
