@@ -347,6 +347,25 @@ fun suffix (op) {
   esac
 }
 
+-- local comparators = {"<", "<=" ,"==" ,"!=" ,">=" ,">"};
+fun isComparator(op) {
+  case op of
+    "<"  -> true
+  | "<=" -> true
+  | "==" -> true
+  | "!=" -> true
+  | ">=" -> true
+  | ">"  -> true
+  | _    -> false
+  esac
+}
+
+fun cmpEax(op, reg) {
+  singletonBuffer (Binop("cmp", reg, eax)) <+
+                   Set(suffix(op), "%al") <+
+                   Binop("&&", L(1), eax)
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -363,6 +382,65 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST (n) -> {
+            case env.allocate of [s, env2] ->
+						  [env2, code <+ Mov (L(n), s)]
+            esac
+				}
+        | LD (x) ->
+            case env.allocate of
+              [s, env2] -> [env2, code <+ Mov(env.loc(x), eax) <+ Mov (eax, s)]
+            esac
+				| LDA (x) ->
+				    case env.addGlobal(x) of env2 ->
+				      case env2.allocate of
+						    [s, env3] -> [env3, code <+ Lea(env.loc(x), s)]
+						  esac
+						esac
+        | ST (x) ->
+            case env.pop of [s, env2] ->
+              case env2.addGlobal(x) of env3 ->
+							  [env3, code <+ Mov (s, env3.loc(x))]
+              esac
+            esac
+				| STI ->
+				    case env.pop of [ref, env2] ->
+						  case env2.peek of val ->
+							  [env2, code <+ Mov (val, I(0, ref))]
+							esac
+						esac
+				| DROP ->
+				    case env.pop of [_, env] ->
+						  [env, code]
+						esac
+        | BINOP (op) ->
+            case env.pop2 of
+              [x, y, env] ->
+                case env.allocate of
+                  [s, env] ->
+                    case isComparator(op) of
+                      true -> [env, code <+ Mov(y, eax) <+> cmpEax(op, x) <+ Mov(eax, s)]
+                    | false ->
+                      case op of
+                        "/"   -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
+                      | "%"   -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
+                      | "!!"  -> [env, code <+ Mov(y, eax) <+ Binop("!!", x, eax) <+> cmpEax("!=", L(0)) <+ Mov(eax, s)]
+                      | "&&"  -> [env, code <+ Mov(y, eax) <+ Binop("*", x, eax) <+> cmpEax("!=", L(0)) <+ Mov(eax, s)]
+                      | _     -> [env, code <+ Mov(y, eax) <+ Binop(op, x, eax) <+ Mov(eax, s)]
+                      esac
+                    esac
+                esac
+            esac
+				| JMP (l) -> [setBarrier(env, l), code <+ Jmp (l)]
+				| CJMP (c, l) ->
+				  case env.pop of
+				    [x, env] -> [setStack(env, l), code <+ Mov(x, eax) <+ Binop("cmp", L(0), eax) <+ CJmp(c , l)]
+					esac
+				| LABEL (l) ->
+				  case isBarrier(env) of
+					  true ->  [retrieveStack(env, l), code <+ Label (l)]
+					| false -> [env, code <+ Label (l)]
+					esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
