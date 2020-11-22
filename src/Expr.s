@@ -176,6 +176,8 @@ global_ops:	.int	1
 
 # EXTERN ("LemptyState") / 
 
+# EXTERN ("LenterFunction1") / 
+
 # EXTERN ("LgetGlobal") / 
 
 # EXTERN ("LleaveFunction") / 

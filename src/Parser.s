@@ -12410,9 +12410,9 @@ L845:
 
 	movl	16(%edx),	%eax
 	movl	%eax,	-12(%ebp)
-# SEXP ("Voia", 0) / 
+# SEXP ("Void", 0) / 
 
-	movl	$25289859,	-16(%ebp)
+	movl	$25289865,	-16(%ebp)
 	pushl	%edx
 	pushl	%ebx
 	pushl	%ecx

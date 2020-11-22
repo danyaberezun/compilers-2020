@@ -584,7 +584,32 @@ fun compile (env, code) {
         | END               -> case epilogue (env) of [env, p] -> [env, code <+> p] esac
         | CALL (fLabel, na) -> case call (env, fLabel, na) of [env, p] -> [env, code <+> p] esac
         | GLOBAL (x)        -> [addGlobal (env, x), code]
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        | STA               -> 
+          case call (env, "Bsta", 2) of
+            [env, p] -> [env, code <+> p]
+          esac
+        | ELEM ->
+          case call (env, "Belem", 2) of
+            [env, p] -> [env, code <+> p]
+          esac
+        | BUILTIN (f, n) ->
+          case call (env, (case f of "read" -> "L" | "write" -> "L" | _ -> "B" esac) ++ f, n) of
+            [env, p] -> [env, code <+> p]
+          esac
+        | STRING (s) ->
+          case env.addString (s) of
+            [env, sym] -> 
+            case allocate (env) of
+              [y, env] ->
+              case call (env, "Bstring", 1) of
+                [env, p] -> [env, code <+> move (M ("$" ++ sym), y) <+> p]
+              esac
+            esac
+          esac
+        | ARRAY (n) ->
+          case call (env, "Barray", n) of
+            [env, p] -> [env, code <+> p]
+          esac
         (* End *)
         esac
       }, [env, emptyBuffer ()], code)

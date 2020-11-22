@@ -206,7 +206,7 @@ local primary    = memo $ eta syntax (
                                                                        Seq (expr, While (e (Val), Seq (s3 (Void), s2 (Void))))
                                                       ), loc)
                                                 | expr               ->
-                                                    assertVoid (a, Seq (expr, While (e (Val), Seq (s3 (Void), s2 (Voia)))), loc)
+                                                    assertVoid (a, Seq (expr, While (e (Val), Seq (s3 (Void), s2 (Void)))), loc)
                                                 esac
                                                }}          |
   loc=pos kRepeat s1=scopeExpr kUntil e=inbr[s("("), exp, s(")")]

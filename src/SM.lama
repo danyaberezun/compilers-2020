@@ -146,7 +146,7 @@ fun eval (env, w, insns) {
       case st of x : ss ->
         eval ([ss, cst, s, [i, x : o]], p) 
       esac
-    | LD    (x)      : p -> (*printf("%s, %s", st.string, lookup (s, x).string);*) eval ([lookup (s, x) : st, cst, s, w], p)
+    | LD    (x)      : p -> eval ([lookup (s, x) : st, cst, s, w], p)
     | ST    (x)      : p -> 
       case st of y : ss ->
         assign (s, x, y); eval ([ss, cst, s, w], p) 
@@ -186,7 +186,7 @@ fun eval (env, w, insns) {
     | GLOBAL (x)     : p    -> assign (s, Glb (x), 0); eval ([st, cst, s, w], p)
     | BUILTIN (f, n) : p    -> 
       case take (st, n) of 
-        [st, a] -> (*printf("%s, %s", a.string, st.string);*) case evalBuiltin (f, a , w) of [v, w] -> eval ([v : st, cst, s, w], p) esac
+        [st, a] -> case evalBuiltin (f, a , w) of [v, w] -> eval ([v : st, cst, s, w], p) esac
       esac
     | STA : p -> case st of v : id : arr : st -> arr[id] := v; eval ([v : st, cst, s, w], p) esac
     | ELEM : p -> case st of id : arr : st -> eval([arr[id] : st, cst, s, w], p) esac
@@ -251,7 +251,7 @@ fun makeCompEnv (nLabels, scopeDepth, state, nLocals, nArgs, functions) {
   
   -- Enters a function
   fun beginFun (state) {
-    makeCompEnv (nLabels, 2, enterFunction (state), 0, 0, functions)
+    makeCompEnv (nLabels, 2, enterFunction1 (state), 0, 0, functions)
   }
 
   -- Get functions and empty functions list
@@ -290,7 +290,7 @@ fun makeCompEnv (nLabels, scopeDepth, state, nLocals, nArgs, functions) {
 
   -- Checks if the current scope is a global
   fun isGlobal () {
-    scopeDepth == 2
+    scopeDepth == 1
   }
   
   [genLabel,
@@ -579,7 +579,7 @@ public fun compileSM (stmt) {
     | String (x) -> [STRING (x) : {}, env]
     | Array (els) -> 
       case cSM_list (els, env) of
-        [inss, env] -> [inss +++ (ARRAY (els.length) : {}), env]
+        [inss, env] -> [inss +++ (ARRAY (size (els)) : {}), env]
       esac
     | Elem (earr, eid) -> 
       case cSM_list ({earr, eid}, env) of
@@ -587,7 +587,7 @@ public fun compileSM (stmt) {
       esac
     | Builtin (f, eargs) -> 
       case cSM_list (eargs, env) of
-        [inss, env] -> [inss +++ (BUILTIN (f, eargs.length) : {}), env]
+        [inss, env] -> [inss +++ (BUILTIN (f, size (eargs)) : {}), env]
       esac
   esac
   }
@@ -613,7 +613,7 @@ public fun compileSM (stmt) {
   }
   
   case cSM (stmt, initCompEnv ()) of
-    [inss, env] -> printf ("%s, %s", inss.string, getFuns(env).string);
+    [inss, env] ->
     deepFlatten (
       cFun (env, {LABEL ("main"), BEGIN ("main", 0, getLocals (env)), inss, END}) 
     )
@@ -621,14 +621,15 @@ public fun compileSM (stmt) {
 }
 (* End *)
 
-local i =
+(*local i =
 case parseString (
   parse |> bypass (end),
-  "fun test2 (b) {}"
+  "local x; fun sort (x) { local i; for i := 0, i<1, i := i+1 do skip od; x } x := [10, 11]; x := sort (x)"
 --"local x; x := read (); write (x)"
 ) of Succ (p) -> p esac;
 local in = compileSM (i);
 
 printf ("%s\n", i.string);
 printf ("%s\n",  showSM (in).string);
-printf ("%s\n", evalSM (5:{}, in).string)
+printf ("%s\n", evalExpr ({}, i).string);
+printf ("%s\n", evalSM (5:{}, in).string)*)
