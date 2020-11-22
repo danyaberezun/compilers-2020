@@ -5,7 +5,6 @@ import Fun;
 public fun getMode (args) {
   args [0] ()
 }
-
 public fun getInFile (args) {
   args [1] ()
 }
