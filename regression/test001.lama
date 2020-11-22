@@ -1,0 +1,3 @@
+local x = read (), y = read (), z;
+z := x * y * 3;
+write (z)
