@@ -15,6 +15,7 @@ Stmt.o: State.o Expr.o World.o
 SM.o: State.o World.o 
 
 X86.o: SM.o
+SM.o: State.o World.o Expr.o
 
 %.o: %.lama
 	$(LAMAC) -I . -c $<
