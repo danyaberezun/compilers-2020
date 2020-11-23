@@ -27,6 +27,7 @@ fun parseArgs (args) {
     esac
   }
   
+
   fun setMode (m) {
     case deref (mode) of
       Comp -> mode ::= m
@@ -56,6 +57,7 @@ fun parseArgs (args) {
             esac
          }
       })(args);
+
 
   [fun () {deref (mode)},
    fun () {case deref(infile) of #unboxed -> failure ("input file name not set\n") | fn -> fn esac},
