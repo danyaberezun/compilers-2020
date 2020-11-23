@@ -6,4 +6,4 @@ I,World;
 I,Stmt;
 I,State;
 I,SM;
-F,program;
+I,X86;

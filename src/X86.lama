@@ -259,6 +259,15 @@ fun move (from, to) {
   fi
 }
 
+fun op_type (op) {
+  case op of 
+      "+" -> 1
+    | "-" -> 1
+    | "*" -> 1
+    | _ -> 0
+  esac
+}
+
 -- Gets a suffix for Set instruction from
 -- source language comparison operator
 fun suffix (op) {
@@ -342,7 +351,7 @@ fun compile (env, code) {
               | "&&" -> [env, code <+ Mov(s1, edx) <+ Binop("imull", s2, edx) <+ Binop("cmp", L(0), edx) <+ Set("ne", "%al") <+ Mov(eax, s)]
               | op -> 
                 case op_type(op) of
-                  0 -> [env, code <+ Mov(s2, edx) <+ Binop("cmp", edx, si) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                  0 -> [env, code <+ Mov(s2, edx) <+ Binop("cmp", edx, s1) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
                 | 1 -> [env, code <+ Mov(s1, eax) <+ Binop(op, s2, eax) <+ Mov(eax, s)]
                 esac
               esac

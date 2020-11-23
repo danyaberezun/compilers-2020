@@ -22,15 +22,46 @@ main:
 	movl	global_x,	%ebx
 # LD y
 	movl	global_y,	%ecx
-# BINOP *
+# BINOP +
 	movl	%ebx,	%eax
-	imull	%ecx,	%eax
+	addl	%ecx,	%eax
 	movl	%eax,	%ebx
-# CONST 3
-	movl	$3,	%ecx
-# BINOP *
+# LD x
+	movl	global_x,	%ecx
+# LD y
+	movl	global_y,	%esi
+# BINOP -
+	movl	%ecx,	%eax
+	subl	%esi,	%eax
+	movl	%eax,	%ecx
+# BINOP +
 	movl	%ebx,	%eax
-	imull	%ecx,	%eax
+	addl	%ecx,	%eax
+	movl	%eax,	%ebx
+# LD x
+	movl	global_x,	%ecx
+# LD y
+	movl	global_y,	%esi
+# BINOP -
+	movl	%ecx,	%eax
+	subl	%esi,	%eax
+	movl	%eax,	%ecx
+# LD x
+	movl	global_x,	%esi
+# LD y
+	movl	global_y,	%edi
+# BINOP /
+	movl	%esi,	%eax
+	cltd
+	idivl	%edi
+	movl	%eax,	%esi
+# BINOP -
+	movl	%ecx,	%eax
+	subl	%esi,	%eax
+	movl	%eax,	%ecx
+# BINOP +
+	movl	%ebx,	%eax
+	addl	%ecx,	%eax
 	movl	%eax,	%ebx
 # ST z
 	movl	%ebx,	global_z

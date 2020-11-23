@@ -2,7 +2,6 @@
 	.data
 global_x:	.int	0
 global_y:	.int	0
-global_z:	.int	0
 	.text
 main:
 	pushl	%ebp
@@ -22,20 +21,36 @@ main:
 	movl	global_x,	%ebx
 # LD y
 	movl	global_y,	%ecx
-# BINOP *
+# BINOP -
 	movl	%ebx,	%eax
-	imull	%ecx,	%eax
+	subl	%ecx,	%eax
 	movl	%eax,	%ebx
-# CONST 3
-	movl	$3,	%ecx
-# BINOP *
+# WRITE
+	pushl	%ebx
+	call	Lwrite
+	popl	%eax
+# LD x
+	movl	global_x,	%ebx
+# LD y
+	movl	global_y,	%ecx
+# BINOP /
 	movl	%ebx,	%eax
-	imull	%ecx,	%eax
+	cltd
+	idivl	%ecx
 	movl	%eax,	%ebx
-# ST z
-	movl	%ebx,	global_z
-# LD z
-	movl	global_z,	%ebx
+# WRITE
+	pushl	%ebx
+	call	Lwrite
+	popl	%eax
+# LD x
+	movl	global_x,	%ebx
+# LD y
+	movl	global_y,	%ecx
+# BINOP %
+	movl	%ebx,	%eax
+	cltd
+	idivl	%ecx
+	movl	%edx,	%ebx
 # WRITE
 	pushl	%ebx
 	call	Lwrite

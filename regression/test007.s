@@ -8,29 +8,27 @@ main:
 	pushl	%ebp
 	movl	%esp,	%ebp
 	subl	$0,	%esp
-# READ
-	call	Lread
-	movl	%eax,	%ebx
+# CONST 1
+	movl	$1,	%ebx
 # ST x
 	movl	%ebx,	global_x
-# READ
-	call	Lread
-	movl	%eax,	%ebx
+# CONST 2
+	movl	$2,	%ebx
 # ST y
 	movl	%ebx,	global_y
 # LD x
 	movl	global_x,	%ebx
 # LD y
 	movl	global_y,	%ecx
-# BINOP *
+# BINOP -
 	movl	%ebx,	%eax
-	imull	%ecx,	%eax
+	subl	%ecx,	%eax
 	movl	%eax,	%ebx
 # CONST 3
 	movl	$3,	%ecx
-# BINOP *
+# BINOP -
 	movl	%ebx,	%eax
-	imull	%ecx,	%eax
+	subl	%ecx,	%eax
 	movl	%eax,	%ebx
 # ST z
 	movl	%ebx,	global_z

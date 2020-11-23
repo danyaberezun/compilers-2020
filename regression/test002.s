@@ -18,24 +18,24 @@ main:
 	movl	%eax,	%ebx
 # ST y
 	movl	%ebx,	global_y
-# LD x
-	movl	global_x,	%ebx
+# LD y
+	movl	global_y,	%ebx
 # LD y
 	movl	global_y,	%ecx
 # BINOP *
 	movl	%ebx,	%eax
 	imull	%ecx,	%eax
 	movl	%eax,	%ebx
-# CONST 3
-	movl	$3,	%ecx
-# BINOP *
-	movl	%ebx,	%eax
-	imull	%ecx,	%eax
-	movl	%eax,	%ebx
 # ST z
 	movl	%ebx,	global_z
+# LD x
+	movl	global_x,	%ebx
 # LD z
-	movl	global_z,	%ebx
+	movl	global_z,	%ecx
+# BINOP +
+	movl	%ebx,	%eax
+	addl	%ecx,	%eax
+	movl	%eax,	%ebx
 # WRITE
 	pushl	%ebx
 	call	Lwrite

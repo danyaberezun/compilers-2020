@@ -13,10 +13,6 @@ import State;
 --        Const (int)                |
 --        Binop (string, expr, expr)
 
-<<<<<<< HEAD
-public fun evalExpr (st, expr) {
-  failure ("evalExpr not implemented\n")
-=======
 
 public fun parse_bin_operation(operation, left, right) {
 	case operation of
@@ -42,5 +38,4 @@ public fun evalExpr(statement, expression) {
 		| Const(x) -> x
 		| Binop(op, left, right) -> parse_bin_operation(op, evalExpr(statement, left), evalExpr(statement, right))
 	esac
->>>>>>> A01-straight-line-int-sm
 }
