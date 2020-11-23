@@ -17,32 +17,30 @@ fun inbr (l, p, r) {
 local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
                                    x=lident  {Var (x)}               |
                                    inbr[s("("), exp, s(")")]),
-      binoper = fun (l, op, r) {Binop(op, l, r)},
-      ops = {[Left, [s("!!"), binoper] : {}],
-             [Left, [s("&&"), binoper]: {}],
-             [Nona, [s("<") | s(">") | s(">=") | s("<=") | s("==") | s("!="), binoper] : {}],
-             [Left, [s("+") | s("-"), binoper] : {}],
-             [Left, [s("*") | s("/") | s("%"), binoper] : {}]},
-      exp = memo $ eta expr(ops, primary);
+      binop = fun (l, op, r) {Binop(op,l,r)},
+      ops = {[Left, [s ("!!"), binop] :{}],
+             [Left, [s ("&&"), binop] : {}],
+             [Nona, [s ("<") | s (">") | s (">=") |s ("<=") |s ("==") | s ("!="), binop] : {}],
+             [Left, [s ("+") | s ("-"), binop] : {}],
+             [Left, [s ("*") | s ("/") | s ("%"), binop] : {}]}, 
+      exp = memo $ eta expr (ops, primary);
 
 local stmt = memo $ eta syntax (
-       kWrite x = inbr[s("("), exp, s(")")] {Write(x)} |
-       kRead x = inbr[s("("), lident, s(")")] {Read(x)} |
-       x = lident s[":="] y = exp {Assn(x, y)} |
-       x = stmt s[";"] y = stmt end {Seq(x, y)} |
-       kSkip {Skip} |
-	   kIf cond=exp kThen s1=smth s2=ifParser  {If (cond, s1, s2)} |
-	   kWhile cond=exp kDo s=smth kOd  {While (cond, s)}   |
-	   kRepeat s=smth kUntil cond=exp  {Repeat (s, cond)}  |
-	   kFor s1=smth s[","] e=exp s[","] s2=smth kDo body=smth kOd {Seq (s1, While(e, Seq(body, s2)))});
-
-local ifParser = memo $ eta syntax(
-	   -kFi {Skip} |
-       -kElse smth -kFi |
-       -kElif cond=exp kThen s1=smth s2=ifParser {If (cond, s1, s2)});
-local smth = memo $ eta syntax (
-	   stmt |
-	   s1=stmt s[";"] s2=smth {Seq(s1, s2)});
+   kWrite x = inbr[s("("), exp, s(")")]    {Write(x)} |
+   kRead  x = inbr[s("("), lident, s(")")] {Read(x)}  |
+   x = lident s[":="] y = exp              {Assn(x,y)} |
+   x1 = stmt s[";"] x2 = stmt end          {Seq(x1, x2)}| 
+   kSkip                                   {Skip} |
+   kIf cond=exp kThen s1=seqq s2=ifTailParser   {If (cond, s1, s2)} |
+   kWhile cond=exp kDo s=seqq kOd               {While (cond, s)} |
+   kRepeat s=seqq kUntil cond=exp               {Repeat (s, cond)} |
+   kFor e1=seqq s[","] e2=exp s[","] e3=seqq kDo s=seqq kOd {Seq (e1, While(e2, Seq(s, e3)))}
+   ),
+   ifTailParser = memo $ eta syntax(-kFi           {Skip} |
+                                    -kElse seqq -kFi      |
+                                     kElif cond=exp kThen s1=seqq s2=ifTailParser {If (cond, s1, s2)}
+                                    ),
+   seqq = memo $ eta syntax (stmt | s1=stmt s[";"] s2=seqq {Seq(s1, s2)});  
 
 -- Public top-level parser
 public parse = stmt;
