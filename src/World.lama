@@ -23,4 +23,3 @@ public fun readWorld ([n:input, output]) {
 public fun getOutput ([_, output]) {
   reverse (output)
 }
-

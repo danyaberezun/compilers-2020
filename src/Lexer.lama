@@ -9,7 +9,7 @@ import List;
 -- A hashtable to keep a source code location information.
 -- The keys in this table are some (boxed) values, and values are
 -- pairs [line, column]
-local srcTab = emptyHashTab (1024, hash, flatCompare);
+local srcTab = emptyHashTab (1024, hash, compare);
 
 -- A custom combinator to additionally add location info
 public fun located (p) {
@@ -18,16 +18,14 @@ public fun located (p) {
 
 -- Retrieves location info; fail if no info found
 public fun getLoc (s) {
-  case findHashTab (srcTab, s) of Some (loc) -> loc esac
+  case findHashTab (srcTab, s) of Some (loc) -> loc | None -> failure ("no location found for item %s\n", s.string) esac
 }
 
 -- A set of all keywords
 local keywords =
    foldl (addSet,
           emptySet (compare),
-          {"read",
-           "write",
-           "skip",
+          {"skip",
            "if",
            "then",
            "else",
@@ -40,15 +38,18 @@ local keywords =
            "repeat",
            "until",
            "local",
-           "fun"});
+           "fun",
+           "length",
+           "string"});
 
 -- Regular expression definitions
-public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\\)\\)*", "whitespace"),
+public rSkip        = createRegexp ("skip\\b", "skip"),
+       rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\\)\\)*", "whitespace"),
        rDecimal     = createRegexp ("-?[0-9]+", "decimal constant"),
+       rStrlit      = createRegexp ("""\\([^""]\\|""""\\)*""", "string constant"),
+       rChar        = createRegexp ("'\\([^']\\|''\\|\\\\n\\|\\\\t\\)'", "character constant"),
        rLident      = createRegexp ("[a-z][a-z_A-Z0-9]*", "lowercase identifier"),
        rRead        = createRegexp ("read\\b", """read"""),
-       rWrite       = createRegexp ("write\\b", """write"""),
-       rSkip        = createRegexp ("skip\\b", """skip"""),
        rIf          = createRegexp ("if\\b", """if"""),
        rThen        = createRegexp ("then\\b", """then"""),
        rElse        = createRegexp ("else\\b", """else"""),
@@ -61,7 +62,8 @@ public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*
        rUntil       = createRegexp ("until\\b", """until"""),
        rFor         = createRegexp ("for\\b", """for"""),
        rLocal       = createRegexp ("local\\b", """for"""),
-       rFun         = createRegexp ("fun\\b", """for""");
+       rFun         = createRegexp ("fun\\b", """for"""),
+       rLength      = createRegexp ("length\\b", """length""");
       
 local whiteSpace = token (rWhiteSpace);
 
@@ -70,9 +72,7 @@ local whiteSpace = token (rWhiteSpace);
 public fun s (t) {memo $ syntax (-whiteSpace token[t])}
 
 -- Some individual tokens
-public kRead    = s (rRead),
-       kWrite   = s (rWrite),
-       kSkip    = s (rSkip),
+public kSkip    = s (rSkip),
        kIf      = s (rIf),
        kThen    = s (rThen),
        kElse    = s (rElse),
@@ -86,7 +86,24 @@ public kRead    = s (rRead),
        kFor     = s (rFor),
        kLocal   = s (rLocal),
        kFun     = s (rFun),
+       kLength  = s (rLength),
        decimal  = s (rDecimal),
+       chrlit   = syntax (x=s[rChar] {case substring (x, 1, x.length - 2) of
+                                        "\\t" -> '\t'
+                                      | "\\n" -> '\n'
+                                      | "''"  -> ''''
+                                      | x     -> x [0]
+                                      esac
+                                     }),
+       strlit   = syntax (x=s[rStrlit] {local j = 0;
+                                        for local i; i := 1,
+                                            i < x.length - 1,
+                                            j := j + 1
+                                        do
+                                          x [j] := x [i];
+                                          i := i + if x[i] == '"' then 2 else 1 fi                                          
+                                        od;
+                                        substring (x, 0, j)}), 
        pos      = memo $ syntax (-whiteSpace loc),
        end      = memo $ syntax (-whiteSpace eof),
        lident   = memo $ syntax (-whiteSpace located[
@@ -103,18 +120,3 @@ public kRead    = s (rRead),
                                    }
        
                                 ]);
-
-(*
-         whiteSpace |> lift (fun (k) {
-                               fun (s) {
-                                 k (case s.matchRegexp (rLident) of
-                                      a@Succ (v, _) -> if memSet (keywords, v)
-                                                       then Fail ("lowercase identifier expected", s.getLine, s.getCol)
-                                                       else a
-                                                       fi
-                                    | a             -> a
-                                    esac)
-                                }
-                              });
-
-*)

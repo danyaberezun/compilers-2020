@@ -1,10 +1,12 @@
 -- Expression evaluator
 
 import List;
+import Array;
 import State;
 import World;
 import Lexer;
 import Parser;
+import Builtins;
 
 -- As association map which maps "\otimes" into "\oplus"
 local ops = {
@@ -37,53 +39,45 @@ public fun evalOp (op, l, r) {
 --
 -- A expression is represented by a data structure of the following shape:
 --
--- expr = Assn   (string, expr)       |
---        Seq    (expr, expr)         |
---        Skip                        |
---        Read   (string)             |
---        Write  (expr)               |
---        if     (expr, expr, expr)   |
---        While  (expr, expr)         |
---        Repeat (expr, expr)         |
---        Var    (string)             |
---        Ref    (string)             |
---        Const  (int)                |
---        Binop  (string, expr, expr) |
---        Scope  (def list, expr)     |
---        Call   (string, expr list)  |
---        Ignore (expr)
---
--- A definition is either a local variable definition or a function
--- definition:
---
--- def = Local (string list)                |
---       Fun   (string, string list, expr)
-(*
---        Call   (string, expr list)  |
---        Ignore (expr)
-*)
+-- expr = Assn    (string, expr)       |
+--        Seq     (expr, expr)         |
+--        Skip                         |
+--        if      (expr, expr, expr)   |
+--        While   (expr, expr)         |
+--        Repeat  (expr, expr)         |
+--        Var     (string)             |
+--        Ref     (string)             |
+--        Const   (int)                |
+--        Binop   (string, expr, expr) |
+--        Call    (string, expr list)  |
+--        Ignore  (expr)               |
+--        String  (string)             |
+--        Array   (expr list)          |
+--        Elem    (expr, expr)         |
+--        ElemRef (expr, expr)         |
+--        Builtin (string, expr list)
 
 -- Helper function: checks that given name designates a regular variable in
 -- a given state
-fun checkVar (state, name) {
+fun lookupVal (state, name) {
   case state.lookup (name) of
-    Var (_) -> skip
-  | _       -> error (sprintf ("the name ""%s"" does not designate a variable", name), getLoc (name))
+    x@Val (_) -> x
+  | _         -> error (sprintf ("the name ""%s"" does not designate a variable", name), getLoc (name))
   esac
 }
 
 -- Helper function: checks that given name designates a function in
 -- a given state
-fun checkFun (state, name) {
+fun lookupFun (state, name) {
   case state.lookup (name) of
-    Fun (_, _) -> skip
-  | _          -> error (sprintf ("the name ""%s"" does not designate a function", name), getLoc (name))
+    x@Fun (_, _) -> x
+  | _            -> error (sprintf ("the name ""%s"" does not designate a function", name), getLoc (name))
   esac
 }
 
 -- Helper function: adds a bunch of regular variables current scope
 fun addNames (state, names) {
-  foldl (fun (s, name) {s.addName (name, Var (0))}, state, names)
+  foldl (fun (s, name) {s.addName (name, Val (0))}, state, names)
 }
 
 -- Helper function: adds a function in current scope
@@ -187,11 +181,11 @@ fun eval (c@[s, w], expr) {
 		esac
 	esac
 }
-
+(* End *)
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
-  case eval ([emptyState (), createWorld (input)], expr) of
+  case eval ([emptyState ().enterScope.addName ("read", Fun ({}, External)).addName ("write", Fun (singleton ("a"), External)) , createWorld (input)], expr) of
     [c, _] -> c.snd.getOutput
   esac
 }
