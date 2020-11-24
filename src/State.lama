@@ -1,5 +1,4 @@
 -- States: partial maps from variables into values
-
 -- Empty state (undefined everywhere)
 public fun emptyState (x) {
   0
