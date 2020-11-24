@@ -128,7 +128,6 @@ fun compileExpr (expr) {
      Var(x) -> singleton(LD(x))
     |Const(n) -> singleton(CONST(n))
     |Binop (op, lft, rght) -> compileExpr(lft) +++ compileExpr(rght) +++ singleton(BINOP(op))
-    | _       -> failure("Expression %s not found. \n", expr)
   esac
 
 }
