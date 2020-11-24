@@ -33,7 +33,6 @@ fun eval (c, stmt) {
        |While (expr, s) -> if (evalExpr(c[0], expr)) then eval (c, Seq(s, stmt)) else eval (c, Skip) fi
        |Repeat (s, expr) -> local c1 = eval (c, s);
                             if (evalExpr(c1[0], expr)) then eval (c1, Skip) else eval (c1, Repeat(s, expr)) fi
-       | _       -> failure("Statement %s not found. \n", stmt)
      esac
   esac 
 
