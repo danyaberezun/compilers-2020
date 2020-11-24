@@ -28,7 +28,6 @@ public fun binopOper (str, x, y) {
     | ">=" -> x >= y
     | "&&" -> x && y
     | "!!" -> x !! y
-	|_    -> failure("Operation %s not found. \n", op)
   esac
 }
 
