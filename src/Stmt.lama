@@ -28,6 +28,11 @@ fun eval (c, stmt) {
             |Write(expr) -> [st, [in, evalExpr(st, expr) : out]]
             |Assn(elem, expr) -> [st <- [elem, evalExpr(st, expr)], [in, out]]
             |Seq(s1, s2) -> eval(eval(c, s1), s2)
+            | If(e, s1, s2) ->  if evalExpr(c[0], e) != 0 then eval(c, s1) else eval(c, s2) fi
+            | While(e, s) ->    if evalExpr(c[0], e) == 0 then c else eval(eval(c, s), stmt) fi
+            | Repeat(s, e)->    local new_c = eval(c, s);
+                            if evalExpr(new_c[0], e) then eval(new_c, Skip) else eval(new_c, Repeat(s, e)) fi
+
         esac
     esac      
 }
