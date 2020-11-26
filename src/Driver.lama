@@ -28,7 +28,7 @@ fun parseArgs (args) {
     | AST -> astDump ::= true
     esac
   }
-  
+
   fun setMode (m) {
     case deref (mode) of
       Comp -> mode ::= m
@@ -82,6 +82,7 @@ local args = parseArgs (arrayList (sysargs).tl);
 
 -- The main part: parses input file, invokes interpreter/stack machine interpreter/x86
 -- code generator
+
 case parseString (syntax (parse -end), fread (args.getInFile)) of
   Succ (program) ->
     peepAST (args, program);

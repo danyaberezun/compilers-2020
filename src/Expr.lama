@@ -101,9 +101,71 @@ fun evalList (c, exprs) {
   esac
 }
 
-(* Assignment *)
 fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+  --if compare(expr.string,"If()") skip
+  --else printf("%s\n",expr.string)
+  --fi;
+    case expr of
+    Assn(l, r) -> case evalList(c, {l, r}) of
+		[[s1, w1], {Ref(x), a}] -> [[s1 <- [x, a], w1], a]
+	esac
+    |Seq(expr1, expr2) -> case eval(c, expr1) of
+        [c1, rubbish] -> eval(c1, expr2)
+    esac
+    |Skip -> [c, None]
+    |Read(val) -> local reader = readWorld(w); [[s <- [val, reader[0]], reader[1]], None]
+    |Write(expr1) -> case eval(c, expr1) of
+        [[s1, w1], a] -> [[s1, writeWorld(a, w)], None]
+    esac
+    |If(expr1, expr2, expr3) -> case eval(c,expr1) of
+        [c1, b] -> if(b) then eval(c1, expr2) else eval(c1, expr3) fi
+    esac
+    |While(expr1, expr2) -> case eval(c, expr1) of
+        [c1, b] -> if(b) then case eval(c1, expr2) of
+            [c2, rubbish] -> eval(c2, While(expr1, expr2))
+        esac
+        else [c1, None] fi
+        |x -> printf("%s\n",expr1.string); [c,0]
+    esac
+    |Repeat (expr1, expr2) -> case eval(c,expr1) of
+        [c1, rubbish] -> case eval(c1, expr2) of
+            [c2, b] -> if(b) then [c2, None] else eval(c2, Repeat(expr1, expr2)) fi
+        esac
+    esac
+    |Var(str) -> [c, lookup(s,str)]
+    |Ref(str) -> [c, Ref(str)]
+    |Const(n) -> [c, n]
+    |Binop  (op, expr1, expr2) -> case eval(c, expr1) of
+        [c1, l] -> case eval(c1, expr2) of
+            [c2, r] -> [c2, evalOp(op, l, r)]
+        esac
+    esac
+    |Ignore(expr1) -> case eval(c, expr1) of
+            [c1, rubbish] -> [c1, None]
+        esac
+    |Scope(def,expr) -> case evalList([enterScope(s), w], def) of
+            [c1, rubbish] -> case eval(c1, expr) of
+                [c2, val] -> case c2 of
+                    [s2,w2] -> [[leaveScope(s2), w2], val]
+                esac
+            esac
+        esac
+    |Local(lst) -> [[addNames(s, lst), w], None]
+    |Fun(name, args, body) -> [[addFunction(s, name, args, body), w], None]
+    |Call(name, exprs) -> case lookup(s, name) of
+            Fun(args, body) -> case evalList(c, exprs) of
+                [c1, vals] -> local c2 = [enterFunction(c1[0]),c1[1]];
+                              while size(args) > 0 do
+                                c2 := [addName(c2[0], args[0], vals[0]), c2[1]];
+                                args := args[1];
+                                vals := vals[1]
+                              od;
+                              case eval(c2, body) of
+                                [c3, retval] -> [[leaveFunction(c1[0], getGlobal(c3[0])), c3[1]], retval]
+                              esac
+            esac
+        esac
+    esac
 }
 
 -- Evaluates a program with a given input and returns an output
