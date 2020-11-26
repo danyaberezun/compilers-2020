@@ -63,23 +63,63 @@ fun evalList (c, exprs) {
   esac
 }
 
-fun eval (c@[s, w], expr) {
+fun eval (c@[s, w@[in, out]], expr) {
 
   case expr of 
-  --   Assn   (e1, e2)         ->
-  -- | Seq    (e1, e2)         ->
-  -- | Read   (str)             ->
-  -- | Write  (expr)               ->
-  -- | If     (cond, e1, e2) ->  
-  -- | While  (cond, expr)     ->    
-  -- | Repeat (expr, cond)   ->      
-  -- | Var    (str)     ->        
-  -- | Ref    (str)   ->          
-  -- | Const  (int)    ->
-  -- | Binop  (str, e1, e2) ->
-  -- | Ignore (expr) ->
-  -- | Skip -> c 
-  _ -> failure("expression: %s is not yet implemented\n", expr.string)
+    Skip                  ->  [ c, Void ]
+  | Var      (x)          ->  [ c, s(x) ] 
+  | Const    (n)          ->  [ c, n ]
+  | Ref      (x)          ->  [ c, x ] 
+
+  | Ignore   (e)          ->  case eval(c, e) of [c, _] ->
+                                [ c, Void ]
+                              esac
+
+  | Read     (x)          ->  case readWorld (w) of [val, new_w] -> 
+                                [ [s <- [x, val], new_w], Void ] 
+                              esac
+
+  | Write    (e)          ->  case eval(c, e) of [[s, w], val] ->  
+                                [ [s, writeWorld (val, w)], Void ] 
+                              esac
+
+  | Binop    (op, l, r)   ->  case evalList(c, {l, r}) of [c, lval:rval:_] -> 
+                                [ c, evalOp(op, lval, rval) ]
+                              esac
+
+  | Assn     (x, e)       ->  case evalList(c, {e, x}) of [[s, w], val:ref:_] ->
+                                [ [s <- [ref, val], w], val ]
+                              esac
+
+  | Seq      (e1, e2)     ->  case evalList(c, {e1, e2}) of [c, _:res:_] ->
+                                [ c, res ]
+                              esac
+
+  | If     (cond, b1, b2) ->  case eval(c, cond) of [c, val] -> 
+                                if val then 
+                                  eval(c, b1) 
+                                else
+                                  eval(c, b2) 
+                                fi
+                              esac
+
+  | wh@While (cond, body) ->  case eval(c, cond) of [c, val] -> 
+                                if val then 
+                                  case eval(c, body) of [c, _] -> eval(c, wh) esac
+                                else 
+                                  [ c, Void ] 
+                                fi
+                              esac
+
+  | r@Repeat (body, cond) ->  case evalList(c, {body, cond}) of [c, _:val:_] -> 
+                                if val then 
+                                  [ c, Void ] 
+                                else 
+                                  eval(c, r) 
+                                fi
+                              esac
+
+  | _ -> failure("expression: %s is not yet implemented\n", expr.string)
   esac
 }
 
