@@ -1,6 +1,4 @@
 -- Parser 
-<<<<<<< HEAD
-import Matcher;
 
 import Ostap;
 import Lexer;
