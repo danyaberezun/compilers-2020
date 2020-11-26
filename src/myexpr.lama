@@ -151,20 +151,6 @@ fun eval (c@[s, w], expr) {
             esac
         esac
     |Local(lst) -> [[addNames(s, lst), w], None]
-    |Fun(name, args, body) -> [[addFunction(s, name, args, body), w], None]
-    |Call(name, exprs) -> case lookup(s, name) of
-            Fun(args, body) -> case evalList(c, exprs) of
-                [c1, vals] -> local c2 = [enterFunction(c1[0]),c1[1]];
-                              while size(args) > 0 do
-                                c2 := [addName(c2[0], args[0], vals[0]), c2[1]];
-                                args := args[1];
-                                vals := vals[1]
-                              od;
-                              case eval(c2, body) of
-                                [c3, retval] -> [[leaveFunction(c1[0], getGlobal(c3[0])), c3[1]], retval]
-                              esac
-            esac
-        esac
     esac
 }
 
