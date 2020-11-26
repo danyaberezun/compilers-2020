@@ -1,0 +1,8 @@
+*.i
+*.o
+*.s
+regression/*.log
+regression/test???*
+regression/deep-expressions/
+regression/expressions/
+
