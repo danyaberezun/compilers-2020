@@ -7,7 +7,6 @@ import Collection;
 import List;
 
 -- A set of all keywords
-
 local keywords =
    foldl (addSet,
           emptySet (compare),
@@ -73,11 +72,12 @@ public kRead    = s (rRead),
          whiteSpace |> lift (fun (k) {
                                 fun (s) {
                                   k (case s.matchRegexp (rLident) of
-                                        a@Succ (v, _) -> if memSet (keywords, v)
+                                       a@Succ (v, _) -> if memSet (keywords, v)
                                                         then Fail ("lowercase identifier expected", s.getLine, s.getCol)
                                                         else a
                                                         fi
                                      | a             -> a
                                      esac)
                                 }
+
                               });

@@ -42,5 +42,6 @@ local stmt = memo $ eta syntax (
                                     ),
    seqq = memo $ eta syntax (stmt | s1=stmt s[";"] s2=seqq {Seq(s1, s2)});  
 
+
 -- Public top-level parser
 public parse = stmt;

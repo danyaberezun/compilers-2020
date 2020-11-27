@@ -52,6 +52,7 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
+
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c@[s, st, w@[i,o]], insns) {
@@ -135,7 +136,6 @@ esac
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-
   fun compileEnv(env, stmt){
     case stmt of
     	
@@ -178,5 +178,4 @@ public fun compileSM (stmt) {
   compileEnv(initCompEnv(), stmt)[1]
    
 }
-
 
