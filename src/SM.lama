@@ -47,6 +47,7 @@ fun initEvalEnv (insns) {
   }]
 }
 
+
 -- Accessor function
 fun fromLabel (env, lab) {
   env [0] (lab)
@@ -54,12 +55,14 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
+
+
 fun eval (env, c, insns) {
   case c of
     [st, state, w] -> 
       case insns of
           {} -> c
-        | BINOP(op)   : s -> eval(env, [binop(op, st[1][0], st[0]) : st[1][1], state, w], s)
+        | BINOP(op)   : s -> eval(env, [apply(op, st[1][0], st[0]) : st[1][1], state, w], s)
         | CONST(n)    : s -> eval(env, [n : st, state, w], s)
         | READ        : s -> local world_ = readWorld(w); eval(env, [world_[0] : st, state, world_[1]], s)
         | WRITE       : s -> eval(env, [st[1], state, writeWorld(st[0], w)], s)
