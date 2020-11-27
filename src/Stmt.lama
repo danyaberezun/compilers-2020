@@ -22,11 +22,15 @@ import World;
 fun eval (c, stmt) {
   case c of [st, [i, o]] ->
     case stmt of
-        Skip         -> c
-      | Read (x)     -> case i of z : it -> [st <- [x, z], [it, o]] esac
-      | Write (expr) -> [st, [i, evalExpr (st, expr)  : o]]
-      | Assn (x, e)  -> [(st <- [x, evalExpr (st, e)]), [i, o]]
-      | Seq (s1, s2) -> eval (eval (c, s1), s2)
+        | Write(x)    -> 	[c[0], writeWorld(evalExpr(c[0], x), c[1])]
+	| Read(x) -> local res = readWorld(c[1]);
+			     [c[0] <- [x, res[0]], res[1]]
+	| Seq(s1, s2) -> eval(eval(c, s1), s2)
+	| Skip -> c
+	| If(e, s1, s2) -> if evalExpr(c[0], e) != 0 then eval(c, s1) else eval(c, s2) fi
+	| While(e, s) -> if evalExpr(c[0], e) == 0 then c else eval(eval(c, s), stmt) fi
+	| Repeat(s, e)-> local new_c = eval(c, s);
+			if evalExpr(new_c[0], e) then eval(new_c, Skip) else eval(new_c, Repeat(s, e)) fi
       esac
     esac   
 }
