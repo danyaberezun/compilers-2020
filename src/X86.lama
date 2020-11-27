@@ -82,6 +82,9 @@ fun insnString (insn) {
   | Pop   (s)          -> sprintf ("\tpopl\t%s\n", opndString (s))
   | Ret                -> "\tret\n"
   | Call  (p)          -> sprintf ("\tcall\t%s\n", p)
+  | Label (l)          -> sprintf ("%s:\n", l)
+  | Jmp   (l)          -> sprintf ("\tjmp\t%s\n", l)
+  | CJmp  (c, l)       -> sprintf ("\tj%s\t%s\n", c, l)
   | Meta  (m)          -> m
   esac
 }
@@ -322,9 +325,14 @@ fun compile (env, code) {
                            fi
                  | "!!" -> [env, code <+ Mov (y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), edx) <+ Set (suffix("!="), "%dl") <+ Mov (x, eax) <+ Binop ("cmp", L (0), eax) <+ Mov (L(0), eax) <+ Set (suffix("!="), "%al") <+ Binop ("!!", eax, edx) <+ Mov (edx, s)]
                  |_    -> [env, code <+ Mov(x, eax) <+ Binop("cmp", eax, y) <+ Mov(L(0), eax) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
-             esac
+              esac
            esac
-          esac
+           esac
+           |LABEL(label) -> [env, code <+ Label(label)]
+           |JMP(label) -> [env, code <+ Jmp(label)]
+           |CJMP(cond, label) -> case env.pop of [s, env] ->
+                             [env, code <+ Mov(L(0), eax) <+ Binop("cmp", s, eax) <+ CJmp(cond, label)]
+                              esac
          esac
       }, [env, emptyBuffer ()], code)
   }

@@ -1,11 +1,13 @@
 -- Stack machine.
 
 import List;
+import Array;
+import Fun;
+import Collection;
 import World;
 import State;
 import Expr;
 import Buffer;
-import Fun;
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -17,11 +19,37 @@ public fun showSMInsn (i) {
   | LD    (x) -> sprintf ("LD %s", x)
   | ST    (x) -> sprintf ("ST %s", x)
   | CONST (n) -> sprintf ("CONST %d", n)
+  | LABEL (s)    -> sprintf ("LABEL %s", s)
+  | JMP   (l)    -> sprintf ("JMP %s", l)
+  | CJMP  (c, l) -> sprintf ("CJMP %s, %s", c, l)
   esac
 }
 
 public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
+}
+
+-- Evaluation environment: keeps a mapping between labels and (sub)programs
+fun initEvalEnv (insns) {
+  local map =
+    fix (fun (rec) {
+          fun ([m, insns]) {
+            case insns of
+              {}               -> m
+            | LABEL (lab) : tl -> rec ([addMap (m, lab, insns), tl])
+            | _ : tl           -> rec ([m, tl])
+            esac
+          }
+        }) $ [emptyMap (compare), insns];
+  
+  [fun (l) {
+     case findMap (map, l) of Some (insns) -> insns esac
+  }]
+}
+
+-- Accessor function
+fun fromLabel (env, lab) {
+  env [0] (lab)
 }
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
@@ -30,18 +58,66 @@ fun eval (c@[s, st, w@[i,o]], insns) {
  case insns of
     {} -> c
    | READ      : e -> local var_ = readWorld(w);
-                      eval([var_[0] : s, st, var_[1]], e)
-   | WRITE     : e -> eval([s[1], st, writeWorld(s[0], w)], e)
-   | CONST(n)  : e -> eval([n : s, st, w], e)
-   | BINOP(op) : e -> eval([evalOp(op, s[1][0], s[0]) : s[1][1], st, w], e)
-   | LD(x)     : e -> eval([st(x) : s, st, w], e)
-   | ST(x)     : e -> eval([s[1], st <-[x, s[0]], w], e)
+                      eval(env, [var_[0] : s, st, var_[1]], e)
+   | WRITE     : e -> eval(env, [s[1], st, writeWorld(s[0], w)], e)
+   | CONST(n)  : e -> eval(env, [n : s, st, w], e)
+   | BINOP(op) : e -> eval(env, [evalOp(op, s[1][0], s[0]) : s[1][1], st, w], e)
+   | LD(x)     : e -> eval(env, [st(x) : s, st, w], e)
+   | ST(x)     : e -> eval(env, [s[1], st <-[x, s[0]], w], e)
+   | LABEL(st)   : e -> eval(env, c, e)
+   | JMP(l)      : e -> eval(env, c, fromLabel(env, l))
+   | CJMP(cond, l)  : e -> case s of cmp : sst -> case cond of
+
+                                                              "z"  -> case cmp of
+                                                                        0 -> eval(env, c, fromLabel (env, l))
+                                                                      | _ -> eval(env, c, e)
+                                                                      esac
+
+                                                            | "nz" -> case cmp of
+                                                                      0 -> eval(env, c, e)
+                                                                    | _ -> eval(env, c, fromLabel (env, l))
+                                                                    esac
+                                                    esac
+                             esac
    esac
 }
+
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
-  eval([{}, emptyState, createWorld (input)], insns)[2].getOutput
+  eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
+
+-- Compilation environment: generates labels
+fun makeCompEnv (n) {
+  [fun () {
+     [sprintf ("L%d", n), makeCompEnv (n+1)]
+  }]
+}
+
+fun initCompEnv () {
+  makeCompEnv (0)
+}
+
+-- Accessor function: generates one label
+fun genLabel (env) {
+  env [0] ()
+}
+
+-- Utility function: generates n labels
+fun genLabels (env, n) {
+  fun inner (env, n) {
+    if n == 0
+    then singleton (env)
+    else case env.genLabel of
+           [lab, env] -> lab : inner (env, n-1)
+         esac
+    fi
+  }
+
+  listArray (inner (env, n))
+
+}
+
 
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
@@ -59,11 +135,48 @@ esac
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-case stmt of
-     Assn(x, expr) -> compileExpr(expr) +++ singleton(ST(x))
-   | Read(x) -> singleton(READ) +++ singleton(ST(x))
-   | Write(expr) -> compileExpr(expr) +++ singleton(WRITE)
-   | Seq(s1, s2) -> compileSM(s1) +++ compileSM(s2)
-   | Skip -> {}
-esac
+
+  fun compileEnv(env, stmt){
+    case stmt of
+    	
+    	  Assn(x, e) 		-> [env, compileExpr(e) +++ singleton(ST(x))]
+    	| Write(x)	 		-> [env, compileExpr(x) +++ singleton(WRITE)]
+    	| Read(x) 	 		-> [env, singleton(READ) +++ singleton(ST(x))]
+    	| Seq(stmt1, stmt2) -> 
+          
+          case compileEnv(env, stmt1) of [env, stmt1] -> 
+              case compileEnv(env, stmt2) of [env, stmt2] ->
+                [env, stmt1 +++ stmt2]
+              esac
+          esac
+
+      | While(e, s) -> case genLabels(env, 2) of [label1, label2, env1] ->
+                              case compileEnv(env1, s) of [env2, insts] ->
+                                  [env2, {JMP(label2), LABEL(label1)} +++ insts +++ singleton(LABEL(label2)) +++ compileExpr(e) +++ singleton(CJMP("nz", label1))]
+                              esac
+                          esac
+
+      | If(e, s1, s2) ->  case genLabels(env, 2) of [lb_else, lb_fi, env1] ->
+                                    case compileEnv(env1, s1) of [env2, stmt1] ->
+                                        case compileEnv(env2, s2) of [env3, stmt2] ->
+                                          [env3, compileExpr(e) +++ singleton(CJMP("z", lb_else )) +++ stmt1 +++ singleton(JMP(lb_fi)) +++ singleton(LABEL(lb_else)) +++ stmt2 +++ singleton(LABEL(lb_fi))]
+                                        esac
+                                    esac
+                                esac
+
+      | Repeat(s, e) ->  case genLabels(env, 1) of [label, env1] ->
+                              case compileEnv(env1, s) of [env2, insts] ->
+                                [env2, singleton(LABEL(label)) +++ insts +++ compileExpr(e) +++ singleton(CJMP("z", label))]
+                              esac
+                            esac
+
+    	| Skip 				-> [env, {}]
+
+    esac
+  }
+
+  compileEnv(initCompEnv(), stmt)[1]
+   
 }
+
+
