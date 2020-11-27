@@ -54,7 +54,7 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c@[s, st, w@[i,o]], insns) {
+fun eval (env, c@[s, st, w@[i,o]], insns) {
  case insns of
     {} -> c
    | READ      : e -> local var_ = readWorld(w);
