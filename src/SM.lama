@@ -54,8 +54,37 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, configuration, insns)
+{
+  local stack; 
+  local st; 
+  local wrld; 
+  stack := configuration [0]; 
+  st := configuration [1]; 
+  wrld := configuration [2]; 
+
+  case insns of 
+  	  {} -> configuration 
+  	| BINOP (op) : programm -> case stack of y:x:stack      -> eval(env, [(evalExpr (st, Binop (op, Const (x), Const (y)))):stack, st, wrld], programm) esac 
+ 	| READ : programm -> case readWorld (wrld) of [z, wrld] -> eval(env, [z:stack, st, wrld], programm) esac 
+	| WRITE : programm -> case stack of z:stack             -> eval(env, [stack, st, writeWorld (z, wrld)], programm) esac 
+	| ST (x) : programm -> case stack of z:stack            -> eval(env, [stack, st <- [x, z], wrld], programm) esac 
+	| LD (x) : programm                                     -> eval(env, [st(x):stack, st, wrld], programm) 
+	| CONST (n) : programm                                  -> eval(env, [n:stack, st, wrld], programm) 
+	| LABEL (s) : programm 				  -> eval(env, configuration, programm)
+	| JMP (l) : programm 					  -> eval(env, configuration, fromLabel(env, l))
+	| CJMP (cond, l) : programm -> case stack of flag:stack -> case cond of
+								  	  "z" -> case flag of 
+								  	  	    0 -> eval(env, configuration, fromLabel(env, l))
+								  	  	  | _ -> eval(env, configuration, programm)
+								  	         esac
+								  	| "nz" -> case flag of
+								  		    0 -> eval(env, configuration, programm)
+								  		  | _ -> eval(env, configuration, fromLabel(env, l))
+								  		  esac
+								   esac
+				     esac 
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -96,13 +125,55 @@ fun genLabels (env, n) {
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
-fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+fun compileExpr (expr) 
+{
+  case expr of
+    Var (x)          -> return singleton(LD(x))
+  | Const (n)        -> return singleton(CONST(n))
+  | Binop (op, l, r) -> return compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
-public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+public fun compileSM (stmt) 
+{
+  fun compileEnvironment(env, stmt)
+  {
+    case stmt of
+      Assn (x, expr)    -> return [env, compileExpr(expr) +++  singleton(ST(x))]
+    | Seq (st1, st2)     -> case compileEnvironment(env, st1) of [new_env1, new_st1] ->
+    				case compileEnvironment(new_env1, st2) of [new_env2, new_st2] ->
+    				   return [new_env2, new_st1 +++ new_st2]
+    				esac
+    			     esac
+    | Skip               -> return [env, {}]
+    | Read (x)           -> return [env, singleton(READ) +++ singleton(ST(x))]
+    | Write (expr)       -> return [env, compileExpr(expr) +++ singleton(WRITE)]
+    | While (expr, st1) -> case genLabels(env, 2) of [label1, label2, new_env] -> 
+   				case compileEnvironment(new_env, st1) of [new_env1, st2] -> 
+   				  return [new_env1, singleton(JMP(label2)) +++ singleton(LABEL(label1)) +++ st2 +++ singleton(LABEL(label2))  +++ compileExpr(expr) +++ singleton(CJMP("nz", label1))]
+   				esac
+    			    esac
+    | Repeat (st1, expr) -> case genLabels(env, 1) of [label1, new_env] ->
+    			     	case compileEnvironment(new_env, st1) of [new_env1, st2] -> 
+    			     	  return [new_env1, singleton(LABEL(label1)) +++ st2 +++ compileExpr(expr) +++ singleton(CJMP("z", label1))]
+    			     	esac
+    			     esac
+    | If (expr, st1, st2) -> case genLabels(env, 2) of [labelElse, labelFi, new_env] ->
+    			      	 case compileEnvironment(new_env, st1) of [new_env1, new_st1] ->
+    			      	    case compileEnvironment(new_env1, st2) of [new_env2, new_st2] ->
+    			      	    	return [new_env2, compileExpr(expr) +++ singleton(CJMP("z", labelElse)) +++ new_st1 +++ singleton(JMP(labelFi)) +++ singleton(LABEL(labelElse)) +++ new_st2 
+    			      	    	        +++ singleton(LABEL(labelFi))]
+    			      	    esac
+    			      	 esac   
+    			      esac
+    | _ -> failure("Statement %s not found. \n", stmt)
+    esac
+  }
+  
+  local env = initCompEnv ();
+  compileEnvironment(env, stmt)[1]
 }
+
