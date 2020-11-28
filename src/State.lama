@@ -73,18 +73,6 @@ fun makeState (scopes) {
     makeState (emptyMap (compare) : enterScopes (scopes))
   }
 
-  fun enterFunction1 () {
-    fun enterScopes (scopes) {
-      case scopes of        
-        (*{_, _}     -> scopes*)
-        {s} -> scopes
-      | _ : scopes -> enterScopes (scopes)
-      (*| _ -> scopes*)
-      esac
-    }
-    makeState (emptyMap (compare) : enterScopes (scopes))
-  }
-
   -- Leaves a function: replaces the global scope in the state with a given one
   fun leaveFunction (global) {
     fun replaceGlobal (scopes) {
@@ -109,7 +97,7 @@ fun makeState (scopes) {
     findGlobal (scopes)
   }
   
-  [lookup, assign, enterScope, leaveScope, addName, enterFunction, leaveFunction, getGlobal, enterFunction1]
+  [lookup, assign, enterScope, leaveScope, addName, enterFunction, leaveFunction, getGlobal]
 }
 
 -- Accessors functions
@@ -143,10 +131,6 @@ public fun leaveFunction (state, global) {
 
 public fun getGlobal (state) {
   state [7] ()
-}
-
-public fun enterFunction1 (state) {
-  state [8] ()
 }
 
 -- Creates an empty state

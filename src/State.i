@@ -11,6 +11,5 @@ F,addName;
 F,enterFunction;
 F,leaveFunction;
 F,getGlobal;
-F,enterFunction1;
 F,emptyState;
 N,"<-",A,":=";

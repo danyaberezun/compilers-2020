@@ -251,7 +251,7 @@ fun makeCompEnv (nLabels, scopeDepth, state, nLocals, nArgs, functions) {
   
   -- Enters a function
   fun beginFun (state) {
-    makeCompEnv (nLabels, 2, enterFunction1 (state), 0, 0, functions)
+    makeCompEnv (nLabels, 2, enterFunction (state), 0, 0, functions)
   }
 
   -- Get functions and empty functions list
@@ -290,7 +290,7 @@ fun makeCompEnv (nLabels, scopeDepth, state, nLocals, nArgs, functions) {
 
   -- Checks if the current scope is a global
   fun isGlobal () {
-    scopeDepth == 1
+    scopeDepth == 2
   }
   
   [genLabel,
@@ -565,7 +565,7 @@ public fun compileSM (stmt) {
           case lookupFun (env, f) of
             Fun (fLabel, n) -> [deepFlatten (inss +++ (CALL (fLabel, n) : {})), env]
           esac 
-        esac 
+        esac
       esac
     | Scope (defs, expr)  ->
       case foldl (addDef, [beginScope (env), {}, {}], defs) of
@@ -612,7 +612,7 @@ public fun compileSM (stmt) {
     iter(env, main, {})
   }
   
-  case cSM (stmt, initCompEnv ()) of
+  case cSM (stmt, initCompEnv ().beginScope.addFun ("read", "$read", 0).addFun ("write", "$write", 1)) of
     [inss, env] ->
     deepFlatten (
       cFun (env, {LABEL ("main"), BEGIN ("main", 0, getLocals (env)), inss, END}) 
