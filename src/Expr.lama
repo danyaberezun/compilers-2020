@@ -42,7 +42,7 @@ public fun evalOp (op, l, r) {
 --        Skip                        |
 --        Read   (string)             |
 --        Write  (expr)               |
---        if     (expr, expr, expr)   |
+--        If     (expr, expr, expr)   |
 --        While  (expr, expr)         |
 --        Repeat (expr, expr)         |
 --        Var    (string)             |
@@ -86,7 +86,18 @@ fun addNames (state, names) {
 fun addFunction (state, name, args, body) {
   state.addName (name, Fun (args, body))
 }
-                                        
+
+-- P.S: added special value Bot in accordance to formal semantics.
+
+-- assertion programming
+fun unboxRef(expr) {
+  case expr of
+    Ref (name) -> name
+  | x          -> failure (sprintf("Parser expected a reference, got %s instead", expr.string))
+  esac
+}
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values
 fun evalList (c, exprs) {
@@ -101,14 +112,51 @@ fun evalList (c, exprs) {
   esac
 }
 
-(* Assignment *)
+
 fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+  case expr of
+     Assn   (expr1, expr2)        ->
+       case evalList(c, {expr1, expr2}) of
+         [[s, w], {nameB, valB}] -> [[s <- [unboxRef(nameB), valB], w], valB]
+       esac
+   | Seq    (expr1, expr2)        -> case evalList(c, {expr1, expr2}) of [c, {_, v2}] -> [c, v2] esac
+   | Skip                         -> [c, Bot]
+   | Read   (nameB)               -> case readWorld(w) of
+                                       [value, world] -> [[s <- [nameB, value], world], Bot]
+                                     esac
+   | Write  (expr)                -> case eval(c, expr) of
+                                       [[s, w], valB] -> [[s, writeWorld(valB, w)], Bot]
+                                     esac
+   | If     (cond, expr1, expr2)  -> case eval(c, cond) of
+                                       [c, condB] -> if (condB)
+                                                     then eval(c, expr1)
+                                                     else eval(c, expr2)
+                                                     fi
+                                     esac
+   | While  (cond, body)          -> case eval(c, cond) of
+                                       [c, condB] -> if (condB)
+                                                     then eval(c, Seq(body, expr)) -- can be prooved to correspond to semantics
+                                                     else [c, Bot]
+                                                     fi
+                                     esac
+   | Repeat (body, cond)          -> eval (c, Seq(body, While (Binop("==", cond, Const (0)), body))) -- new semantics for repeat
+   | Var    (name)                -> [c, s(name)]
+   | Ref    (name)                -> [c, Ref(name)]
+   | Const  (val)                 -> [c, val]
+   | Binop  (str, expr1, expr2)   ->
+       case evalList(c, {expr1, expr2}) of
+         [c, {v1, v2}] -> [c, evalOp(str, v1, v2)]
+       esac
+   | Ignore (expr)                -> case eval(c, expr) of [c, _] -> [c, Bot] esac
+  esac
 }
+
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
   case eval ([emptyState (), createWorld (input)], expr) of
-    [c, _] -> c.snd.getOutput
+    [c, v] ->
+              -- fprintf (stderr, "Expression ""%s"" evaluated to ""%s""\n", expr.string, v.string);
+              c.snd.getOutput
   esac
 }
