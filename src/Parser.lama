@@ -8,6 +8,8 @@ import Matcher;
 import Ref;
 import Collection;
 
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+
 -- Signals an error; takes an error message and location info
 public fun error (msg, loc) {
   failure ("%s at %d:%d\n", msg, loc.fst, loc.snd)
@@ -80,6 +82,7 @@ fun expandScope (defs, expr) {
            [{}, expr],
            defs)
   }
+  fprintf (stderr, "Expand scope defs: ""%s"" ", defs.string);
 
   case
     foldr (fun ([defs, expr], def) {
@@ -103,6 +106,11 @@ fun distributeScope (expr, exprConstructor) {
     Scope (defs, sexpr) -> Scope (defs, exprConstructor (sexpr))
   | _                   -> exprConstructor (expr)
   esac
+}
+
+-- checkpoint debug parser
+fun checkpoint(i) {
+ syntax(token[""] { printf("Checkpoint %s\n", i.string) })
 }
 
 local primary    = memo $ eta syntax (
@@ -139,7 +147,20 @@ local primary    = memo $ eta syntax (
                                             loc=pos -kElse e=exp -kFi { fun(a) { e(a) } }  |
                                             kElif cond=exp kThen s1=exp s2=ifTailParser { fun(a) { If (cond(Val), s1(a), s2(a)) } }
                                             ),
-      scopeExpr = memo $ eta (syntax ($(failure ("scope expression parsing is not implemented\n")))),
+      scopeExpr = syntax (checkpoint[6] se=scopeExprAdv { fun (a) { se (a, {})} }),
+      scopeExprAdv = memo $ eta (syntax ( d=decl se=scopeExprAdv {fun (a, decls) { se(a, d:decls)}}
+                                        | expr=exp { fun (a, decls) { expandScope(decls, expr) } }  )),
+      decl = memo $ eta ( syntax ( loc=pos kLocal locals=list[declVar] s[";"] { Local(locals) }
+                                 | loc=pos kFun name=lident
+                                                args=inbr[s("("), list0(syntax(lident)), s(")")]
+                                                body=inbr[s("{"), scopeExprAdv, s("}")]
+                                                { Fun(name, args, body) }
+                                 )),
+      declVar = memo $ eta (syntax (name=lident expr=(-s["="] basic)? { case expr of
+                                                                              None     -> [name, None]
+                                                                            | Some (e) -> [name, Some(e)]
+                                                                        esac
+                                                                       })),
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
                                                             fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
@@ -154,4 +175,4 @@ local primary    = memo $ eta syntax (
       exp        = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
 
 -- Public top-level parser
-public parse = syntax (s=scopeExpr {s (Void)});
+public parse = syntax (checkpoint[1] s=scopeExpr {s (Void)});
