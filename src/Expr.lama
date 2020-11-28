@@ -1,5 +1,4 @@
 -- Expression evaluator
-import Ostap;
 import List;
 import Array;
 import State;
@@ -187,8 +186,3 @@ public fun evalExpr (input, expr) {
     [c, _] -> c.snd.getOutput
   esac
 }
-
-(*printf ("%s", parseString (parse |> bypass (end), 
-"local x;  x := ""aaaa""; write (x[0]) ").string)*)
-
-

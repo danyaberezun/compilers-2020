@@ -1,5 +1,4 @@
 -- Stack machine.
-import Ostap;
 import Ref;
 import Array;
 import List;
@@ -182,7 +181,17 @@ fun eval (env, w, insns) {
         foldl (fun (i, arg) {assign (s, Arg (i), arg); i+1}, 0, sl);
          eval ([st, cst, s, w], p)
       esac
-    | CALL (f, _)    : p    -> eval ([st, [s, p] : cst, s, w], fromLabel(env, f))
+    | CALL (f, n)    : p    ->
+      case f[0] of 
+        '$' ->
+         case take (st, n) of
+           [st, a] -> 
+           case evalBuiltin (substring (f, 1, f.length - 1), a, w) of
+               [v, w] -> eval ([v : st, cst, s, w], p)
+           esac
+         esac  
+      | _ -> eval ([st, [s, p] : cst, s, w], fromLabel(env, f))
+      esac
     | GLOBAL (x)     : p    -> assign (s, Glb (x), 0); eval ([st, cst, s, w], p)
     | BUILTIN (f, n) : p    -> 
       case take (st, n) of 
@@ -558,14 +567,9 @@ public fun compileSM (stmt) {
     | Call (f, args)   ->
       case (cSM_list (args, env)) of
         [inss, env] -> 
-        case f of 
-          "read" -> [inss +++ (BUILTIN ("read", 0) : {}), env] 
-        | "write" -> [inss +++ (BUILTIN ("write", 1) : {}), env] 
-        | _ -> 
-          case lookupFun (env, f) of
-            Fun (fLabel, n) -> [deepFlatten (inss +++ (CALL (fLabel, n) : {})), env]
-          esac 
-        esac
+        case lookupFun (env, f) of
+          Fun (fLabel, n) -> [deepFlatten (inss +++ (CALL (fLabel, n) : {})), env]
+        esac 
       esac
     | Scope (defs, expr)  ->
       case foldl (addDef, [beginScope (env), {}, {}], defs) of
@@ -593,15 +597,15 @@ public fun compileSM (stmt) {
   }
 
   fun cFun (env, main) {
-    fun iter (env, acc, funSeq) {
+    fun iterate (env, acc, funSeq) {
       case funSeq of
         {} -> case getFuns (env) of
                 [{}, env] -> acc
-              | [fs, env] -> iter (env, acc, fs)
+              | [fs, env] -> iterate (env, acc, fs)
         esac
       | Fun (f, args, body, state) : fs ->
         case cSM (body, addArgs (beginFun (env, state), args)) of
-          [inss, env] -> iter (
+          [inss, env] -> iterate (
             env,
             {acc, LABEL (f), BEGIN (f, size (args), getLocals (env)), inss, END},
             fs
@@ -609,7 +613,7 @@ public fun compileSM (stmt) {
         esac
       esac
     }
-    iter(env, main, {})
+    iterate (env, main, {})
   }
   
   case cSM (stmt, initCompEnv ().beginScope.addFun ("read", "$read", 0).addFun ("write", "$write", 1)) of

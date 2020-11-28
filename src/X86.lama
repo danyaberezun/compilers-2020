@@ -52,7 +52,12 @@ local wordSize = 4;
 --   Call  (string)             -- calls a function by its name 
 --   Ret                        -- returns from a function
 --   Meta  (string)             -- metainformation (declarations, etc.)
-                                                               
+--
+--   Dec   (opnd)               -- arithmetic correction: decrement  
+--   Or1   (opnd)               -- arithmetic correction: or 0x0001                     
+--   Sal1  (opnd)               -- arithmetic correction: shl 1           
+--   Sar1  (opnd)               -- arithmetic correction: shr 1
+
 -- Machine instruction printer
 fun insnString (insn) {
   
@@ -97,6 +102,10 @@ fun insnString (insn) {
   | Jmp   (l)          -> sprintf ("\tjmp\t%s\n", l)
   | CJmp  (c, l)       -> sprintf ("\tj%s\t%s\n", c, l)
   | Meta  (m)          -> m
+  | Dec   (s)          -> sprintf ("\tdecl\t%s\n", opndString (s))
+  | Or1   (s)          -> sprintf ("\torl\t$0x0001,\t%s\n", opndString (s))
+  | Sal1  (s)          -> sprintf ("\tsall\t%s\n", opndString (s))
+  | Sar1  (s)          -> sprintf ("\tsarl\t%s\n", opndString (s))  
   esac
 }
 
@@ -430,6 +439,30 @@ fun move (from, to) {
   fi
 }
 
+-- Gets a suffix for Set instruction from
+-- source language comparison operator
+fun suffix (op) {
+  case op of
+    "<"  -> "l"
+  | "<=" -> "le"
+  | "==" -> "e"
+  | "!=" -> "ne"
+  | ">=" -> "ge"
+  | ">"  -> "g"
+  esac
+}
+
+-- Boxes an immediate value
+fun box (n) {
+  n * 2 + 1
+}
+
+-- Generates a fixednum representation
+-- conversion
+fun toFixedNum (r) {
+  singletonBuffer (Sal1 (r)) <+ Or1 (r)
+}
+
 (* Implementation *)
 -- Generates a static call
 fun call (env, fLabel, nA) {
@@ -456,30 +489,17 @@ fun call (env, fLabel, nA) {
              [y, env] ->
                [env, listBuffer (deepFlatten $ {pushRegs,
                                  reverse (pushArgs),
-                                 case extraArg of Some (n) -> Push (L (n)) | _ -> {} esac,
-                                 Call (fLabel),
-                                 Binop ("+", L (wordSize * (pushArgs.size + if extraArg == 0 then 0 else 1 fi)), esp),
+                                 case extraArg of Some (n) -> Push (L (box $ n)) | _ -> {} esac,
+                                 Call (fLabel) : {},
+                                 Binop ("+", L (wordSize * (pushArgs.size + if extraArg == 0 then 0 else 1 fi)), esp) :{},
                                  reverse (popRegs),
-                                 Mov (eax, y)})
+                                 Mov (eax, y) : {}})
                ]
            esac
       esac
   esac
 }
 (* End *)
-
--- Gets a suffix for Set instruction from
--- source language comparison operator
-fun suffix (op) {
-  case op of
-    "<"  -> "l"
-  | "<=" -> "le"
-  | "==" -> "e"
-  | "!=" -> "ne"
-  | ">=" -> "ge"
-  | ">"  -> "g"
-  esac
-}
 
 fun op_type (op) {
   case op of
@@ -503,17 +523,17 @@ fun compile (env, code) {
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
-          READ ->
+          (*READ ->
             case allocate (env) of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
             esac             
         | WRITE ->
             case pop (env) of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
-            esac
-        | CONST (x) ->
+            esac*)
+         CONST (x) ->
             case allocate (env) of
-              [s, env] -> [env, code <+ Mov (L (x), s)]
+              [s, env] -> [env, code <+ Mov (L (box(x)), s)]
             esac
         | ST (x) ->
             case pop (env) of
@@ -529,17 +549,33 @@ fun compile (env, code) {
                 case allocate (env) of
                   [s, env] -> 
                     case op of
-                      "/"  -> [env, code <+ Mov (s1, eax) <+ Cltd <+ IDiv (s2) <+ Mov (eax, s)]
-                    | "%"  -> [env, code <+ Mov (s1, eax) <+ Cltd <+ IDiv (s2) <+ Mov (edx, s)]
-                    | "&&" -> [env, code <+ 
-                      Mov (s1, edx) <+ Binop ("*", s2, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
-                    | "!!" -> [env, code <+
-                      Mov (s1, edx) <+ Binop ("!!", s2, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
-                    | op ->
-                        case op_type (op) of
-                          1 -> [env, code <+ Mov (s1, eax) <+ Binop (op, s2, eax) <+ Mov (eax, s)]
-                        | 0 -> [env, code <+ Mov (s2, edx) <+ Binop ("cmp", edx, s1) <+ Mov (L (0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
-                        esac
+                      "/"  -> [env, code
+                      <+ Dec (s2) <+ Dec (s1) 
+                      <+ Mov (s1, eax) <+ Cltd <+ IDiv (s2) 
+                      <+> toFixedNum (eax) <+ Mov (eax, s)]
+                    | "%"  -> [env, code
+                      <+ Sar1 (s1) <+ Sar1 (s2)
+                      <+ Mov (s1, eax) <+ Cltd <+ IDiv (s2) 
+                      <+> toFixedNum (edx) <+ Mov (edx, s)]
+                    | "&&" -> [env, code 
+                      <+ Dec (s1) <+ Dec (s2)
+                      <+ Mov (s1, edx) <+ Binop ("*", s2, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") 
+                      <+> toFixedNum (eax)
+                      <+ Mov (eax, s)]
+                    | "!!" -> [env, code 
+                      <+ Dec (s1) <+ Dec (s2)
+                      <+ Mov (s1, edx) <+ Binop ("!!", s2, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") 
+                      <+> toFixedNum (eax)
+                      <+ Mov (eax, s)]
+                    | "+"  -> [env, code <+ Dec (s2) <+ Mov (s1, eax) <+ Binop (op, s2, eax) <+ Mov (eax, s)]
+                    | "-"  -> [env, code <+ Dec (s2) <+ Mov (s1, eax) <+ Binop (op, s2, eax) <+ Mov (eax, s)]
+                    | "*"  -> [env, code 
+                      <+ Dec (s1) <+ Dec (s2)
+                      <+ Mov (s1, eax) <+ Binop (op, s2, eax)
+                      <+ Sar1 (eax) <+ Or1 (eax) <+ Mov (eax, s)] 
+                    | _    -> [env, code
+                      <+ Mov (s2, edx) <+ Binop ("cmp", edx, s1) <+ Mov (L (0), eax) <+ Set (suffix (op), "%al")
+                      <+> toFixedNum (eax) <+ Mov (eax, s)]
                     esac 
                 esac
             esac
@@ -548,7 +584,7 @@ fun compile (env, code) {
         | JMP (l)       -> [env, code <+ Jmp (l)]
         | CJMP (znz, l) -> 
             case pop (env) of
-              [s, env] -> [setStack(env, l), code <+ Mov (s, eax) <+ Binop ("cmp", L (0), eax) <+ CJmp (znzene (znz), l)]
+              [s, env] -> [setStack(env, l), code <+ Mov (s, eax) <+ Binop ("cmp", L (1), eax) <+ CJmp (znzene (znz), l)]
             esac
         | DROP          -> [pop (env)[1], code]
         | LDA (x)       -> 
@@ -593,7 +629,7 @@ fun compile (env, code) {
             [env, p] -> [env, code <+> p]
           esac
         | BUILTIN (f, n) ->
-          case call (env, (case f of "read" -> "L" | "write" -> "L" | _ -> "B" esac) ++ f, n) of
+          case call (env, "B" ++ f, n) of
             [env, p] -> [env, code <+> p]
           esac
         | STRING (s) ->

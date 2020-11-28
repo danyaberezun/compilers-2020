@@ -66,10 +66,11 @@ fun makeState (scopes) {
   fun enterFunction () {
     fun enterScopes (scopes) {
       case scopes of        
-      {_, _}     -> scopes
+        {_, _}     -> scopes
       | _ : scopes -> enterScopes (scopes)
       esac
     }
+
     makeState (emptyMap (compare) : enterScopes (scopes))
   }
 
