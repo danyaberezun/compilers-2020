@@ -1,5 +1,5 @@
 -- Expression evaluator
-
+import Ostap;
 import List;
 import Array;
 import State;
@@ -99,11 +99,87 @@ fun evalList (c, exprs) {
   esac
 }
 
-(* Assignment *)
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+fun evalDef (c@[s, w], def_list) {
+  case def_list of
+    {}                            -> c
+  | Local (names)            : dt -> evalDef ([addNames    (s, names), w],            dt)
+  | Fun   (name, args, body) : dt -> evalDef ([addFunction (s, name, args, body), w], dt) 
+  esac
 }
-(* End *)
+
+fun assignNames (c@[s, w], names, values) {
+  case names of
+    {}        -> c
+  | name : nt -> case values of val : vt -> assignNames ([s.addName(name, Val (val)), w], nt, vt) esac
+  esac
+}
+
+fun eval (c@[s, w], expr) {
+  case expr of
+    Const (z)         -> [c, z]
+  | Var   (x)         -> [c, case s.lookupVal(x) of Val (v) -> v esac]
+  | Ref   (x)         -> s.lookupVal(x); [c, Ref (x)]
+  | ElemRef (arr, id) -> case evalList (c, {arr, id}) of [c, {arr, id}] -> [c, ElemRef (arr, id)] esac
+  | Binop (op, l, r)  -> 
+    case evalList (c, {l, r}) of
+      [c, {v, w}] -> [c, evalOp (op, v, w)]
+    esac
+  | Skip              -> [c, None]
+  (*| Assn  (l, r)      ->
+    case evalList (c, {l, r}) of
+      [c@[s, w], {Ref (x), v}] -> [[s <- [x, v], w], v]
+    esac
+  | Read  (x)         -> case w of [z : it, o] -> [[s <- [x, z], [it, o]], None] esac
+  | Write (expr)      ->
+    case eval (c, expr) of
+      [[s, [i, o]], v] -> [[s , [i, v : o]], None]
+    esac*)
+  | Seq   (s1, s2)    -> eval (eval (c, s1)[0], s2)
+  | If    (e, s1, s2) -> 
+    case eval (c, e) of
+      [c, v] -> eval (c, if v then s1 else s2 fi)
+    esac
+  | While (e, st)     -> 
+    case eval (c, e) of
+      [c, v] -> if v then eval (eval (c, st)[0], While (e, st)) else [c, None] fi
+    esac
+  | Repeat (st, e)      ->
+    case eval (eval (c, st)[0], e) of
+      [c, v] -> if v then [c, None] else eval (c, Repeat (st, e)) fi
+    esac
+  | Scope (def_list, e) ->
+    case eval (evalDef ([s.enterScope, w], def_list), e) of
+      [[s, w], v] -> [[s.leaveScope, w], v]
+    esac
+  | Call (func, e_list) -> 
+    case s.lookupFun(func) of 
+      Fun (args, body) ->
+      case evalList (c, e_list) of
+        [[s, w], vl] ->
+        case body of
+          External -> case evalBuiltin (func, vl, w) of [a, w] -> [[s, w], a] esac
+        | _        -> 
+          case eval (assignNames ([s.enterFunction, w], args, vl), body) of
+            [[s0, w0], v] -> [[leaveFunction (s, getGlobal (s0)), w0], v]
+          esac
+        esac
+      esac
+    esac
+  | Ignor (e)              -> [eval (c, e)[0], None]
+  | Builtin (func, e_list) -> 
+    case evalList (c, e_list) of
+      [[s, w], vs] -> case evalBuiltin (func, vs, w) of [a, w] -> [[s, w], a] esac
+    esac
+  | String (s)             -> [c, s]
+  | Array  (es)            -> case evalList (c, es) of [c, vs] -> [c, listArray (vs)] esac
+  | Elem   (e, i)          -> case evalList (c, {e, i}) of [c, {arr, id}] -> [c, arr[id]] esac
+  | Assn   (l, r)          ->
+    case evalList (c, {l, r})  of
+      [[s, w], {Ref (x), v}] -> [[s <- [x, Val (v)], w], v]
+    | [c, {ElemRef (w, i), v}] -> w[i] := v; [c, v]
+    esac
+  esac
+}
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
@@ -111,3 +187,8 @@ public fun evalExpr (input, expr) {
     [c, _] -> c.snd.getOutput
   esac
 }
+
+(*printf ("%s", parseString (parse |> bypass (end), 
+"local x;  x := ""aaaa""; write (x[0]) ").string)*)
+
+
