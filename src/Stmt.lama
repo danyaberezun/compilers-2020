@@ -1,0 +1,45 @@
+-- Statement evaluator.
+
+import State;
+import Expr;
+import World;
+
+-- Evaluates a statement "stmt" in a configuration "c".
+-- A configuration is a pair of a state "s" and a world "w".
+-- Returns a final configuration (if any)
+--
+-- A statement is represented by a data structure of the following shape:
+--
+-- stmt = Assn   (string, expr)     |
+--        Seq    (stmt, stmt)       |
+--        Skip                      |
+--        Read   (string)           |
+--        Write  (expr)             |
+--        if     (expr, stmt, stmt) |
+--        While  (expr, stmt)       |
+--        Repeat (stmt, expr)
+
+fun eval (c, stmt) {
+	case c of [sigma, w] ->
+		case stmt of
+		  Assn(x, e)  	 -> [sigma <- [x, evalExpr(sigma, e)], w]
+		| Seq(s1, s2) 	 -> eval(eval(c, s1), s2)
+		| Skip        	 -> c 
+		| Read(x)     	 -> local new_w = readWorld(w);
+							[sigma <- [x, new_w[0]], new_w[1]]
+		| Write (e)    	 -> [sigma, writeWorld(evalExpr(sigma, e), w)]
+		| If(e, s1, s2)  -> if evalExpr(sigma, e) != 0 then eval(c, s1) else eval(c, s2) fi
+		| While(e, s)  	 -> if evalExpr(sigma, e) == 0 then c else eval(eval(c, s), stmt) fi
+		| Repeat(s, e)	 -> 
+							case eval(c, s) of c_new@[sigma_new, w_new] ->
+								if evalExpr(sigma_new, e) != 0 then c_new else eval(c_new, stmt) fi
+							esac
+		| _              -> failure("%s???", stmt.string)
+		esac
+	esac
+}
+
+-- Evaluates a program with a given input and returns an output
+public fun evalStmt (input, stmt) {
+  eval ([emptyState, createWorld (input)], stmt).snd.getOutput
+}
