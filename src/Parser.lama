@@ -144,8 +144,6 @@ local primary    = memo $ eta syntax (
 			inbr[s ("{"), scopeExpr, s ("}")]					  																 |
 			--basic										  		  																 |
 			inbr[s ("("), exp, s (")")]					  		  																 |
-			loc=pos kRead  s["("] x=lident s[")"]					{ fun (a) { assertVoid(a, Read(x),       loc) }} 			 |
-			loc=pos kWrite s["("] x=exp    s[")"]					{ fun (a) { assertVoid(a, Write(x(Val)), loc) }} 			 |
 			loc=pos kSkip											{ fun (a) { assertVoid(a, Skip, loc) }} 					 |
 			loc=pos kWhile e=exp kDo x=scopeExpr kOd				{ fun (a) { assertVoid(a, While(e(Val), x(Void)), loc) }}	 |
 			loc=pos kIf e=exp kThen x=exp y=elifParser kFi			{ myIf(e, x, y) 	} 										 |
@@ -192,7 +190,7 @@ local primary    = memo $ eta syntax (
                                      ),
       scopeExpr  = memo $ eta syntax (ds=definition* e=exp? {fun (a) {fun (e) {
                                                                         case ds of
-                                                                          {} -> e
+                                                                          {} -> Scope({}, e)
                                                                         | _  -> expandScope (ds, e) 
                                                                         esac
                                                                       } (case e of 

@@ -140,7 +140,6 @@ fun eval (env, w, insns) {
   }
 
 
-  fun eval (c@[st, cst, s, w], insns) {
   -- Core interpreter: takes a configuration and a program, returns a configuration
   (* Assignment *)
   fun eval (c@[st, cst, s, w], insns) {
@@ -167,12 +166,6 @@ fun eval (env, w, insns) {
 			esac
 		| DROP 			->
 			eval([st[1], cst, s, w], insns[1])
-		| READ        	-> 
-			case readWorld(w) of [x, w1] ->
-				eval([x : st, cst, s, w1], insns[1])
-			esac
-		| WRITE       	-> 
-			eval([st[1], cst, s, writeWorld(st[0], w)], insns[1])
 		| LABEL (_)		-> eval(c, insns[1]) 
 		| JMP   (l)		-> eval(c, fromLabel(env, l))
 		| CJMP  (c, l)	-> 
@@ -186,7 +179,19 @@ fun eval (env, w, insns) {
 			assign(s, Glb(x), 0);
 			eval([st, cst, s, w], insns[1])
 		| CALL (f, a) 	-> 
-			eval([st, [s, insns[1]] : cst, s, w], fromLabel(env, f))
+			case f of 
+			  "read"  ->
+				case evalBuiltin(f, {}, w) of [res, w1] ->
+					eval([res : st, cst, s, w1], insns[1])
+				esac
+			| "write" ->
+				case st of x : st2 ->
+					case evalBuiltin(f, x:{}, w) of [res, w1] ->
+						eval([res : st2, cst, s, w1], insns[1])
+					esac
+				esac
+			| _ -> eval([st, [s, insns[1]] : cst, s, w], fromLabel(env, f))
+			esac
 		| BEGIN (f, a, l) -> 
 			case take(st, a) of [st2, vals] ->
 				local s = makeState(a, l), i;
@@ -200,6 +205,26 @@ fun eval (env, w, insns) {
 			case cst of
 			  {} -> c
 			| [s1, insns1] : tl -> eval([st, tl, s1, w], insns1)
+			esac
+		| BUILTIN (f, n) ->
+			case take(st, n) of [st2, vals] ->
+				case evalBuiltin(f, vals, w) of [res, w1] ->
+					eval([res : st2, cst, s, w1], insns[1])
+				esac
+			esac
+		| STRING (str) -> eval([str : st, cst, s, w], insns[1])
+		| ARRAY (n) ->
+			case take(st, n) of [st2, vals] ->
+				eval([listArray(vals) : st2, cst, s, w], insns[1])
+			esac
+		| STA -> 
+			case st of v : i : a : tl ->
+				a[i] := v;
+				eval([v : tl, cst, s, w], insns[1])
+			esac
+		| ELEM -> 
+			case st of i : a : tl ->
+				eval([a[i] : tl, cst, s, w], insns[1])
 			esac
 		esac
 	fi
@@ -485,14 +510,12 @@ fun compileSM1 (env, expr, lEnd) {
 	| Assn(x, e)	  -> 
 		case compileSM1(env, x, "") of [env1, insns1] -> 
 			case compileSM1(env1, e, "") of [env2, insns2] -> 
-				[env2, insns1 +++ insns2 +++ singleton(STI)]
+				case x of
+				  ElemRef(_, _) -> 
+					[env2, insns1 +++ insns2 +++ singleton(STA)]
+				| _ -> [env2, insns1 +++ insns2 +++ singleton(STI)]
+				esac
 			esac
-		esac
-	| Read(x)     	  -> 
-		[env, singleton(READ) +++ singleton(ST(lookupVar(env, x)))]
-	| Write(e)	      -> 
-		case compileSM1(env, e, "") of [env1, insns] -> 
-			[env1, insns +++ singleton(WRITE)]
 		esac
 	| Seq(s1, s2)     -> 
 		case compileSM1(env, s1, "") of [env1, insns1] -> 
@@ -553,8 +576,15 @@ fun compileSM1 (env, expr, lEnd) {
 		esac
 	| Call (f, exprs) -> 
 		  case compileSMList(env, exprs) of [env1, insns1] ->
-			case lookupFun(env1, f) of Fun(fLabel, n) ->
-				[env1, insns1 +++ singleton(CALL(fLabel, n))]
+			case f of 
+			  "read"  -> [env1, insns1 +++ singleton(CALL(f, 0))]
+			| "write" -> [env1, insns1 +++ singleton(CALL(f, 1))]
+			| _ 	  ->
+				case lookupFun(env1, f) of Fun(fLabel, n) ->
+					[env1, insns1 +++ singleton(CALL(fLabel, n))]
+				esac
+				
+				--[env1, singleton(CONST(0))]
 			esac
 		esac
 	| Fun (fLabel, args, body, fEnv) ->
@@ -565,12 +595,27 @@ fun compileSM1 (env, expr, lEnd) {
 					insnsf +++
 					singleton(END)]
 	  esac
+	| String (str)  -> [env, singleton(STRING(str))]
+	| Array (exprs) ->
+		case compileSMList(env, exprs) of [env1, insns] ->
+			[env1, insns +++ singleton(ARRAY(size(exprs)))]
+		esac
+	| Elem (ea, ei) ->
+		case compileSMList(env, {ea, ei}) of [env1, insns] ->
+			[env1, insns +++ singleton(ELEM)]
+		esac
+	| ElemRef(ea, ei) -> compileSMList(env, {ea, ei})
+	| Builtin(f, exprs) ->
+		case compileSMList(env, exprs) of [env1, insns] ->
+			[env1, insns +++ singleton(BUILTIN(f, size(exprs)))]
+		esac
 	esac
 }
 
 
 public fun compileSM (expr) {
-	case compileSM1(initCompEnv(), expr, "") of [env, code] ->
+	case compileSM1(beginScope(initCompEnv()), expr, "") of 
+	[env, code] ->
 		local flag = 1;
 		code := ({ LABEL("main"), BEGIN("main", 0, getLocals(env))} +++
 		  code +++ singleton(END));
@@ -591,6 +636,7 @@ public fun compileSM (expr) {
 			esac
 		od;
 		--printf("%s\n", showSM(code));
+		--{}
 		code
   esac
 }

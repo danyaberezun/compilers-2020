@@ -99,11 +99,15 @@ fun evalList (c, exprs) {
   esac
 }
 
+
 (* Assignment *)
 fun eval (c@[s, w], expr) {
 	case expr of
 	  Const(n) -> [c, n]
-	| Var(x) ->  (* checkVar(s, x); *) [c, lookup(s, x)]
+	| Var(x) -> 
+		case lookupVal(s, x) of Val(v) -> 
+			[c, v] 
+		esac
 	| Ref(x) -> [c, Ref(x)]
 	| Binop(op, l, r) -> 
 		case evalList(c, {l, r}) of 
@@ -112,15 +116,8 @@ fun eval (c@[s, w], expr) {
 	| Skip -> [c, None]
 	| Assn(l, r) -> 
 		case evalList(c, {l, r}) of
-			[[s1, w1], {Ref(x), a}] -> [[s1 <- [x, a], w1], a]
-		esac
-	| Read(x) ->
-		case readWorld(w) of
-			[val, w1] -> [[s <- [x, val], w1], None]
-		esac
-	| Write(e) -> 
-		case eval(c, e) of
-			[[s1, w1], a] -> [[s1, writeWorld(a, w)], None]
+		  [[s1, w1],  {Ref(x), a}] -> [[s1 <- [x, Val(a)], w1], a]
+		| [c1, {ElemRef(x, i), a}] -> x[i] := a; [c1, a]
 		esac
 	| Seq(e1, e2) -> 
 		case eval(c, e1) of
@@ -158,25 +155,51 @@ fun eval (c@[s, w], expr) {
 			[c1, v] -> [c1, None]
 		esac
 	| Scope(defs, e) ->
-		case evalList([s.enterScope, w], defs) of [c1, x] ->
+		case evalList([enterScope(s), w], defs) of [c1, x] ->
 			case eval(c1, e) of [[s2, w2], y] ->
 				[[leaveScope(s2), w2], y]
 			esac
 		esac
 	| Local(vals) -> [[addNames(s, vals), w], None]
 	| Fun(f, args, body) -> [[addFunction(s, f, args, body), w], None]
-	| Call(f, exprs) -> (*checkFun(s, f); *)
-		case lookup(s, f) of Fun(args, body) ->
+	| Call(f, exprs) ->
+		case lookupFun(s, f) of Fun(args, body) ->
 			case evalList(c, exprs) of [[s1, w1], vals] ->
-				local s15 = enterFunction(s1); -- s15 читай как s_1,5
-				while size(args) > 0 do
-					s15 := addName(s15, args[0], vals[0]);
-					args := args[1];
-					vals := vals[1]
-				od;
-				case eval([s15, w1], body) of [[s2, w2], x] ->
-					[[leaveFunction(s1, getGlobal(s2)), w2], x]
+				case body of 
+				  External -> 
+					case evalBuiltin(f, vals, w1) of [res, w2] ->
+						[[s1, w2], res]
+					esac
+				| _ ->
+					local s15 = enterFunction(s1); -- s15 читай как s_1,5
+					while size(args) > 0 do
+						s15 := addName(s15, args[0], Val(vals[0]));
+						args := args[1];
+						vals := vals[1]
+					od;
+					case eval([s15, w1], body) of [[s2, w2], x] ->
+						[[leaveFunction(s1, getGlobal(s2)), w2], x]
+					esac 
 				esac
+			esac
+		esac
+	| String (str) -> [c, str]
+	| Array (exprs) -> 
+		case evalList(c, exprs) of [c1, vals] ->
+			[c1, listArray(vals)]
+		esac
+	| Elem (ea, ei) ->
+		case evalList(c, {ea, ei}) of [c1, {a, i}] ->
+			[c1, a[i]]
+		esac
+	| ElemRef (ea, ei) ->
+		case evalList(c, {ea, ei}) of [c1, {a, i}] ->
+			[c1, ElemRef(a, i)]
+		esac
+	| Builtin (f, args) ->
+		case evalList(c, args) of [[s1, w1], vals] ->
+			case evalBuiltin(f, vals, w1) of [res, w2] ->
+				[[s1, w2], res]
 			esac
 		esac
 	esac
