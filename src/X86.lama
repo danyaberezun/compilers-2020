@@ -52,7 +52,12 @@ local wordSize = 4;
 --   Call  (string)             -- calls a function by its name 
 --   Ret                        -- returns from a function
 --   Meta  (string)             -- metainformation (declarations, etc.)
-                                                               
+--
+--   Dec   (opnd)               -- arithmetic correction: decrement  
+--   Or1   (opnd)               -- arithmetic correction: or 0x0001                     
+--   Sal1  (opnd)               -- arithmetic correction: shl 1           
+--   Sar1  (opnd)               -- arithmetic correction: shr 1
+
 -- Machine instruction printer
 fun insnString (insn) {
   
@@ -98,6 +103,10 @@ fun insnString (insn) {
   | Jmp   (l)          -> sprintf ("\tjmp\t%s\n", l)
   | CJmp  (c, l)       -> sprintf ("\tj%s\t%s\n", c, l)
   | Meta  (m)          -> m
+  | Dec   (s)          -> sprintf ("\tdecl\t%s\n", opndString (s))
+  | Or1   (s)          -> sprintf ("\torl\t$0x0001,\t%s\n", opndString (s))
+  | Sal1  (s)          -> sprintf ("\tsall\t%s\n", opndString (s))
+  | Sar1  (s)          -> sprintf ("\tsarl\t%s\n", opndString (s))  
   esac
 }
 
@@ -431,6 +440,30 @@ fun move (from, to) {
   fi
 }
 
+-- Gets a suffix for Set instruction from
+-- source language comparison operator
+fun suffix (op) {
+  case op of
+    "<"  -> "l"
+  | "<=" -> "le"
+  | "==" -> "e"
+  | "!=" -> "ne"
+  | ">=" -> "ge"
+  | ">"  -> "g"
+  esac
+}
+
+-- Boxes an immediate value
+fun box (n) {
+  n * 2 + 1
+}
+
+-- Generates a fixednum representation
+-- conversion
+fun toFixedNum (r) {
+  singletonBuffer (Sal1 (r)) <+ Or1 (r)
+}
+
 (* Implementation *)
 -- Generates a static call
 fun call (env, fLabel, nA) {
@@ -455,9 +488,9 @@ fun call (env, fLabel, nA) {
         [env, pushArgs] ->
            case env.allocate of
              [y, env] ->
-               [env, listBuffer (deepFlatten $ {pushRegs,
+               [env, listBuffer (flatten $ {pushRegs,
                                  reverse (pushArgs),
-                                 case extraArg of Some (n) -> Push (L (n)) | _ -> {} esac,
+                                 case extraArg of Some (n) -> Push (L (box $ n)) | _ -> {} esac,
                                  Call (fLabel),
                                  Binop ("+", L (wordSize * (pushArgs.size + if extraArg == 0 then 0 else 1 fi)), esp),
                                  reverse (popRegs),
@@ -468,20 +501,6 @@ fun call (env, fLabel, nA) {
   esac
 }
 (* End *)
-
--- Gets a suffix for Set instruction from
--- source language comparison operator
-fun suffix (op) {
-  case op of
-    "<"  -> "l"
-  | "<=" -> "le"
-  | "==" -> "e"
-  | "!=" -> "ne"
-  | ">=" -> "ge"
-  | ">"  -> "g"
-  esac
-}
-
 
 fun operationType(op)
 {
@@ -505,7 +524,7 @@ fun operationType(op)
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
-fun compile (env, code) {
+fun compile (env, code) {  
   fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
@@ -564,6 +583,16 @@ fun compile (env, code) {
 					esac
 				esac
 			esac
+(*
+          READ ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
+            esac             
+        | WRITE ->
+            case env.pop of
+              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
+            esac
+*)
         (* Assignment *)
         
          -- Some guidelines for generating function calls:
@@ -624,7 +653,6 @@ fun compile (env, code) {
 			esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
-        
         esac
       }, [env, emptyBuffer ()], code)
   }

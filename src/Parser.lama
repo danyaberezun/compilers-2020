@@ -116,29 +116,29 @@ local elifParser  = memo $ eta syntax(
 						);
 
 local primary    = memo $ eta syntax (
-			-- array constant
-			loc=pos x=inbr[s("["), list0(syntax (e=exp {e(Val)})), s("]")] {fun (a) {assertValue (a, Array (x), loc)}}    |
-			
-			-- string constant
-			loc=pos x=strlit                                               {fun (a) {assertValue (a, String (x), loc)}}   |
-			
-			-- character literal
-			loc=pos x=chrlit                                               {fun (a) {assertValue (a, Const (x), loc)}}    |
-			
-			-- decimal constant
-			loc=pos x=decimal                                              {fun (a) {assertValue (a, Const (stringInt (x)), loc)}} |
+                                      -- array constant
+                                      loc=pos x=inbr[s("["), list0(syntax (e=exp {e(Val)})), s("]")] {fun (a) {assertValue (a, Array (x), loc)}}    |
+                                      
+                                      -- string constant
+                                      loc=pos x=strlit                                               {fun (a) {assertValue (a, String (x), loc)}}   |
+                                      
+                                      -- character literal
+                                      loc=pos x=chrlit                                               {fun (a) {assertValue (a, Const (x), loc)}}    |
+                                      
+                                      -- decimal constant
+                                      loc=pos x=decimal                                              {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
 
-			-- identifier
-			x=lident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? {fun (a) {
-																				case args of
-																					None -> case a of
-																							Ref  -> Ref (x)
-																							| Void -> Ignore (Var (x))
-																							| _    -> Var (x)
-																							esac
-																				| Some (args) -> assertValue (a, Call (x, args))
-																				esac
-																				}} |
+                                      -- identifier
+                                      x=lident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? {fun (a) {
+                                                                                                            case args of
+                                                                                                              None -> case a of
+                                                                                                                        Ref  -> Ref (x)
+                                                                                                                      | Void -> Ignore (Var (x))
+                                                                                                                      | _    -> Var (x)
+                                                                                                                      esac
+                                                                                                            | Some (args) -> assertValue (a, Call (x, args))
+                                                                                                            esac
+                                                                                                         }} |
 			(* Assignment *)
 			
 			inbr[s ("{"), scopeExpr, s ("}")]					  																 |
@@ -172,6 +172,8 @@ local primary    = memo $ eta syntax (
                                       [Left , map (binop, {"*", "/", "%"})]
                                      },
                                      postfix)),
+---------------------------------------------------------------------(id)------------------------------------------------------------------------------------
+--                                     postfix)(id)),
       postfix    = memo $ eta syntax (loc=pos e=primary ps=(i=inbr[s("["), exp, s("]")] {Index (i (Val))} |
                                                             -s["."] kLength {Length}
                                                            )* {fun (a) {foldl (fun (e, p) {                                                                            

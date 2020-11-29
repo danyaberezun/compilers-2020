@@ -99,7 +99,6 @@ fun evalList (c, exprs) {
   esac
 }
 
-
 (* Assignment *)
 fun eval (c@[s, w], expr) {
 	case expr of
