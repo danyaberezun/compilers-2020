@@ -86,7 +86,7 @@ fun addNames (state, names) {
 fun addFunction (state, name, args, body) {
   state.addName (name, Fun (args, body))
 }
-                                        
+
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values
 fun evalList (c, exprs) {
@@ -101,9 +101,93 @@ fun evalList (c, exprs) {
   esac
 }
 
-(* Assignment *)
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+-- не уверен что это правильно
+local void = "void";
+
+fun eval (configuration, expr) {
+  eval0(configuration, expr)
+}
+
+fun eval1 (configuration, expr) {
+  printf("eval: %s\n", expr.string);
+  printf("eval: %s\n", configuration.string);
+  case eval0(configuration, expr) of [configuration, value] ->
+    printf("\teval: %s  =>  %s\n", expr.string, value.string);
+    [configuration, value]
+  esac
+}
+
+fun eval0 (configuration@[state, world], expr) {
+  case expr of
+    Seq (stmt1, stmt2) -> return eval(eval(configuration, stmt1)[0], stmt2)
+  | Skip -> [configuration, void]
+  | Ref (x) -> [configuration, Ref (x)]
+  | Ignore (expr) ->
+      case eval(configuration, expr)
+        of [configuration, _] -> [configuration, void]
+      esac
+  | Read (var) ->
+      -- как делать destructuring assignment?
+      case readWorld (world) of [value, world] ->
+        state := state <- [var, value];
+        return [[state, world], void]
+      esac
+  | Write (expr) ->
+      case eval(configuration, expr) of [[state, world], value] ->
+        world := writeWorld(value, world);
+        return [[state, world], void]
+      esac
+  | Assn (dst, expr) ->
+      case evalList(configuration, {dst, expr}) of [[state, world], {Ref (var), value}] ->
+        state := state <- [var, value];
+        return [[state, world], value]
+      esac
+  | If (expr, stmtThen, stmtElse) ->
+      case eval(configuration, expr) of [configuration, value] ->
+        return eval(configuration, if value then stmtThen else stmtElse fi)
+      esac
+  | While (expr, stmt) ->
+      return evalWhile(expr, stmt, fun (value) { value != 0 }, configuration)
+  | Repeat (stmt, expr) ->
+      case eval(configuration, stmt) of [configuration, _] ->
+        return evalWhile(expr, stmt, fun (value) { value == 0 }, configuration)
+      esac
+
+  | Var (var) -> return [configuration, state(var)]
+  | Const (value) -> return [configuration, value]
+  | Binop (op, expr1, expr2) ->
+      case evalList(configuration, {expr1, expr2}) of [configuration, {value1, value2}] ->
+        return [configuration, evalBinop(op, value1, value2)]
+      esac
+  esac
+}
+
+fun evalWhile (expr, stmt, continue, configuration) {
+  --printf("evalWhile: %s\n", expr.string);
+  case eval(configuration, expr) of [configuration, value] ->
+    if continue(value)
+    then evalWhile(expr, stmt, continue, eval(configuration, stmt)[0])
+    else [configuration, void]
+    fi
+  esac
+}
+
+public fun evalBinop (op, value1, value2) {
+  case op of
+    "*"  -> return value1 *  value2
+  | "+"  -> return value1 +  value2
+  | "-"  -> return value1 -  value2
+  | "/"  -> return value1 /  value2
+  | "%"  -> return value1 %  value2
+  | "<"  -> return value1 <  value2
+  | "<=" -> return value1 <= value2
+  | ">"  -> return value1 >  value2
+  | ">=" -> return value1 >= value2
+  | "==" -> return value1 == value2
+  | "!=" -> return value1 != value2
+  | "&&" -> return value1 && value2
+  | "!!" -> return value1 !! value2
+  esac
 }
 
 -- Evaluates a program with a given input and returns an output
