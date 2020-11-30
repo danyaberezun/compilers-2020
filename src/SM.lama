@@ -9,7 +9,25 @@ import Expr;
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+ case c of 
+        [s, st, w@[in, out]] -> case insns of
+            {} -> c
+            |Read: p -> case in of 
+                    elem : i -> eval([elem: s, st, [i, out]], p) 
+                  esac
+            |Write: p-> case s of 
+                    elem : ss -> eval([ss, st, [in, elem : out]], p) 
+                  esac
+            |Binop(bin): p -> case s of 
+                    r : l : ss -> eval([evalOp(bin, l, r): ss, st, w], p) 
+                  esac
+            |LD(elem): p -> eval([st(elem) : s, st, w], p)
+            |ST(elem): p -> case s of 
+                    elemo : ss -> eval([s, (st <- [ elem, elemo ] ), w], p)
+                  esac
+            |Const(n): p-> eval([n : s, st, w], p)
+        esac
+    esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -21,12 +39,22 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+         Var(elem) -> singleton(LD(elem))
+        |Const(n) -> singleton(Const(n))
+        |Binop(op, l, r) -> compileExpr(l) +++ compileExpr(r) +++ singleton(Binop(op))
+    esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of 
+      Skip -> {}
+    | Read(elem) -> singleton(Read) +++ singleton(ST(elem))
+		| Write(elem) -> compileExpr(elem) +++ singleton(Write)
+		| Assn(elem, expression) -> compileExpr(expression) +++ singleton(ST(elem))
+		| Seq(s1, s2) -> compileSM(s1) +++ compileSM(s2)
+  esac
 }
