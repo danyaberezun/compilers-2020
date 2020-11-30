@@ -8,6 +8,8 @@ import Matcher;
 import Ref;
 import Collection;
 
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+
 -- Signals an error; takes an error message and location info
 public fun error (msg, loc) {
   failure ("%s at %d:%d\n", msg, loc.fst, loc.snd)
@@ -71,7 +73,7 @@ fun list (item) {
 -- initializers into assignments
 fun expandScope (defs, expr) {
   fun expandDefs (defs, expr) {
-    foldr (fun ([defs, expr], def) {     
+    foldr (fun ([defs, expr], def) {
              case def of
                 [ident, None]         -> [ident : defs, expr]
              |  [ident, Some (value)] -> [ident : defs, Seq (Ignore (Assn (Ref (ident), value)), expr)]
@@ -80,8 +82,9 @@ fun expandScope (defs, expr) {
            [{}, expr],
            defs)
   }
+  -- fprintf (stderr, "Expand scope defs: ""%s"" ", defs.string);
 
-  case 
+  case
     foldr (fun ([defs, expr], def) {
              case def of
                f@Fun (_, _, _) -> [f : defs, expr]
@@ -94,7 +97,7 @@ fun expandScope (defs, expr) {
            [{}, expr],
            defs) of
     [defs, expr] -> Scope (defs, expr)
-  esac  
+  esac
 }
 
 -- Helper AST function: distributes a scope through an expression
@@ -103,6 +106,11 @@ fun distributeScope (expr, exprConstructor) {
     Scope (defs, sexpr) -> Scope (defs, exprConstructor (sexpr))
   | _                   -> exprConstructor (expr)
   esac
+}
+
+-- checkpoint debug parser
+fun checkpoint(i) {
+ syntax(token[""] { fprintf(stderr, "Checkpoint %s\n", i.string) })
 }
 
 local primary    = memo $ eta syntax (
@@ -120,10 +128,46 @@ local primary    = memo $ eta syntax (
                                                                                                             | Some (args) -> assertValue (a, Call (x, args))
                                                                                                             esac
                                                                                                          }} |
-(* Assignment *)
-                                      $(failure ("the rest of primary parsing in not implemented\n"))),
-      scopeExpr = memo $ eta (syntax ($(failure ("scope expression parsing is not implemented\n")))),
-(* End *)
+                                    loc=pos kRead x=inbr[s("("), lident, s(")")]      {  fun(a) { assertVoid (a, Read  (x),      loc) } } |
+                                    loc=pos kWrite y=inbr[s("("), exp, s(")")]        {  fun(a) { assertVoid (a, Write (y(Val)), loc) } } |
+                                    loc=pos kSkip                                     {  fun(a) { assertVoid (a, Skip, loc)           } } |
+                                    loc=pos kIf cond=exp kThen s1=exp s2=ifTailParser {  fun(a) { If (cond(Val), s1(a), s2(a))        } } |
+                                    loc=pos kWhile cond=exp kDo s=scopeExpr kOd             {  fun(a) {assertVoid (a, While  (cond(Val), s(Void)), loc) } } |
+                                    loc=pos kRepeat s=scopeExpr kUntil cond=primary      {  case s(Void) of
+                                                            Scope(defs, s) -> fun(a) {assertVoid (a, Scope(defs, Repeat (s, cond(Val))), loc) }
+                                                          esac } |
+                                    loc=pos kFor e1=scopeExpr s[","] e2=exp s[","] e3=exp kDo s=scopeExpr kOd
+                                       {  case e1(Void) of
+                                           Scope(defs, e1) -> fun (a) { assertVoid(a, Scope(defs, Seq (e1, While(e2(Val), Seq(s(Void), e3(Void))))), loc) }
+                                          esac } |
+                                    -- nested expressions
+                                    inbr[s("("), exp, s(")")] |
+                                    -- nested scopes
+                                    inbr[s("{"), scopeExpr, s("}")]
+                                    ),
+           ifTailParser = memo $ eta syntax(loc=pos -kFi              { fun(a) { case a of
+                                                                                   Void -> Skip
+                                                                                 | Weak -> Skip
+                                                                                 | Ref  -> error ("'else' branch is needed for reference", loc)
+                                                                                 | Val  -> error ("'else' branch is needed for value",     loc)
+                                                                                  esac } } |
+                                            loc=pos -kElse e=exp -kFi { fun(a) { e(a) } }  |
+                                            kElif cond=exp kThen s1=exp s2=ifTailParser { fun(a) { If (cond(Val), s1(a), s2(a)) } }
+                                            ),
+      scopeExpr = syntax (-s[""] se=scopeExprAdv { fun (a) { se (a, {})} }),
+      scopeExprAdv = memo $ eta (syntax ( d=decl se=scopeExprAdv {fun (a, decls) { se(a, d:decls)}}
+                                        | expr=exp? { fun (a, decls) { expandScope(decls, case expr of Some(ee) -> ee (a) | None -> Skip esac) } }  )),
+      decl = memo $ eta ( syntax ( loc=pos kLocal locals=list[declVar] s[";"] { Local(locals) }
+                                 | loc=pos kFun name=lident
+                                                args=inbr[s("("), list0(syntax(lident)), s(")")]
+                                                body=inbr[s("{"), scopeExpr, s("}")]
+                                                { Fun(name, args, body(Weak)) }
+                                 )),
+      declVar = memo $ eta (syntax (name=lident expr=(-s["="] basic)? { case expr of
+                                                                              None     -> [name, None]
+                                                                            | Some (e) -> [name, Some(e(Val))]
+                                                                        esac
+                                                                       })),
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
                                                             fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}

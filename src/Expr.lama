@@ -42,7 +42,7 @@ public fun evalOp (op, l, r) {
 --        Skip                        |
 --        Read   (string)             |
 --        Write  (expr)               |
---        if     (expr, expr, expr)   |
+--        If     (expr, expr, expr)   |
 --        While  (expr, expr)         |
 --        Repeat (expr, expr)         |
 --        Var    (string)             |
@@ -81,12 +81,39 @@ fun checkFun (state, name) {
 fun addNames (state, names) {
   foldl (fun (s, name) {s.addName (name, Var (0))}, state, names)
 }
+fun addNamesWithVals (state, namesWithValsZipped) {
+  foldl (fun (s, [name, val]) {s.addName (name, val)}, state, namesWithValsZipped)
+}
 
 -- Helper function: adds a function in current scope
 fun addFunction (state, name, args, body) {
   state.addName (name, Fun (args, body))
 }
-                                        
+
+-- Helper function: adds either a bunch of regular variables or function in current scope
+fun addDefinition(state, def) {
+  case def of
+      Local(names)          -> addNames(state, names)
+    | Fun(name, args, body) -> addFunction(state, name, args, body)
+    | _                     -> error (sprintf ("only definitions can be added in scope, ""%s"" found.", def.string), None)
+  esac
+}
+-- the same for multiple definitions
+fun addMultipleDefinitions(state, defs) {
+  foldl (fun (s, def) {addDefinition (s, def)}, state, defs)
+}
+
+-- P.S: added special value Bot in accordance to formal semantics.
+
+-- assertion programming
+fun unboxRef(expr) {
+  case expr of
+    Ref (name) -> name
+  | x          -> failure (sprintf("Parser expected a reference, got %s instead", expr.string))
+  esac
+}
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values
 fun evalList (c, exprs) {
@@ -101,14 +128,69 @@ fun evalList (c, exprs) {
   esac
 }
 
-(* Assignment *)
+
 fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+  -- local unit = fprintf (stderr, "Evaluating ""%s""\n", expr.string);
+  local result = case expr of
+     Assn   (expr1, expr2)        ->
+       case evalList(c, {expr1, expr2}) of
+         [[s, w], {nameB, valB}] -> [[s <- [unboxRef(nameB), valB], w], valB]
+       esac
+   | Seq    (expr1, expr2)        -> case evalList(c, {expr1, expr2}) of [c, {_, v2}] -> [c, v2] esac
+   | Skip                         -> [c, Bot]
+   | Read   (nameB)               -> case readWorld(w) of
+                                       [value, world] -> [[s <- [nameB, value], world], Bot]
+                                     esac
+   | Write  (expr)                -> case eval(c, expr) of
+                                       [[s, w], valB] -> [[s, writeWorld(valB, w)], Bot]
+                                     esac
+   | If     (cond, expr1, expr2)  -> case eval(c, cond) of
+                                       [c, condB] -> if (condB)
+                                                     then eval(c, expr1)
+                                                     else eval(c, expr2)
+                                                     fi
+                                     esac
+   | While  (cond, body)          -> case eval(c, cond) of
+                                       [c, condB] -> if (condB)
+                                                     then eval(c, Seq(body, expr)) -- can be prooved to correspond to semantics
+                                                     else [c, Bot]
+                                                     fi
+                                     esac
+   | Repeat (body, cond)          -> eval (c, Seq(body, While (Binop("==", cond, Const (0)), body))) -- new semantics for repeat
+   | Var    (name)                -> [c, s.lookup(name)]
+   | Ref    (name)                -> [c, Ref(name)]
+   | Const  (val)                 -> [c, val]
+   | Binop  (str, expr1, expr2)   ->
+       case evalList(c, {expr1, expr2}) of
+         [c, {v1, v2}] -> [c, evalOp(str, v1, v2)]
+       esac
+   | Scope(defs, expr)            -> case eval([s.enterScope.addMultipleDefinitions(defs), w], expr) of
+                                       [[ss, ww], val] ->
+                                         -- fprintf (stderr, "Scope size: %d, Scope.\n", ss.scopeSize);
+                                         [[ss.leaveScope, ww], val]
+                                     esac
+   | Call(f, exprs)               -> case s.lookup(f) of
+                                       Fun (scope_names, body) -> case evalList(c, exprs) of
+                                         [[ss, ww], scope_values] ->
+                                         -- fprintf (stderr, "Scope size: %d, Call: ""%s""(""%s"")\n", ss.scopeSize, f.string, scope_values.string);
+                                         case eval([ss.enterFunction.addNamesWithVals(zip(scope_names, scope_values)), ww], body) of
+                                           [[sss, www], vvv] -> [[leaveFunction(ss, getGlobal(sss)), www], vvv]
+                                         esac
+                                       esac
+                                     esac
+   | Ignore (expr)                -> case eval(c, expr) of [c, _] -> [c, Bot] esac
+  esac;
+  -- fprintf (stderr, "expr=""%s""; result=""%s""\n", expr.string, result.string);
+  result
 }
+
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
+  -- fprintf(stderr, "Evaluating expr=""%s""...", expr.string);
   case eval ([emptyState (), createWorld (input)], expr) of
-    [c, _] -> c.snd.getOutput
+    [c, v] ->
+              -- fprintf (stderr, "Expression ""%s"" evaluated to ""%s""\n", expr.string, v.string);
+              c.snd.getOutput
   esac
 }
