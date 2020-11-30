@@ -81,14 +81,8 @@ fun checkFun (state, name) {
 fun addNames (state, names) {
   foldl (fun (s, name) {s.addName (name, Var (0))}, state, names)
 }
-fun addNamesWithValsZipped (state, namesWithValsZipped) {
+fun addNamesWithVals (state, namesWithValsZipped) {
   foldl (fun (s, [name, val]) {s.addName (name, val)}, state, namesWithValsZipped)
-}
-fun addNamesWithVals (state, names, vals) {
-  case names of
-      name : names -> addNamesWithVals(state.addName(name, vals.hd), names, vals.tl)
-    | _            -> state
-  esac
 }
 
 -- Helper function: adds a function in current scope
@@ -171,11 +165,15 @@ fun eval (c@[s, w], expr) {
          [c, {v1, v2}] -> [c, evalOp(str, v1, v2)]
        esac
    | Scope(defs, expr)            -> case eval([s.enterScope.addMultipleDefinitions(defs), w], expr) of
-                                       [[ss, ww], val] -> [[ss.leaveScope, ww], val]
+                                       [[ss, ww], val] ->
+                                         -- fprintf (stderr, "Scope size: %d, Scope.\n", ss.scopeSize);
+                                         [[ss.leaveScope, ww], val]
                                      esac
    | Call(f, exprs)               -> case s.lookup(f) of
                                        Fun (scope_names, body) -> case evalList(c, exprs) of
-                                         [[ss, ww], scope_values] -> case eval([ss.enterFunction.addNamesWithVals(scope_names, scope_values), ww], body) of
+                                         [[ss, ww], scope_values] ->
+                                         -- fprintf (stderr, "Scope size: %d, Call: ""%s""(""%s"")\n", ss.scopeSize, f.string, scope_values.string);
+                                         case eval([ss.enterFunction.addNamesWithVals(zip(scope_names, scope_values)), ww], body) of
                                            [[sss, www], vvv] -> [[leaveFunction(ss, getGlobal(sss)), www], vvv]
                                          esac
                                        esac
