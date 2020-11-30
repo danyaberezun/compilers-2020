@@ -131,7 +131,7 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-  -- popped items and an undated environment
+
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -289,7 +289,42 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+
+        | CONST (n) ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (L (n), s)]
+            esac
+        | ST (x) -> 
+            case env.addGlobal (x).pop of
+              [s, env] -> [env, code <+> move (s, env.loc (x))]
+            esac   
+        | LD (x) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move (env.loc (x), s)]
+            esac
+        | BINOP (op) ->
+            case env.pop2 of
+              [x, y, env] -> 
+              case env.allocate of
+                [s, env] -> case op of
+                  "+" -> [env, code <+ Mov (y, eax) <+ Binop("+", x, eax) <+ Mov (eax, s)]
+                
+                | "-" -> [env, code <+ Mov (y, eax) <+ Binop("-", x, eax) <+ Mov (eax, s)]
+                
+                | "*" -> [env, code <+ Mov (y, eax) <+ Binop("*", x, eax) <+ Mov (eax, s)]
+                
+                | "&&" -> [env, code <+  Mov (y, edx) <+ Binop ("*", x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+                
+                | "!!" -> [env, code <+  Mov (y, edx) <+ Binop ("!!", x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+                
+                | "/" -> [env, code <+ Mov (y, eax) <+ Cltd  <+ IDiv (x)  <+ Mov (eax, s)]
+
+                | "%" -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x) <+ Mov (edx, s)]
+
+                | _ -> [env, code <+ Mov (x, eax) <+ Binop ("cmp", eax, y)<+ Mov(L(0), eax)  <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
+                  esac
+              esac
+           esac
         esac
       }, [env, emptyBuffer ()], code)
   }
@@ -307,7 +342,6 @@ public fun compileX86 (args, code) {
                          #unboxed -> "../runtime/"
                        | path     -> path
                        esac ++ "/runtime.o";
-       
        fwrite (asmFile,
                map (insnString, 
                     getBuffer $
@@ -323,4 +357,5 @@ public fun compileX86 (args, code) {
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
-}
+} 
+
