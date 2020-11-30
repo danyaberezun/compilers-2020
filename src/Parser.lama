@@ -35,9 +35,9 @@ local stmt = memo $ eta syntax (
 		x = stmt s[";"] y = stmt end {Seq(x, y)}                           |
 		kSkip {Skip}													   |
 		kIf cond=exp kThen st1=stmts st2=ifTailParser {If(cond, st1, st2)} |
-		kWhile cond=exp st=inbr[kDo, stmts, kOd] {While (cond, st)}        |
+		kWhile cond=exp kDo st=stmts kOd {While (cond, st)}				   |
 		kRepeat s=stmts kUntil cond=exp  {Repeat (s, cond)}                |
-		kFor st1=stmts s[","] cond=exp s[","] st2=stmts body=inbr[kDo, stmts, kOd] {Seq (st1, While(cond, Seq(body, st2)))}
+		kFor st1=stmts s[","] cond=exp s[","] st2=stmts kDo st=stmts kOd {Seq (st1, While(cond, Seq(st, st2)))}
 );
 
 
