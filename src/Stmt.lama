@@ -18,14 +18,19 @@ import List;
 --        Write  (expr)             |
 
 fun eval (c, stmt) {
-  case stmt of
-          Assn(str, expr) -> [c[0] <- [str, evalExpr(c[0], expr)], c[1]]
-        | Seq(s1, s2) -> eval(eval(c, s1), s2)
-        | Skip -> c
-		| Read(str) -> local res = readWorld(c[1]);
-					   [c[0] <- [str, res[0]], res[1]]
-		| Write(str) -> [c[0], writeWorld(evalExpr(c[0], str), c[1])]
-	esac
+	case c of [st, [in, out]] ->
+        case stmt of
+              Skip -> c
+            | Read(x) -> case in of y : i -> [st <- [x, y], [i, out]] esac
+            | Write(expr) -> [st, [in, evalExpr(st, expr) : out]]
+            | Assn(x, expr) -> [st <- [x, evalExpr(st, expr)], [in, out]]
+            | Seq(s1, s2) -> eval(eval(c, s1), s2)
+            | If (expr, s1, s2) -> if (evalExpr(c[0], expr)) then eval (c, s1) else eval (c, s2) fi
+            | Repeat (s, expr) -> local c1 = eval (c, s);
+                                 if (evalExpr(c1[0], expr)) then eval (c1, Skip) else eval (c1, Repeat(s, expr)) fi
+            | While (expr, s) -> if (evalExpr(c[0], expr)) then eval (c, Seq(s, stmt)) else eval (c, Skip) fi
+        esac
+    esac
 }
 
 -- Evaluates a program with a given input and returns an output
