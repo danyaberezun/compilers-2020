@@ -60,7 +60,30 @@ fun fromLabel (env, lab) {
 -- returns a final configuration
 (* Assignment *)
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+  case insns of
+    {} -> c
+  | i : is -> case c of [stack, state, w] -> 
+        case i of 
+          CONST (n) -> eval(env, [n : stack, state, w], is)
+        | BINOP (op) -> eval(env, case stack of lhs : rhs : t ->  [evalOp (op, lhs, rhs) : t, state, w] esac, is)
+        | LD (x) -> eval(env, [state (x) : stack, state, w], is)
+        | LDA(x) -> eval(env, [Ref(x) : stack, state, w], is)
+        | ST (x) -> eval(env, case stack of h : t -> [t, state <- [x, h], w] esac, is)
+        | STI -> eval(env, case stack of val : Ref(x) : t -> [val:t, state <- [x, val], w] esac, is)
+        | DROP -> eval(env, case stack of _:t -> [t, state, w] esac, is)
+        | READ -> eval(env, case readWorld(w) of [h, w1] -> [h : stack, state, w1] esac, is)
+        | WRITE -> eval(env, case stack of h : t -> [t, state, writeWorld (h, w)] esac, is)
+        | LABEL (l) -> eval(env, c, is)
+        | JMP (l) -> eval(env, c, env.fromLabel(l))
+        | CJMP ("z", l) -> case stack of h : t -> 
+            eval(env, [t, state, w], if h then is else env.fromLabel(l) fi)
+          esac
+        | CJMP ("nz", l) -> case stack of h : t -> 
+            eval(env, [t, state, w], if h == 0 then is else env.fromLabel(l) fi)
+          esac
+        esac
+    esac
+  esac
 }
 (* End *)
 
@@ -104,6 +127,54 @@ fun genLabels (env, n) {
 -- instructions.
 (* Assignment *)
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  fun compileSMListImpl(exprs, env) {
+    case foldl(fun ([smInsns, env], expr) {
+            case compileSMImpl (expr, env) of
+                [is, env] -> [is : smInsns, env]
+            esac
+        }, [{}, env], exprs) of
+        [insns, env] -> [reverse(insns), env]
+    esac
+  }
+  fun compileSMImpl(stmt, env) {
+      case stmt of
+        Var (x) -> [LD (x), env]
+      | Ref (x) -> [LDA (x), env]
+      | Ignore (e) -> case compileSMImpl(e, env) of 
+            [is, env] -> [{is, DROP}, env]
+        esac
+      | Const (n) -> [CONST (n), env]
+      | Binop(op, lhs, rhs) -> case compileSMListImpl({lhs, rhs}, env) of
+            [lis:ris:_, env] -> [{ris, lis, BINOP(op)}, env]
+        esac
+      | Read (x) -> [{READ, ST (x)}, env]
+      | Write (e) -> case compileSMImpl(e, env) of
+            [is, env] -> [{is, WRITE}, env]
+        esac
+      | Assn (x, e) -> case compileSMListImpl({x, e}, env) of
+            [xis:eis:_, env] -> [{xis, eis, STI}, env]
+        esac
+      | Seq (s1, s2) -> case compileSMListImpl({s1, s2}, env) of
+            [is1:is2:_, env] -> [{is1, is2}, env]
+        esac
+      | Skip -> [{}, env]
+      | If (cond, s1, s2) -> case env.genLabels(2) of 
+            [l1, l2, env] -> case compileSMListImpl({cond, s1, s2}, env) of
+                [cis:is1:is2:_, env] -> [{cis, CJMP("z", l1), is1, JMP(l2), LABEL(l1), is2, LABEL(l2)}, env]
+            esac
+        esac
+      | While (cond, stmt) -> case env.genLabels(2) of
+            [l1, l2, env] -> case compileSMListImpl({cond, stmt}, env) of
+              [cis:body:_, env] -> [{JMP (l2), LABEL (l1), body, LABEL(l2), cis, CJMP ("nz", l1)}, env]
+            esac
+        esac
+      | Repeat (stmt, cond) -> case env.genLabel of
+            [l, env] -> case compileSMListImpl({stmt, cond}, env) of
+              [body:cis:_, env] -> [{LABEL(l), body, cis, CJMP ("z", l)}, env]
+            esac
+        esac
+      esac
+  }
+  compileSMImpl (stmt, initCompEnv()).fst.deepFlatten
 }
 (* End *)
