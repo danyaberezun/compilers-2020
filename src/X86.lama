@@ -87,7 +87,6 @@ fun insnString (insn) {
     | I (n, x) -> sprintf ("%d(%s)", n, opndString (x))
     esac
   }
-
   case insn of
     Cltd               -> "\tcltd\n"
   | Set   (suf, s)     -> sprintf ("\tset%s\t%s\n", suf, s)
@@ -490,11 +489,11 @@ fun call (env, fLabel, nA) {
              [y, env] ->
                [env, listBuffer (flatten $ {pushRegs,
                                  reverse (pushArgs),
-                                 case extraArg of Some (n) -> Push (L (box $ n)) | _ -> {} esac,
-                                 Call (fLabel),
-                                 Binop ("+", L (wordSize * (pushArgs.size + if extraArg == 0 then 0 else 1 fi)), esp),
+                                 case extraArg of Some (n) -> Push (L (box $ n)) : {} | _ -> {} esac,
+                                 Call (fLabel) : {},
+                                 Binop ("+", L (wordSize * (pushArgs.size + if extraArg == 0 then 0 else 1 fi)), esp) :{},
                                  reverse (popRegs),
-                                 Mov (eax, y)})
+                                 Mov (eax, y) : {}})
                ]
            esac
       esac
@@ -513,9 +512,9 @@ fun operationType(op)
   | ">"  -> ">,<"
   | "&&" -> "&&, !!"
   | "!!" -> "&&, !!"
-  | "+"  -> "+-*"
-  | "-"  -> "+-*"
-  | "*"  -> "+-*"
+  | "+"  -> "+"
+  | "-"  -> "-"
+  | "*"  -> "*"
   | "/"  -> "/"
   | "%"  -> "%"
   | _    -> "?"
@@ -524,7 +523,7 @@ fun operationType(op)
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
-fun compile (env, code) {  
+fun compile (env, code) {
   fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
@@ -532,7 +531,7 @@ fun compile (env, code) {
         case i of
          CONST(n) -> 
 			case env.allocate of
-			  [s, env] -> [env, code <+ Mov (L(n), s)]
+			  [s, env] -> [env, code <+ Mov (L(box(n)), s)]
 			esac
 		| GLOBAL(x) -> [env.addGlobal(x), code]
 		| LD(x) ->
@@ -562,7 +561,7 @@ fun compile (env, code) {
 			[setBarrier(setStack(env, l)), code <+ Jmp(l)]
 		| CJMP(c, l) ->
 			case env.pop of [s, env] -> 
-				[env.setStack(l), code <+ Mov(L(0), eax) <+ Binop("cmp", eax, s) <+ CJmp(c, l)]
+				[env.setStack(l), code <+ Mov(L(box(0)), eax) <+ Binop("cmp", eax, s) <+ CJmp(c, l)]
 			esac
 		| BINOP(op) ->
 			case env.pop2 of
@@ -570,29 +569,31 @@ fun compile (env, code) {
 				case env.allocate of
 				  [s, env] ->
 					case operationType(op) of
-					  "/"  	   	-> [env, code <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(eax, s)]
-					| "%"  	   	-> [env, code <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(edx, s)]
+					  "/"  	   	-> [env, code <+ Sar1(s2) <+ Sar1(s1)
+											  <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(eax, s)
+											  <+> toFixedNum(s) ]
+					| "%"  	   	-> [env, code <+ Sar1(s2) <+ Sar1(s1)
+											  <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(edx, s)
+											  <+> toFixedNum(s) ]
 					| "&&, !!" 	-> [env, code <+ Mov(L(0), eax) <+ Mov(L(0), edx)
-											  <+ Binop("cmp", L(0), s1) <+ Set(suffix("!="), "%al")  -- <+ Mov(eax, s1)
-											  <+ Binop("cmp", L(0), s2) <+ Set(suffix("!="), "%dl")  -- <+ Mov(eax, s2)
-											  <+ Binop(op, eax, edx) <+ Mov(edx, s)]
-					| ">,<"    	-> [env, code <+ Mov(L(0), eax) <+ Mov(s2, edx) 
-											  <+ Binop("cmp", s1, edx) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
-					| "+-*"  	-> [env, code <+ Mov(s2, eax) <+ Binop(op, s1, eax) <+ Mov(eax, s)]
+											  <+ Binop("cmp", L(box(0)), s1) <+ Set(suffix("!="), "%al")
+											  <+ Binop("cmp", L(box(0)), s2) <+ Set(suffix("!="), "%dl")
+											  <+ Binop(op, eax, edx) <+ Mov(edx, s) <+> toFixedNum(s)]
+					| ">,<"    	-> [env, code <+ Mov(L(box(0)), eax) <+ Mov(s2, edx) 
+											  <+ Binop("cmp", s1, edx) <+ Set(suffix(op), "%al")
+											  <+ Mov(eax, s) <+> toFixedNum(s)]
+					| "+"  		-> [env, code <+ Mov(s2, eax) <+ Binop("-", L(1), eax)
+											  <+ Binop("+", s1, eax) <+ Mov(eax, s)]
+					| "-"  		-> [env, code <+ Mov(s2, eax) <+ Binop("-", s1, eax) 
+											  <+ Binop("+", L(1), eax) <+ Mov(eax, s)]
+					| "*"  		-> [env, code <+ Sar1(s2) <+ Sar1(s1)
+											  <+ Mov(s2, eax) <+ Binop(op, s1, eax) 
+											  <+ Mov(eax, s) <+> toFixedNum(s) ] 
 					| _ 		-> failure ("unknown operation %s\n", op)
 					esac
 				esac
 			esac
-(*
-          READ ->
-            case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
-        | WRITE ->
-            case env.pop of
-              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
-            esac
-*)
+			
         (* Assignment *)
         
          -- Some guidelines for generating function calls:

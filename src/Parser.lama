@@ -107,7 +107,7 @@ fun distributeScope (expr, exprConstructor) {
 
 fun myIf(cond, x, y)
 {
-	fun(a) { If(cond(Var), x(a), y(a))}
+	fun(a) { If(cond(Val), x(a), y(a))}
 }
 
 local elifParser  = memo $ eta syntax(
@@ -146,7 +146,7 @@ local primary    = memo $ eta syntax (
 			inbr[s ("("), exp, s (")")]					  		  																 |
 			loc=pos kSkip											{ fun (a) { assertVoid(a, Skip, loc) }} 					 |
 			loc=pos kWhile e=exp kDo x=scopeExpr kOd				{ fun (a) { assertVoid(a, While(e(Val), x(Void)), loc) }}	 |
-			loc=pos kIf e=exp kThen x=exp y=elifParser kFi			{ myIf(e, x, y) 	} 										 |
+			loc=pos kIf e=exp kThen x=scopeExpr y=elifParser kFi	{ myIf(e, x, y) 	} 										 |
 			loc=pos kIf e=exp kThen x=scopeExpr kFi					{ myIf(e, x, fun(a) { assertVoid(a, Skip, loc)})}			 |
 			loc=pos kRepeat x=scopeExpr kUntil s["("] e=exp s[")"]  { fun (a) { 
 																		case x(Void) of Scope(defs, e1) ->
