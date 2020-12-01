@@ -87,7 +87,6 @@ fun insnString (insn) {
     | I (n, x) -> sprintf ("%d(%s)", n, opndString (x))
     esac
   }
-
   case insn of
     Cltd               -> "\tcltd\n"
   | Set   (suf, s)     -> sprintf ("\tset%s\t%s\n", suf, s)
@@ -490,11 +489,11 @@ fun call (env, fLabel, nA) {
              [y, env] ->
                [env, listBuffer (flatten $ {pushRegs,
                                  reverse (pushArgs),
-                                 case extraArg of Some (n) -> Push (L (box $ n)) | _ -> {} esac,
-                                 Call (fLabel),
-                                 Binop ("+", L (wordSize * (pushArgs.size + if extraArg == 0 then 0 else 1 fi)), esp),
+                                 case extraArg of Some (n) -> Push (L (box $ n)) : {} | _ -> {} esac,
+                                 Call (fLabel) : {},
+                                 Binop ("+", L (wordSize * (pushArgs.size + if extraArg == 0 then 0 else 1 fi)), esp) :{},
                                  reverse (popRegs),
-                                 Mov (eax, y)})
+                                 Mov (eax, y) : {}})
                ]
            esac
       esac
@@ -502,22 +501,99 @@ fun call (env, fLabel, nA) {
 }
 (* End *)
 
+fun operationType(op)
+{
+  case op of
+    "<"  -> ">,<"
+  | "<=" -> ">,<"
+  | "==" -> ">,<"
+  | "!=" -> ">,<"
+  | ">=" -> ">,<"
+  | ">"  -> ">,<"
+  | "&&" -> "&&, !!"
+  | "!!" -> "&&, !!"
+  | "+"  -> "+"
+  | "-"  -> "-"
+  | "*"  -> "*"
+  | "/"  -> "/"
+  | "%"  -> "%"
+  | _    -> "?"
+  esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
-fun compile (env, code) {  
+fun compile (env, code) {
   fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
-          READ ->
-            case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
-        | WRITE ->
-            case env.pop of
-              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
-            esac
+         CONST(n) -> 
+			case env.allocate of
+			  [s, env] -> [env, code <+ Mov (L(box(n)), s)]
+			esac
+		| GLOBAL(x) -> [env.addGlobal(x), code]
+		| LD(x) ->
+			case env.allocate of
+			  [s, env] -> [env, code <+> move (env.loc(x), s) ]
+			esac
+		| LDA(x) -> 
+			case env.allocate of
+			  [s, env] -> [env, code <+ Lea(env.loc(x), eax) <+ Mov(eax, s)]
+			esac
+		| ST(x) ->
+			case env.pop of
+			  [s, env] -> [env, code <+> move (s, env.loc(x))]
+			esac
+		| STI -> 
+			case env.pop2 of
+			  [s, adr, env1] -> 
+				case env1.allocate of [s2, env2] ->
+					[env2, code <+> move (s, I(0, adr)) <+> move(s, s2)]
+				esac
+			esac
+		| DROP -> 
+			[env.pop[1], code]
+		| LABEL(l) -> 
+			[if env.isBarrier then env.retrieveStack(l) else env fi, code <+ Label(l)]
+		| JMP (l) ->
+			[setBarrier(setStack(env, l)), code <+ Jmp(l)]
+		| CJMP(c, l) ->
+			case env.pop of [s, env] -> 
+				[env.setStack(l), code <+ Mov(L(box(0)), eax) <+ Binop("cmp", eax, s) <+ CJmp(c, l)]
+			esac
+		| BINOP(op) ->
+			case env.pop2 of
+			  [s1, s2, env] ->
+				case env.allocate of
+				  [s, env] ->
+					case operationType(op) of
+					  "/"  	   	-> [env, code <+ Sar1(s2) <+ Sar1(s1)
+											  <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(eax, s)
+											  <+> toFixedNum(s) ]
+					| "%"  	   	-> [env, code <+ Sar1(s2) <+ Sar1(s1)
+											  <+ Mov(s2, eax) <+ Cltd <+ IDiv(s1) <+ Mov(edx, s)
+											  <+> toFixedNum(s) ]
+					| "&&, !!" 	-> [env, code <+ Mov(L(0), eax) <+ Mov(L(0), edx)
+											  <+ Binop("cmp", L(box(0)), s1) <+ Set(suffix("!="), "%al")
+											  <+ Binop("cmp", L(box(0)), s2) <+ Set(suffix("!="), "%dl")
+											  <+ Binop(op, eax, edx) <+ Mov(edx, s) <+> toFixedNum(s)]
+					| ">,<"    	-> [env, code <+ Mov(L(box(0)), eax) <+ Mov(s2, edx) 
+											  <+ Binop("cmp", s1, edx) <+ Set(suffix(op), "%al")
+											  <+ Mov(eax, s) <+> toFixedNum(s)]
+					| "+"  		-> [env, code <+ Mov(s2, eax) <+ Binop("-", L(1), eax)
+											  <+ Binop("+", s1, eax) <+ Mov(eax, s)]
+					| "-"  		-> [env, code <+ Mov(s2, eax) <+ Binop("-", s1, eax) 
+											  <+ Binop("+", L(1), eax) <+ Mov(eax, s)]
+					| "*"  		-> [env, code <+ Sar1(s2) <+ Sar1(s1)
+											  <+ Mov(s2, eax) <+ Binop(op, s1, eax) 
+											  <+ Mov(eax, s) <+> toFixedNum(s) ] 
+					| _ 		-> failure ("unknown operation %s\n", op)
+					esac
+				esac
+			esac
+			
         (* Assignment *)
         
          -- Some guidelines for generating function calls:
@@ -535,7 +611,47 @@ fun compile (env, code) {
          -- 1. generate proper prologue for BEGIN instruction (use "prologue" helper); use
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
-               
+         
+		| CALL (fLabel, a) ->
+			local g = case fLabel of 
+					    "read"  -> "Lread" 
+					  | "write" -> "Lwrite"
+					  | _       ->  fLabel
+					  esac;
+			case call(env, g, a) of [env1, codef] ->
+				[env1, code <+> codef]
+			esac
+		| BEGIN (fLabel, a, l) ->
+			[enterFunction(env, fLabel, l), code <+> prologue(fLabel)]
+		| END -> 
+			case epilogue(env) of [env1, code1] ->
+				[env1, code <+> code1]
+			esac
+		| BUILTIN (f, a) ->
+			case call(env, "B" ++ f, a) of [env1, code1] ->
+				[env1, code <+> code1]
+			esac
+		| STRING (str) ->
+			case addString(env, str) of [env1, strName] ->
+				case env1.allocate of [s, env2] ->
+					case call(env2, "Bstring", 1) of [env3, code1] ->
+						[env3, code <+> 
+								move(M("$" ++ strName), s) <+> code1]
+					esac
+				esac
+			esac
+		| ARRAY (n) ->
+			case call(env, "Barray", n) of [env1, code1] ->
+				[env1, code <+> code1]
+			esac
+		| ELEM ->
+			case call(env, "Belem", 2) of [env1, code1] ->
+				[env1, code <+> code1]
+			esac
+		| STA ->
+			case call(env, "Bsta", 2) of [env1, code1] ->
+				[env1, code <+> code1]
+			esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
         esac
