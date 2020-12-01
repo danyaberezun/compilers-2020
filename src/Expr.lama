@@ -12,7 +12,7 @@ import State;
 -- expr = Var   (string)             |
 --        Const (int)                |
 --        Binop (string, expr, expr)
-public fun evalpublic fun evalOp(op, l, r) {
+public fun evalOp(op, l, r) {
     case op of
 		  "+" -> l + r 
 		| "-" -> l - r 
