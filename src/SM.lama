@@ -63,9 +63,9 @@ fun eval (env, c, insns) {
         |   BINOP(op) : e -> case s of r : l : ss -> eval(env, [calcBinOp(op, l, r) : ss, d, w], e) esac
         |   READ : e -> case in of elem : i -> eval(env, [elem: s, d, [i, out]], e) esac
         |   WRITE : e -> case s of elem : ss -> eval(env, [ss, d, [in, elem : out]], e) esac
-        |   LABEL(st) : e -> eval(env, c, e)
+        |   LABEL(s) : e -> eval(env, c, e)
         |   JMP(l)      : e -> eval(env, c, fromLabel(env, l))
-        |   CJMP(cond, l)  : e -> case s of cmp : sst -> case cond of
+        |   CJMP(cond, l)  : e -> case s of cmp : ss -> case cond of
                                                             "z" -> case cmp of
                                                                        0 -> eval(env, c, fromLabel (env, l))
                                                                    | _ -> eval(env, c, e)

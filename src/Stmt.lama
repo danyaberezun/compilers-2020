@@ -29,9 +29,9 @@ fun eval (c, stmt) {
     |   Write (e) -> return [s, writeWorld (evalExpr (s, e), w)]
     |   Skip -> return c
     |   If (expr, stmt1, stmt2) -> if (evalExpr(c[0], expr)) then eval(c, stmt1) else eval(c, stmt2) fi
-    |   While (expr, s) -> if (evalExpr(c[0], expr)) then eval (c, Seq(s, stmt)) else eval (c, Skip) fi
-    |   Repeat (s, expr) -> local c1 = eval (c, s);
-                            if (evalExpr(c1[0], expr)) then eval (c1, Skip) else eval (c1, Repeat(s, expr)) fi 
+    |   While (expr, ss) -> if (evalExpr(c[0], expr)) then eval (c, Seq(ss, stmt)) else eval (c, Skip) fi
+    |   Repeat (ss, expr) -> local c1 = eval (c, ss);
+                            if (evalExpr(c1[0], expr)) then eval (c1, Skip) else eval (c1, Repeat(ss, expr)) fi 
     esac
 }
 
