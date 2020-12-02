@@ -19,6 +19,9 @@ public fun showSMInsn (i) {
   | LD    (x) -> sprintf ("LD %s", x)
   | ST    (x) -> sprintf ("ST %s", x)
   | CONST (n) -> sprintf ("CONST %d", n)
+  | LABEL (s)    -> sprintf ("LABEL %s", s)
+  | JMP   (l)    -> sprintf ("JMP %s", l)
+  | CJMP  (c, l) -> sprintf ("CJMP %s, %s", c, l)
   esac
 }
 
@@ -53,17 +56,17 @@ fun fromLabel (env, lab) {
 fun eval (env, c, insns) {
     case insns of
         {} -> return c
-    |   p -> local i = insns[1], s = c[0], d = c[1], w = c[2];
-        case insns[0] of
-            LD (x) : e -> eval(env, [singleton(d(x)) +++ s, d, w], i)
-        |   ST (x) : e -> eval(env, [s[1], d <- [x, s[0]], w], i)
-        |   CONST(c) : e-> eval(env, [singleton(c) +++ s, d, w], i)
-        |   BINOP(op) : e-> eval(env, [singleton(calcBinOp(op, s[1][0], s[0])) +++ s[1][1], d, w], i)
+    |   p -> local s = c[0], d = c[1], w = c[2];
+        case insns of
+            LD (x) : e -> eval(env, [singleton(d(x)) +++ s, d, w], e)
+        |   ST (x) : e -> eval(env, [s[1], d <- [x, s[0]], w], e)
+        |   CONST(c) : e -> eval(env, [singleton(c) +++ s, d, w], e)
+        |   BINOP(op) : e -> eval(env, [singleton(calcBinOp(op, s[1][0], s[0])) +++ s[1][1], d, w], e)
         |   READ : e -> local read = readWorld(w);
                     local var = read[0];
                     local new_w = read[1];
-                    return eval(env, [singleton(var) +++ s, d, new_w], i)
-        |   WRITE : e -> eval(env, [s[1], d, writeWorld(s[0], w)], i)
+                    return eval(env, [singleton(var) +++ s, d, new_w], e)
+        |   WRITE : e -> eval(env, [s[1], d, writeWorld(s[0], w)], e)
         |   LABEL(st) : e -> eval(env, c, e)
         |   JMP(l)      : e -> eval(env, c, fromLabel(env, l))
         |   CJMP(cond, l)  : e -> case s of cmp : sst -> case cond of
