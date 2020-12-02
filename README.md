@@ -1,2 +1,3 @@
-# compiler-2020
-A supplementary repository for the course on compilers.
+# A11-Sexp-case-int
+
+Implement S-expressions and pattern matching in interpretation mode.
