@@ -4,6 +4,7 @@ import Ostap;
 import Lexer;
 import List;
 import Fun;
+import Matcher;
 
 -- A parser of "something" in brackets; l, r are left and right
 -- brackets as strings, p --- a parser of "something"
@@ -32,7 +33,7 @@ local stmt = memo $ eta syntax (
       kIf e=exp kThen s1=seqq s2=ifTailParser {If (e, s1, s2)} |
       kWhile e=exp kDo s=seqq kOd {While (e, s)} |
       kRepeat s=seqq kUntil e=exp {Repeat (s, e)} |
-      kFor e1=seqq s[","] e2=exp s[","] e3=seqq kDo s=seqq kOd {Seq (e1, While(e2, Seq(s, e3)))}
+      kFor e1=seqq s[","] e2=exp s[","] e3=seqq s=inbr[kDo, seqq, kOd] {Seq (e1, While(e2, Seq(s, e3)))}
       ),
 
       ifTailParser = memo $ eta syntax(
@@ -40,7 +41,7 @@ local stmt = memo $ eta syntax (
       -kElse seqq -kFi |
       kElif e=exp kThen s1=seqq s2=ifTailParser {If (e, s1, s2)}
       ),
-
+    
       seqq = memo $ eta syntax (stmt | s1=stmt s[";"] s2=seqq {Seq(s1, s2)});  
         
 -- Public top-level parser
