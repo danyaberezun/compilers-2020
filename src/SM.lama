@@ -54,22 +54,21 @@ fun fromLabel (env, lab) {
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c, insns) {
+    local s = c[0], d = c[1], w = c[2];
     case insns of
-        {} -> return c
-    |   p -> local s = c[0], d = c[1], w = c[2];
-        case insns of
-            LD (x) : e -> eval(env, [singleton(d(x)) +++ s, d, w], e)
-        |   ST (x) : e -> eval(env, [s[1], d <- [x, s[0]], w], e)
-        |   CONST(c) : e -> eval(env, [singleton(c) +++ s, d, w], e)
-        |   BINOP(op) : e -> eval(env, [singleton(calcBinOp(op, s[1][0], s[0])) +++ s[1][1], d, w], e)
-        |   READ : e -> local read = readWorld(w);
+        {} -> return c  
+    |    LD (x) : e -> eval(env, [singleton(d(x)) +++ s, d, w], e)
+    |   ST (x) : e -> eval(env, [s[1], d <- [x, s[0]], w], e)
+    |   CONST(c) : e -> eval(env, [singleton(c) +++ s, d, w], e)
+    |   BINOP(op) : e -> eval(env, [singleton(calcBinOp(op, s[1][0], s[0])) +++ s[1][1], d, w], e)
+    |   READ : e -> local read = readWorld(w);
                     local var = read[0];
                     local new_w = read[1];
                     return eval(env, [singleton(var) +++ s, d, new_w], e)
-        |   WRITE : e -> eval(env, [s[1], d, writeWorld(s[0], w)], e)
-        |   LABEL(st) : e -> eval(env, c, e)
-        |   JMP(l)      : e -> eval(env, c, fromLabel(env, l))
-        |   CJMP(cond, l)  : e -> case s of cmp : sst -> case cond of
+    |   WRITE : e -> eval(env, [s[1], d, writeWorld(s[0], w)], e)
+    |   LABEL(st) : e -> eval(env, c, e)
+    |   JMP(l)      : e -> eval(env, c, fromLabel(env, l))
+    |   CJMP(cond, l)  : e -> case s of cmp : sst -> case cond of
                                                             "z" -> case cmp of
                                                                        0 -> eval(env, c, fromLabel (env, l))
                                                                    | _ -> eval(env, c, e)
@@ -78,9 +77,8 @@ fun eval (env, c, insns) {
                                                                         0 -> eval(env, c, e)
                                                                     |   _ -> eval(env, c, fromLabel (env, l))
                                                                     esac
-                                                        esac
-                                  esac                      
-        esac
+                                                     esac
+                              esac                      
     esac
 }
 
