@@ -1,0 +1,9 @@
+local s = 0;
+
+repeat
+  local n;
+  read (n);
+  s := s + n
+until (n == 0);
+
+write (s)  
