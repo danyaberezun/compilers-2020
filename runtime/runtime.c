@@ -20,7 +20,6 @@ typedef struct {
   char contents[0];
 } data; 
 
-
 int Blength (void *p) {
   data *a = TO_DATA(p);
   return BOX(LEN(a->tag));
