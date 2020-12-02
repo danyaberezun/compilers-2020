@@ -19,8 +19,41 @@ import World;
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
 
-fun eval (c, stmt) {
-  failure ("Stmt eval not implemented\n")
+fun eval (configuration, stmt) {
+  local state = configuration.fst;
+  local world = configuration.snd;
+  case stmt of
+    Seq (stmt1, stmt2) -> return eval (eval (configuration, stmt1), stmt2)
+  | Skip -> configuration
+  | Read (var) ->
+      -- как делать destructuring assignment?
+      case readWorld (world) of
+        [value, world2] -> return [state <- [var, value], world2]
+      esac
+  | Write (expr) ->
+    local value = evalExpr (state, expr);
+    local world2 = writeWorld (value, world);
+    return [state, world2]
+  | Assn (var, expr) ->
+    local value = evalExpr (state, expr);
+    return [state <- [var, value], world]
+  | If (expr, stmtThen, stmtElse) ->
+    local value = evalExpr(state, expr);
+    return eval(configuration, if value then stmtThen else stmtElse fi)
+  | While (expr, stmt) ->
+    return evalWhile(expr, stmt, fun (value) { value != 0 }, configuration)
+  | Repeat (stmt, expr) ->
+    local configuration1 = eval(configuration, stmt);
+    return evalWhile(expr, stmt, fun (value) { value == 0 }, configuration1)
+  esac
+}
+
+fun evalWhile (expr, stmt, continue, configuration) {
+  local value = evalExpr(configuration.fst, expr);
+  if continue(value)
+  then evalWhile(expr, stmt, continue, eval(configuration, stmt))
+  else configuration
+  fi
 }
 
 -- Evaluates a program with a given input and returns an output
