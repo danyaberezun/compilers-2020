@@ -27,7 +27,7 @@ local ebx = R (0),
 -- We need to know the word size to calculate offsets correctly
 local wordSize = 4;
 
--- We need to distinguish the following operand types: 
+-- We need to distinguish the following operand types:
 --    R (int)       -- hard register                    
 --    S (int)       -- a position on the hardware stack 
 --    M (string)    -- a named memory location          
@@ -144,7 +144,7 @@ fun makeEnv (stack, stackSlots, globals, barrier, stackMap) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-  -- popped items and an undated environment
+  -- popped items and an updated environment
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals, barrier, stackMap)]
@@ -347,6 +347,23 @@ fun suffix (op) {
   esac
 }
 
+fun opType (op) {
+	case op of
+		  "*"  -> "sh"
+		| "+"  -> "sh"
+		| "-"  -> "sh"
+		| "<"  -> "cm"
+		| "<=" -> "cm"
+		| ">"  -> "cm"
+		| ">=" -> "cm"
+		| "==" -> "cm"
+		| "!=" -> "cm"
+		| "!!" -> "bi"
+		| "&&" -> "bi"
+		| _    -> op
+	esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -356,14 +373,60 @@ fun compile (env, code) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
           READ ->
-            case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
+			case env.allocate of
+				[s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
+			esac             
         | WRITE ->
-            case env.pop of
-              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
-            esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+			case env.pop of
+				[s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
+			esac
+		| ST (v) -> 
+			case env.addGlobal(v).pop of
+				[s, env] -> [env, code <+> move(s, env.loc(v))] 
+			esac
+		| LD (v) ->
+			case env.addGlobal(v).allocate of
+				[s, env] -> [env, code <+> move(env.loc(v), s)]
+			esac
+		| CONST (n) ->
+			case env.allocate of
+				[s, env] -> [env, code <+ Mov (L(n), s)]
+			esac
+		| LDA (v) -> 
+			case env.addGlobal(v).allocate of
+				[s, env] -> [env, code <+ Lea(env.loc(v), eax) <+ Mov(eax, s)]
+			esac
+		| STI ->
+			case env.pop2 of [s, adr, env0] ->
+				case env0.allocate of [v, env1] ->
+					[env1, code <+> move(s, I(0, adr)) <+> move(s, v)]
+				esac
+			esac
+		| DROP -> [env.pop[1], code]
+		| LABEL (lb) -> [if env.isBarrier then env.retrieveStack(lb) else env fi, code <+ Label (lb)]
+		| JMP (lb) -> [setBarrier(setStack(env, lb)), code <+ Jmp (lb)]
+		| CJMP (ch, lb) ->
+			case env.pop of
+				[s, env] -> [env.setStack(lb), code <+ Mov (L(0), eax) <+ Binop("cmp", eax, s) <+ CJmp (ch, lb)]
+			esac
+		| BINOP (op) ->
+			case env.pop2 of
+				[x, y, env] ->
+					case env.allocate of
+						[s, env] ->
+							case opType(op) of
+								  "sh" -> [env, code <+ Mov(y, eax) <+ Binop(op, x, eax) <+ Mov(eax, s)]
+								| "%"  -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
+								| "/"  -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
+								| "cm" -> [env, code <+ Mov(L(0), eax) <+ Mov(y, edx) <+ Binop("cmp", x, edx)
+													 <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+								| "bi" -> [env, code <+ Mov(L(0), edx) <+ Mov(L(0), eax) <+ Binop("cmp", L(0), x) <+ Set(suffix("!="), "%dl")
+													 <+ Binop("cmp", L(0), y) <+ Set(suffix("!="), "%al") <+ Binop(op, edx, eax) <+ Mov(eax, s)]
+								| _    -> failure("Operation %s not found.\n", op)
+							esac
+					esac
+			esac
+        | _ -> failure ("Codegeneration for instruction %s is not yet implemented.\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
   }
