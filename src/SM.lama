@@ -93,8 +93,6 @@ fun eval (env, c@[stack, state, w], insns) {
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
-  -- TODO: remove
-  printf ("evalSM of:\n%s", showSM (insns));
   eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
