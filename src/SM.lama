@@ -1,5 +1,4 @@
 -- Stack machine.
-
 import Ref;
 import Array;
 import List;
@@ -77,6 +76,13 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
+fun compznz (x, znz) {
+  case znz of
+    "z" -> x == 0
+  | "nz" -> x != 0
+  esac
+}
+
 -- Stack machine interpreter. Takes an environment, a world and a program,
 -- returns a final output
 fun eval (env, w, insns) {
@@ -114,17 +120,89 @@ fun eval (env, w, insns) {
     fun inner (n, acc, list) {
       if n == 0
       then [list, acc]
-      else inner (n-1, list.hd : acc, list.tl)
+      else inner (n-1, hd(list) : acc, tl(list))
       fi
     }
 
     inner (n, {}, list)
   }
 
+
   -- Core interpreter: takes a configuration and a program, returns a configuration
   (* Assignment *)
-  fun eval (c@[st, cst, s, w], insns) {
-    failure ("SM interpreter is not implemented\n")
+  fun eval (c@[st, cst, s, w@[i, o]], insns) { (*printf("%s", insns.string);*)
+    case insns of
+      {} -> c
+    | BINOP (b)      : p -> 
+      case st of x : y : ss ->
+        eval ([evalOp (b, y, x) : ss, cst, s, w], p) 
+      esac
+    | CONST (n)      : p -> eval ([n : st, cst, s, w], p)
+    | READ           : p -> 
+      case i of x : it -> 
+        eval ([x : st, cst, s, [it, o]], p)
+      esac
+    | WRITE          : p -> 
+      case st of x : ss ->
+        eval ([ss, cst, s, [i, x : o]], p) 
+      esac
+    | LD    (x)      : p -> eval ([lookup (s, x) : st, cst, s, w], p)
+    | ST    (x)      : p -> 
+      case st of y : ss ->
+        assign (s, x, y); eval ([ss, cst, s, w], p) 
+      esac
+    | LABEL (l)      : p -> eval (c, p)
+    | DUP            : p -> eval (c, p)
+    | JMP   (l)      : p -> eval (c, fromLabel (env, l))
+    | CJMP  (znz, l) : p -> 
+      case st of x : ss ->
+        if compznz (x, znz) 
+        then  eval ([ss, cst, s, w], fromLabel(env, l))
+        else  eval ([ss, cst, s, w], p)
+        fi
+      esac
+    | LDA (x)        : p -> eval ([Ref (x) : st, cst, s, w], p)
+    | STI            : p -> 
+      case st of v : Ref (x) : ss ->
+        assign (s, x, v); eval ([v : ss, cst, s, w], p)
+      esac
+    | DROP           : p -> 
+      case st of
+        x : ss -> eval ([ss, cst, s, w], p)
+      esac
+    | END            : p ->
+      case cst of
+        {}            -> c
+      | [sl, q] : cst -> eval ([st, cst, sl, w], q)
+      esac
+    | BEGIN (_, na, nl) : p ->
+      case take (st, na) of
+        [st, sl] ->
+        local s = makeState (na, nl);
+        foldl (fun (i, arg) {assign (s, Arg (i), arg); i+1}, 0, sl);
+         eval ([st, cst, s, w], p)
+      esac
+    | CALL (f, n)    : p    ->
+      case f[0] of 
+        '$' ->
+         case take (st, n) of
+           [st, a] -> 
+           case evalBuiltin (substring (f, 1, f.length - 1), a, w) of
+               [v, w] -> eval ([v : st, cst, s, w], p)
+           esac
+         esac  
+      | _ -> eval ([st, [s, p] : cst, s, w], fromLabel(env, f))
+      esac
+    | GLOBAL (x)     : p    -> assign (s, Glb (x), 0); eval ([st, cst, s, w], p)
+    | BUILTIN (f, n) : p    -> 
+      case take (st, n) of 
+        [st, a] -> case evalBuiltin (f, a , w) of [v, w] -> eval ([v : st, cst, s, w], p) esac
+      esac
+    | STA : p -> case st of v : id : arr : st -> arr[id] := v; eval ([v : st, cst, s, w], p) esac
+    | ELEM : p -> case st of id : arr : st -> eval([arr[id] : st, cst, s, w], p) esac
+    | ARRAY (n) : p -> case take (st, n) of [st, a] -> eval ([listArray (a) : st, cst, s, w], p) esac
+    | STRING (x) : p -> eval ([x : st, cst, s, w], p)
+    esac
   }
   (* End *)
   
@@ -353,7 +431,210 @@ fun addVars (env, names) {
 --    environment (use env.beginFun) and register arguments
 --    (use env.addArg).
 
-public fun compileSM (expr) {
-  failure ("compileSM not implemented\n")
+public fun compileSM (stmt) {
+
+  fun last (l) {
+    case l of
+      {}     -> [{}]
+    | x : {} -> [{}, x]
+    | x : t  -> case last (t) of [a, b] -> [x : a, b] esac
+    esac
+  }
+
+  fun cSM_list (exprs, env) {
+    case exprs of
+      {}        -> [{}, env]
+    | e : exprs -> 
+      case cSM (e, env) of
+        [ins, env] -> 
+        case cSM_list (exprs, env) of
+          [inss, env] -> [ins : inss, env]
+        esac
+      esac
+    esac
+  }
+
+  fun addDef ([env, funs, glbs], def) {
+    case def of
+      Fun (name, args, body) ->
+      case genFunLabel (env, name) of
+        [fLabel, env] -> [addFun (env, name, fLabel, size (args)),
+                          [fLabel, args, body] : funs,
+                          glbs]
+      esac
+    | Local (ds)      -> [addVars (env, ds), funs,
+                           {if isGlobal (env) then
+                             map (fun (x) {GLOBAL (x)}, ds)
+                           else {} fi, glbs}]
+    esac
+  }
+
+  fun cSM (stmt, env) {
+    case stmt of
+      Var   (x)            -> [LD (lookupVar (env, x)) : {}, env]
+    | Const (n)            -> [CONST (n) : {}, env]
+    | Binop (b, e1, e2)    -> 
+      case cSM (e1, env) of
+        [ins1, env] -> 
+        case cSM (e2, env) of
+          [ins2, env] -> [ins1 +++ ins2 +++ (BINOP (b) : {}), env]
+        esac
+      esac
+    | Ref   (x)            -> [LDA (lookupVar (env, x)) : {}, env]
+    | Ignor (x)            -> 
+      case cSM (x, env) of
+        [ins, env] -> [ins +++ (DROP : {}), env]
+      esac
+    | Assn  (x, expr)      ->
+      case x of
+        ElemRef (earr, eid) ->
+        case cSM_list ({earr, eid, expr}, env) of
+          [inss, env] -> [inss +++ (STA : {}), env]
+        esac
+      | _ ->
+        case cSM_list ({x, expr}, env) of
+          [inss, env] -> [inss +++ (STI : {}), env]
+        esac
+      esac
+    | Read  (x)            -> [{READ, ST (lookupVar (env, x))}, env]
+    | Write (expr)         -> 
+      case cSM (expr, env) of
+        [ins, env] -> [ins +++ (WRITE : {}), env]
+      esac
+    | Skip                 -> [{}, env]
+    | Seq   (s1, s2)       -> 
+      case cSM (s1, env) of
+        [ins, env] ->
+          case cSM (s2, env) of
+            [ins1, env] -> [ins +++ ins1, env]
+          esac
+      esac
+    | If    (expr, s1, s2) -> 
+      case env.genLabels(2) of
+        [ls2, lfi, env] ->
+          case cSM (s1, env) of
+            [ins, env] ->
+              case cSM (s2, env) of
+                [ins1, env] -> 
+                case cSM (expr, env) of
+                  [ins2, env]->
+                  [ins2                    +++
+                  (CJMP ("z", ls2) : {})   +++ 
+                  (case last (ins) of
+                      [ins, LABEL (l)] -> 
+                      ins               +++ 
+                      {JMP (l), DUP, LABEL (ls2)} +++
+                      ins1              +++ 
+                      (LABEL (l) : {})
+                    | _                -> 
+                      ins +++
+                      {JMP (lfi), DUP, LABEL (ls2)} +++ 
+                      ins1              +++ 
+                      (LABEL (lfi) : {})
+                  esac), env]
+                esac
+              esac
+          esac
+      esac 
+    | While (expr, s) ->
+      case env.genLabels(2) of
+        [l1, l2, env] ->
+          case cSM (s, env) of
+            [ins, env] -> 
+            case cSM (expr, env) of
+              [ins1, env] ->
+            [{JMP (l2), LABEL (l1)} +++
+            ins                     +++
+            (LABEL (l2) : {})       +++
+            ins1                    +++
+            (CJMP ("nz", l1) : {}), env]
+            esac
+          esac
+      esac
+    | Repeat (s, expr) ->
+      case env.genLabel of
+        [l, env] ->
+          case cSM (s, env) of
+            [ins, env] ->
+            case cSM (expr, env) of
+              [ins1, env] ->
+              [(LABEL (l) : {})  +++
+              ins                +++
+              ins1               +++
+              (CJMP ("z", l) : {}), env]
+            esac
+          esac
+      esac
+    | Call (f, args)   ->
+      case (cSM_list (args, env)) of
+        [inss, env] -> 
+        case lookupFun (env, f) of
+          Fun (fLabel, n) -> [deepFlatten (inss +++ (CALL (fLabel, n) : {})), env]
+        esac 
+      esac
+    | Scope (defs, expr)  ->
+      case foldl (addDef, [beginScope (env), {}, {}], defs) of
+        [env, funs, glbs] -> 
+        case cSM (expr,
+                  foldl (fun (env, [fLabel, args, body]) {
+                            rememberFun (env, fLabel, args, body)
+                          }, env, funs)) of [ins, env] -> [{glbs, ins}, endScope (env)]
+        esac
+      esac
+    | String (x) -> [STRING (x) : {}, env]
+    | Array (els) -> 
+      case cSM_list (els, env) of
+        [inss, env] -> [inss +++ (ARRAY (size (els)) : {}), env]
+      esac
+    | Elem (earr, eid) -> 
+      case cSM_list ({earr, eid}, env) of
+        [inss, env] -> [inss +++ (ELEM : {}), env]
+      esac
+    | Builtin (f, eargs) -> 
+      case cSM_list (eargs, env) of
+        [inss, env] -> [inss +++ (BUILTIN (f, size (eargs)) : {}), env]
+      esac
+  esac
+  }
+
+  fun cFun (env, main) {
+    fun iterate (env, acc, funSeq) {
+      case funSeq of
+        {} -> case getFuns (env) of
+                [{}, env] -> acc
+              | [fs, env] -> iterate (env, acc, fs)
+        esac
+      | Fun (f, args, body, state) : fs ->
+        case cSM (body, addArgs (beginFun (env, state), args)) of
+          [inss, env] -> iterate (
+            env,
+            {acc, LABEL (f), BEGIN (f, size (args), getLocals (env)), inss, END},
+            fs
+          )
+        esac
+      esac
+    }
+    iterate (env, main, {})
+  }
+  
+  case cSM (stmt, initCompEnv ().beginScope.addFun ("read", "$read", 0).addFun ("write", "$write", 1)) of
+    [inss, env] ->
+    deepFlatten (
+      cFun (env, {LABEL ("main"), BEGIN ("main", 0, getLocals (env)), inss, END}) 
+    )
+  esac
 }
 (* End *)
+
+(*local i =
+case parseString (
+  parse |> bypass (end),
+  "local x; fun sort (x) { local i; for i := 0, i<1, i := i+1 do skip od; x } x := [10, 11]; x := sort (x)"
+--"local x; x := read (); write (x)"
+) of Succ (p) -> p esac;
+local in = compileSM (i);
+
+printf ("%s\n", i.string);
+printf ("%s\n",  showSM (in).string);
+printf ("%s\n", evalExpr ({}, i).string);
+printf ("%s\n", evalSM (5:{}, in).string)*)

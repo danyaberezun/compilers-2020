@@ -1,14 +1,49 @@
 -- Builtins
 import World;
 
-public fun evalBuiltin (name, args, w) {
-  case [name, args] of
-    ["stringval", {a}]          -> [a.string, w]
-  | ["length"   , {a@#array}]   -> [a.length, w]
-  | ["length"   , {a@#string}]  -> [a.length, w]
-  | ["read"     , {}]           -> readWorld (w) 
-  | ["write"    , {x@#unboxed}] -> [0, writeWorld (x, w)]
-  | _ ->
-     failure ("no builtin ""%s"" or it can not be applied to %s\n", name, args.string)
+fun isSexp (x) {
+  case x of
+    [name@#string, _] -> case name[0] of '$' -> 1 | _ -> 0 esac
+  | _ -> 0
   esac
 }
+
+fun printSexp_args (args) {
+  case args of 
+    x : args -> 
+    if isSexp (x) 
+    then 
+      case x of
+        [name, args1] -> 
+        substring (name, 1, name.length - 1) ++
+        (case args1 of _ : _ -> " ("++printSexp_args(args1)++")" | _ -> "" esac) ++
+        (case args of _ : _ -> ", " ++ printSexp_args (args) | _ -> "" esac) 
+      esac
+    else x.string ++ (case args of _ : _ -> ", " ++ printSexp_args (args) | _ -> "" esac)
+    fi
+  | {} -> ""
+  esac
+  
+}
+
+public fun evalBuiltin (name, args, w) {
+    case [name, args] of
+      ["stringval", a : {}]             -> 
+      if isSexp (a) 
+      then 
+        case a of
+          [name, args] -> [substring (name, 1, name.length - 1) ++ 
+          case args of _ : _ -> " ("++printSexp_args(args)++")" | _ -> "" esac, w]
+        esac
+      else [a.string, w]
+      fi
+    | ["length"   , {a@#array}]      -> [a.length, w]
+    | ["length"   , {a@#string}]     -> [a.length, w]
+    | ["read"     , {}]              -> readWorld (w) 
+    | ["write"    , {x@#unboxed}] -> [0, writeWorld (x, w)]
+    | _ ->
+      failure ("no builtin ""%s"" or it can not be applied to %s\n", name, args.string)
+    esac
+}
+
+(*printf ("%s", evalBuiltin ("stringval", ["D", {4, 5, ["$Z", {5, 6}]}] : {}, {}).string)*)
