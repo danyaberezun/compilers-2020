@@ -59,29 +59,33 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-  fun helper(c@[st, state, w], i) {
-    case i of
-        BINOP(op) -> case st of 
-          a:b:r -> [(evalExpr(state, Binop(op, Const(a), Const(b)))):r, state, w] 
-        esac |
-        CONST(n)  -> [n:st, state, w] |
-        READ ->
-          local tmp;
-          tmp := readWorld(w);
-          [tmp[0]:st, state, tmp[1]] |
-        WRITE -> case st of 
-          a:r -> [r, state, writeWorld(a, w)] 
-        esac |
-        LD(x) -> [state(x) : st, state, w] |
-        ST(x) -> case st of 
-          a:r -> [r, state <- [x, a], w] 
-        esac
-      esac
-  }
+fun eval (env, c@[st, state, w], insns) {
   case insns of
-    {} -> c |
-    i:is -> eval((helper(c, i)), is)
+      {} -> c |
+      BINOP (op) : e -> case st of 
+        a:b:r -> eval(env, [(evalExpr(state, Binop(op, Const(a), Const(b)))):r, state, w], e) 
+      esac |
+      CONST (n) : e   -> eval(env, [n:st, state, w], e) |
+      READ : e  ->
+        local tmp;
+        tmp := readWorld(w);
+        eval(env, [tmp[0]:st, state, tmp[1]], e) |
+      WRITE : e  -> case st of 
+        a:r -> eval(env, [r, state, writeWorld(a, w)], e)
+      esac |
+      LD (x) : e  -> eval(env, [state(x) : st, state, w], e) |
+      ST (x) : e  -> case st of 
+        a:r -> eval(env, [r, state <- [x, a], w], e)
+      esac |
+      LABEL (s) : e  -> eval(env, c, e) |
+		  JMP (l) : e  -> eval(env, c, fromLabel(env, l)) |
+		  CJMP (c, l) : e 	-> 
+			case st of a : r ->
+        case c of 
+        "z" -> if (a == 0) then eval(env, [r, state, w], fromLabel(env, l)) else eval(env, [r, state, w], e) fi |
+        "nz" -> if (a == 1) then eval(env, [r, state, w], fromLabel(env, l)) else eval(env, [r, state, w], e) fi
+			  esac 
+      esac
   esac
 }
 
@@ -124,47 +128,48 @@ fun genLabels (env, n) {
 -- of stack machine instructions
 fun compileExpr (expr) {
   case expr of
-    Binop(op, l, r) -> {compileExpr(r), compileExpr(l), BINOP(op)} |
-    Var(x) -> LD(x) |
-    Const(n) -> CONST(n)
+    Binop(op, l, r) -> compileExpr(r) +++ compileExpr(l) +++ singleton(BINOP(op)) |
+    Var(x) -> singleton(LD(x)) |
+    Const(n) -> singleton(CONST(n))
   esac
-}
-
-fun deepFlatten (l) {
-  local res = [0, {}], curr = [res];
-
-  fun append (x) {
-    local new = x : {};
-    
-    curr [0][1] := new;
-    curr [0] := new    
-  }
-
-  fun traverse (l) {
-    case l of
-      _ : _ -> iter (traverse, l)
-    | {}    -> skip
-    | _     -> append (l)
-    esac
-  }
-  
-  traverse (l);
-  
-  res [1]
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  fun helper(stmt) { 
+  fun helper(env, stmt, endIf) { 
     case stmt of
-      Skip -> {} |
-      Assn(x, e) -> {compileExpr(e), ST(x)} |
-      Read(x) -> {READ, ST(x)} |
-      Write(e) -> {compileExpr(e), WRITE} |
-      Seq(s1, s2) -> {helper(s1), helper(s2)}
+      Skip -> [env, {}] |
+      Assn (x, e) -> [env, compileExpr(e) +++ singleton(ST(x))] |
+      Read (x) -> [env, {READ, ST(x)}] |
+      Write (e) -> [env, compileExpr(e) +++ singleton(WRITE)] |
+      Seq (s1, s2) -> case helper(env, s1, "") of [nEnv, is] ->
+                        case helper(nEnv, s2, endIf) of [nnEnv, is2] -> [nnEnv, is +++ is2] esac
+                      esac |
+      If (e, s1, s2) -> case genLabels(env, 2) of [lElse, lFi, env] ->
+			  if compare(endIf, "") == 0 then endIf := lFi fi;
+
+			  case helper(env, s1, endIf) of [env, is1] ->
+				  case helper(env, s2, endIf) of [env, is2] ->
+					  [env, compileExpr(e) +++
+                singleton(CJMP("z", lElse)) +++
+                is1 +++
+                {JMP(endIf), LABEL(lElse)} +++
+                is2 +++
+                singleton(LABEL(lFi))]
+          esac
+        esac
+        esac |
+      While(e, s)	-> case genLabels(env, 2) of [l1, l2, env] -> 
+      case helper(env, s, "") of [env, is] ->
+				[env, {JMP (l2), LABEL (l1)} +++ is +++ singleton(LABEL (l2)) +++ compileExpr(e) +++ singleton(CJMP ("nz", l1))]
+			esac
+		    esac |
+      Repeat (s, e) -> case genLabels(env, 1) of [l, env] ->
+        case helper(env, s) of [env, is] -> [env, singleton(LABEL(l)) +++ is +++ compileExpr(e) +++ singleton(CJMP("z", l))] esac
+      esac 
     esac
   }
-  deepFlatten(helper(stmt))
+  helper(initCompEnv(), stmt, "")[1]
 }
