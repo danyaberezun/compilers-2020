@@ -295,12 +295,84 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST (n) ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (L (n), s)]
+            esac
+        | LD (x) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move (env.loc (x), s)]
+            esac
+        | ST (x) -> 
+            case env.addGlobal(x).pop of
+              [s, env] -> [env, code <+> move (s, env.loc (x))]
+            esac
+        | LABEL (s) -> [env, code <+ Label (s)]
+        | JMP (l) -> [env, code <+ Jmp (l)] 
+        | CJMP (c, l) -> 
+            case env.pop of [s, env] ->
+              [env, code 
+                <+ Binop ("cmp", L (0), s) 
+                <+ CJmp (c, l)
+              ]
+            esac
+        | BINOP (op) ->
+            case env.pop2 of
+              [l, r, env] ->
+                case env.allocate of
+                  [s, env] -> {
+
+                    fun oneOf (x, lst) {
+                      case find (fun (v) { compare (x, v) == 0 }, lst) of
+                        Some (_) -> true
+                      | _        -> false
+                      esac
+                    }
+
+                    if op.oneOf ({"+", "-", "*"}) then
+                      [env, code
+                        <+ Mov (l, eax)
+                        <+ Binop (op, r, eax)
+                        <+ Mov (eax, s)
+                      ]
+                    elif op.oneOf ({"/", "%"}) then
+                      [env, code
+                        <+ Mov (l, eax)
+                        <+ Cltd
+                        <+ IDiv (r)
+                        <+ Mov (case op of "/" -> eax | "%" -> edx esac, s)
+                      ]
+                    elif op.oneOf ({"==", "!=", "<", "<=", ">", ">="}) then
+                      [env, code
+                        <+ Mov (l, eax)
+                        <+ Binop ("cmp", r, eax)
+                        <+ Mov (L (0), eax)
+                        <+ Set (suffix (op), "%al")
+                        <+ Mov (eax, s)
+                      ]
+                    elif op.oneOf ({"&&", "!!"}) then
+                      [env, code
+                        <+ Mov (L (0), eax)
+                        <+ Binop ("cmp", L (0), l)
+                        <+ Set ("nz", "%al")
+                        <+ Mov (L (0), edx)
+                        <+ Binop ("cmp", L (0), r)
+                        <+ Set ("nz", "%dl")
+                        <+ Binop (op, edx, eax)
+                        <+ Mov (eax, s)
+                      ]
+                    else
+                      failure ("unexpected operator in codegeneration: %s\n", op)
+                    fi
+                  }
+                esac
+            esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
-      }, [env, emptyBuffer ()], code)
+      }, [env, {}], code)
   }
 
-  compile (env, code) 
+  compile (env, code)
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
