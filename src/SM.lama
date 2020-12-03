@@ -54,21 +54,6 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval ([sub], c, insns) {
-  fun evalIns(c@[stack, state, w], i) {
-    case i of
-      CONST (n)  -> [n : stack, state, w]
-    | BINOP (op) -> case stack of v1 : v2 : vs -> [opFun (op) (v1, v2) : vs, state, w] esac
-    | LD (x)     -> [state (x) : stack, state, w]
-    | ST (x)     -> case stack of v : vs -> [vs, state <- [x, v], w] esac
-    | READ       -> case readWorld (w) of [v, w1] -> [v : stack, state, w1] esac
-    | WRITE      -> case stack of v : vs -> [vs, state, writeWorld (v, w)] esac
-    | LABEL (s)  -> c
-    | JMP (l)    -> eval(env, c, sub (l))
-  }
-}
--- Stack machine interpreter. Takes an SM-configuration and a program,
--- returns a final configuration
 fun eval (env, c@[stack, state, w], insns) {
   case insns of
     {}             -> c
@@ -86,7 +71,7 @@ fun eval (env, c@[stack, state, w], insns) {
           eval (env, [vs, state, w],
             case isCondTrue(cond, v) of
               0 -> is
-              _ -> fromLabel (env, l)
+            | _ -> fromLabel (env, l)
             esac
           )
         } esac
@@ -108,6 +93,8 @@ fun eval (env, c@[stack, state, w], insns) {
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
+  -- TODO: remove
+  printf ("evalSM of:\n%s", showSM (insns));
   eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
@@ -169,10 +156,10 @@ public fun compileSM (stmt) {
         esac
     | Skip                -> [env, {}]
     | If (cond, thn, els) -> 
-        case genLabels (env, 2) of [labelEls, labelEnd, env1] ->
-          case compileImpl (env1, thn) of [env2, smThn] ->
-            case compileImpl (env2, els) of [env3, smEls] ->
-              [env3,
+        case genLabels (env, 2) of [labelEls, labelEnd, env] ->
+          case compileImpl (env, thn) of [env, smThn] ->
+            case compileImpl (env, els) of [env, smEls] ->
+              [env,
                 { compileExpr (cond)
                 , CJMP ("z", labelEls)
                 , smThn
@@ -186,9 +173,9 @@ public fun compileSM (stmt) {
           esac
         esac
     | While (cond, body) ->
-        case genLabels (env, 2) of [labelBody, labelCond, env1] ->
-          case compileImpl (env1, body) of [env2, smBody] ->
-            [env2,
+        case genLabels (env, 2) of [labelBody, labelCond, env] ->
+          case compileImpl (env, body) of [env, smBody] ->
+            [env,
               { JMP (labelCond)
               , LABEL (labelBody)
               , smBody
@@ -200,9 +187,9 @@ public fun compileSM (stmt) {
           esac
         esac
     | Repeat (body, cond) ->
-        case genLabels (env, 1) of [labelBody, env1] ->
-          case compileImpl (env1, body) of [env2, smBody] ->
-            [env2,
+        case genLabels (env, 1) of [labelBody, env] ->
+          case compileImpl (env, body) of [env, smBody] ->
+            [env,
               { LABEL (labelBody)
               , smBody
               , compileExpr (cond)

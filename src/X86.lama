@@ -286,6 +286,9 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+        printf("code is %s\n", code.string);
+        -- TODO: remove
+        printf("Current ins: %s\n", showSMInsn (i));
         case i of
           READ ->
             case env.allocate of
@@ -296,6 +299,8 @@ fun compile (env, code) {
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
         | CONST (n) ->
+            -- TODO: remove
+            printf("[CONST] code is %s\n", code.string);
             case env.allocate of
               [s, env] -> [env, code <+ Mov (L (n), s)]
             esac
@@ -306,6 +311,20 @@ fun compile (env, code) {
         | ST (x) -> 
             case env.addGlobal(x).pop of
               [s, env] -> [env, code <+> move (s, env.loc (x))]
+            esac
+        | LABEL (s) -> [env, code <+ Label (s)]
+        | JMP (l) -> {
+          -- TODO: remove
+          printf("JMP (%s) matched\n", l);
+          printf("code is %s\n", code.string);
+          [env, code <+ Jmp (l)]
+        }
+        | CJMP (c, l) -> 
+            case env.pop of [s, env] ->
+              [env, code 
+                <+ Binop ("cmp", L (0), s) 
+                <+ CJmp (c, l)
+              ]
             esac
         | BINOP (op) ->
             case env.pop2 of
@@ -358,18 +377,14 @@ fun compile (env, code) {
                   }
                 esac
             esac
-        | LABEL (s) -> [env, code <+ Label (s)]
-        | JMP (l) -> [env, code <+ Jmp (l)]
-        | CJMP (c, l) -> 
-            case env.pop of [s, env] ->
-              [env, code <+ Binop ("cmp", L (0), s) <+ CJmp (c, l)]
-            esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, {}], code)
   }
 
-  compile (env, code) 
+  -- TODO: remove
+  printf("compile() of:\n%s", showSM (code));
+  compile (env, code)
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
