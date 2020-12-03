@@ -221,12 +221,3 @@ public fun evalExpr (input, expr) {
     [c, _] -> c.snd.getOutput
   esac
 }
-
-(*local p =
-  case parseString (parse |> bypass (end),
-   "fun sum (x) {  case x of Nil -> 0  | Cons (x, tl) -> x + sum (tl)  esac} write (sum (Nil))") of Succ (p) -> 
-    evalExpr ({}, p)
-  esac;
-
-printf("%s\n", p.string)
---printf ("%s", printSexp_args ({4, 5, ["$Z", {5, 6}]}))*)
