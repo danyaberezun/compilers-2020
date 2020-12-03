@@ -466,7 +466,7 @@ fun toFixedNum (r) {
 (* Implementation *)
 -- Generates a static call
 fun call (env, fLabel, nA) {
-  local extraArg = case fLabel of "Barray" -> Some (nA) | _ -> {} esac;
+  local extraArg = case fLabel of "Barray" -> Some (nA) | "Bsexp" -> Some (nA) | _ -> {} esac;
 
   if fLabel[0] == '$' then
     fLabel := "L" ++ substring (fLabel, 1, fLabel.length - 1)

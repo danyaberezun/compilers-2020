@@ -1,10 +1,12 @@
 -- Expression evaluator
+import Ostap;
 import List;
 import Array;
 import State;
 import World;
 import Lexer;
 import Parser;
+import Fun;
 import Builtins;
 
 -- As association map which maps "\otimes" into "\oplus"
@@ -54,7 +56,10 @@ public fun evalOp (op, l, r) {
 --        Array   (expr list)          |
 --        Elem    (expr, expr)         |
 --        ElemRef (expr, expr)         |
---        Builtin (string, expr list)
+--        Builtin (string, expr list)  |
+--        Sexp    (string, expr list)  |
+--        Blank                        |
+--        Case    (expr, list [expr, expr])
 
 -- Helper function: checks that given name designates a regular variable in
 -- a given state
@@ -113,6 +118,43 @@ fun assignNames (c@[s, w], names, values) {
   esac
 }
 
+local flag = 1;
+local stateg;
+
+fun evalPattern (c, sexpr, ps) {
+
+  fun list2 (f, l1, l2) {
+    case [l1, l2] of
+      [h1 : l1, h2 : l2] -> f (h1, h2); list2 (f, l1, l2)
+    | [{}, {}]           -> skip 
+    | _                  -> flag := 0
+    esac
+  }
+
+  fun iter (ps, sexpr) {
+    --printf("%s, %s\n", ps.string, sexpr.string);
+    case [ps, sexpr] of
+      [Sexp (name1, args1), [name2, args2]] ->
+      if  compare ("$" ++ name1, name2) == 0
+      then list2 (iter, args1, args2)
+      else flag := 0
+      fi 
+    | [Ref (x), v] -> stateg := stateg <- [x, Val (v)]
+    | [Blank, _]   -> skip
+    | _            -> flag := 0
+    esac
+  }
+  stateg := c[0];
+  case ps of
+    [pattern, expr] : ps -> iter (pattern, sexpr);
+    if flag == 0
+    then flag := 1; evalPattern (c, sexpr, ps)
+    else eval ([stateg, c[1]], expr)
+    fi
+  | {} -> failure ("match failure: %s, %s", ps.string, sexpr.string)
+  esac
+}
+
 fun eval (c@[s, w], expr) {
   case expr of
     Const (z)         -> [c, z]
@@ -124,15 +166,6 @@ fun eval (c@[s, w], expr) {
       [c, {v, w}] -> [c, evalOp (op, v, w)]
     esac
   | Skip              -> [c, None]
-  (*| Assn  (l, r)      ->
-    case evalList (c, {l, r}) of
-      [c@[s, w], {Ref (x), v}] -> [[s <- [x, v], w], v]
-    esac
-  | Read  (x)         -> case w of [z : it, o] -> [[s <- [x, z], [it, o]], None] esac
-  | Write (expr)      ->
-    case eval (c, expr) of
-      [[s, [i, o]], v] -> [[s , [i, v : o]], None]
-    esac*)
   | Seq   (s1, s2)    -> eval (eval (c, s1)[0], s2)
   | If    (e, s1, s2) -> 
     case eval (c, e) of
@@ -177,6 +210,8 @@ fun eval (c@[s, w], expr) {
       [[s, w], {Ref (x), v}] -> [[s <- [x, Val (v)], w], v]
     | [c, {ElemRef (w, i), v}] -> w[i] := v; [c, v]
     esac
+  | Sexp   (name, es)     -> case evalList (c, es) of [c, vs] -> [c, ["$" ++ name, vs]] esac
+  | Case   (e, list_p)   -> case eval (c, e) of [c, v] -> evalPattern (c, v, list_p) esac
   esac
 }
 
@@ -186,3 +221,12 @@ public fun evalExpr (input, expr) {
     [c, _] -> c.snd.getOutput
   esac
 }
+
+(*local p =
+  case parseString (parse |> bypass (end),
+   "fun sum (x) {  case x of Nil -> 0  | Cons (x, tl) -> x + sum (tl)  esac} write (sum (Nil))") of Succ (p) -> 
+    evalExpr ({}, p)
+  esac;
+
+printf("%s\n", p.string)
+--printf ("%s", printSexp_args ({4, 5, ["$Z", {5, 6}]}))*)
