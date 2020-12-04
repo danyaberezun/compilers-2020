@@ -1,3 +1,5 @@
+local n;
+
 read (n);
 
 while n > 0 do

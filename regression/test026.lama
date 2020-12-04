@@ -1,3 +1,5 @@
+local x, y;
+
 read (x);
 read (y);
 

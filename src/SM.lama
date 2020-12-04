@@ -1,5 +1,6 @@
 -- Stack machine.
 
+
 import Array;
 import List;
 import Fun;
@@ -8,7 +9,7 @@ import World;
 import State;
 import Expr;
 import Buffer;
-import Fun;
+
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -30,9 +31,11 @@ public fun showSMInsn (i) {
   esac
 }
 
+
 public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
+
 
 -- Evaluation environment: keeps a mapping between labels and (sub)programs
 fun initEvalEnv (insns) {
@@ -52,14 +55,16 @@ fun initEvalEnv (insns) {
   }]
 }
 
+
 -- Accessor function
 fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
+
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
--- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
+(* Assignment *)
 fun eval (env, c@[stack, map, world@[input, output]], insns) {
 --printf ("%s\n", insns.string);
 --printf ("x %s\n", stack.string);
@@ -103,11 +108,14 @@ case insns of
 				esac
 esac
 }
+(* End *)
+
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
   eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
+
 
 -- Compilation environment: generates labels
 fun makeCompEnv (n) {
@@ -116,14 +124,17 @@ fun makeCompEnv (n) {
   }]
 }
 
+
 fun initCompEnv () {
   makeCompEnv (0)
 }
+
 
 -- Accessor function: generates one label
 fun genLabel (env) {
   env [0] ()
 }
+
 
 -- Utility function: generates n labels
 fun genLabels (env, n) {
@@ -143,6 +154,7 @@ fun genLabels (env, n) {
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list of stack machine
 -- instructions.
+(* Assignment *)
 public fun compileSM (stmt) {
 	fun compileEnv(env, stmt) {
 	case stmt of 
@@ -198,4 +210,5 @@ public fun compileSM (stmt) {
 	esac
 	}
 compileEnv (initCompEnv (), stmt)[1]
-} 
+}
+(* End *)
