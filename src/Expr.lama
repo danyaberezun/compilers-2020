@@ -6,6 +6,7 @@ import State;
 import World;
 import Lexer;
 import Parser;
+import Fun;
 import Builtins;
 
 -- As association map which maps "\otimes" into "\oplus"

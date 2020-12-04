@@ -115,6 +115,7 @@ local elifParser  = memo $ eta syntax(
 				kElif e=exp kThen x=exp y=elifParser { myIf(e, x, y) } 
 						);
 
+
 local primary    = memo $ eta syntax (
                                       -- array constant
                                       loc=pos x=inbr[s("["), list0(syntax (e=exp {e(Val)})), s("]")] {fun (a) {assertValue (a, Array (x), loc)}}    |
@@ -161,6 +162,7 @@ local primary    = memo $ eta syntax (
 			(* End *)
 		),
 		
+
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
                                                             fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
@@ -174,6 +176,7 @@ local primary    = memo $ eta syntax (
                                      postfix)),
 ---------------------------------------------------------------------(id)------------------------------------------------------------------------------------
 --                                     postfix)(id)),
+
       postfix    = memo $ eta syntax (loc=pos e=primary ps=(i=inbr[s("["), exp, s("]")] {Index (i (Val))} |
                                                             -s["."] kLength {Length}
                                                            )* {fun (a) {foldl (fun (e, p) {                                                                            

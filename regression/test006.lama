@@ -1,0 +1,14 @@
+local x = read (), y = read (), z;
+
+z := x < y;
+write (z);
+z := x <= y;
+write (z);
+z := x == y;
+write (z);
+z := x != y;
+write (z);
+z := x >= y;
+write (z);
+z := x > y;
+write (z)

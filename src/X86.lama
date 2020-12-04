@@ -87,6 +87,8 @@ fun insnString (insn) {
     | I (n, x) -> sprintf ("%d(%s)", n, opndString (x))
     esac
   }
+
+  
   case insn of
     Cltd               -> "\tcltd\n"
   | Set   (suf, s)     -> sprintf ("\tset%s\t%s\n", suf, s)
@@ -466,7 +468,7 @@ fun toFixedNum (r) {
 (* Implementation *)
 -- Generates a static call
 fun call (env, fLabel, nA) {
-  local extraArg = case fLabel of "Barray" -> Some (nA) | _ -> {} esac;
+  local extraArg = case fLabel of "Barray" -> Some (nA) | "Bsexp" -> Some (nA) | _ -> {} esac;
 
   if fLabel[0] == '$' then
     fLabel := "L" ++ substring (fLabel, 1, fLabel.length - 1)
@@ -487,6 +489,8 @@ fun call (env, fLabel, nA) {
         [env, pushArgs] ->
            case env.allocate of
              [y, env] ->
+-------------------------------look------------------------------------
+(*
                [env, listBuffer (flatten $ {pushRegs,
                                  reverse (pushArgs),
                                  case extraArg of Some (n) -> Push (L (box $ n)) : {} | _ -> {} esac,
@@ -494,6 +498,14 @@ fun call (env, fLabel, nA) {
                                  Binop ("+", L (wordSize * (pushArgs.size + if extraArg == 0 then 0 else 1 fi)), esp) :{},
                                  reverse (popRegs),
                                  Mov (eax, y) : {}})
+*)
+               [env, listBuffer (deepFlatten $ {pushRegs,
+                                 reverse (pushArgs),
+                                 case extraArg of Some (n) -> Push (L (box $ n)) | _ -> {} esac,
+                                 Call (fLabel),
+                                 Binop ("+", L (wordSize * (pushArgs.size + if extraArg == 0 then 0 else 1 fi)), esp),
+                                 reverse (popRegs),
+                                 Mov (eax, y)})
                ]
            esac
       esac
@@ -523,7 +535,7 @@ fun operationType(op)
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
-fun compile (env, code) {
+fun compile (env, code) {  
   fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
@@ -594,6 +606,16 @@ fun compile (env, code) {
 				esac
 			esac
 			
+(*
+          READ ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
+            esac             
+        | WRITE ->
+            case env.pop of
+              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
+            esac
+*)
         (* Assignment *)
         
          -- Some guidelines for generating function calls:
@@ -652,6 +674,7 @@ fun compile (env, code) {
 			case call(env, "Bsta", 2) of [env1, code1] ->
 				[env1, code <+> code1]
 			esac
+
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
         esac
