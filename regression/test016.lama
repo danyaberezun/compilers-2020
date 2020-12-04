@@ -1,3 +1,5 @@
+local n, s;
+
 read (n);
 
 s := 1;

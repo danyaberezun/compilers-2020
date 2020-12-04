@@ -3,9 +3,9 @@
 import SM;
 import Collection;
 import List;
+import Manifest;
 import Buffer;
 import Fun;
-import Manifest;
 
 -- Assembler language interface
 -- The registers: 
@@ -280,7 +280,7 @@ fun initEnv () {
 -- Codegeneration helper functions
 -- Generates code section
 fun codeSection (text) {
-  singletonBuffer (Meta ("\t.text\n")) <+> text
+  Meta ("\t.text\n") : text
 }
 
 -- Generates data section
@@ -303,9 +303,9 @@ fun prologue (size) {
 -- Generates function epilogue
 fun epilogue () {
   singletonBuffer (Mov (ebp, esp)) <+
-  Pop   (ebp) <+
-  Binop ("^", eax, eax) <+
-  Ret
+   Pop   (ebp) <+
+   Binop ("^", eax, eax) <+
+   Ret
 }
 
 -- Checks if an operand resides on a stack
@@ -363,6 +363,7 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        (* Assignment *)
         | CONST (n) -> case env.allocate of 
 	      [s, env] -> [env, code  <+ Mov (L (n), s)]
 	    esac
@@ -410,6 +411,7 @@ fun compile (env, code) {
 				[space, env] -> [env, code <+ Lea (env.loc(x), eax) <+ Mov (eax, space)]
 		     esac
 	| DROP -> [env.pop[1], code]
+        (* End *)
         esac
       }, [env, emptyBuffer ()], code)
   }
@@ -431,14 +433,13 @@ public fun compileX86 (args, code) {
        fwrite (asmFile,
                map (insnString, 
                     getBuffer $
-                      singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-                      dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
+                      singletonBuffer ("\t.global\tmain\n") <+>
+                      dataSection (listBuffer $  map (dataDef, getGlobals (env))) <+>
                       codeSection (
                         singletonBuffer (Meta ("main:\n")) <+>
                         prologue (getStackSize (env)) <+>
                         code <+>
-                        epilogue ()
-                      )
+                        epilogue ())
                    ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
