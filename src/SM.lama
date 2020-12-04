@@ -4,6 +4,24 @@ import List;
 import World;
 import State;
 import Expr;
+import Buffer;
+import Fun;
+
+public fun showSMInsn (i) {
+  case i of
+    READ      -> sprintf ("READ")
+  | WRITE     -> sprintf ("WRITE")
+  | BINOP (s) -> sprintf ("BINOP %s", s)
+  | LD    (x) -> sprintf ("LD %s", x)
+  | ST    (x) -> sprintf ("ST %s", x)
+  | CONST (n) -> sprintf ("CONST %d", n)
+  esac
+}
+
+public fun showSM (prg) {
+  map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
+}
+
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
@@ -14,20 +32,20 @@ fun eval (c, insns)
     case c of 
         [s, st, w@[in, out]] -> case insns of
             {} -> c
-            |Read: p -> case in of 
+            |READ: p -> case in of 
                     elem : i -> eval([elem: s, st, [i, out]], p) 
                   esac
-            |Write: p-> case s of 
+            |WRITE: p-> case s of 
                     elem : ss -> eval([ss, st, [in, elem : out]], p) 
                   esac
-            |Binop(bin): p -> case s of 
+            |BINOP(bin): p -> case s of 
                     r : l : ss -> eval([evalOp(bin, l, r): ss, st, w], p) 
                   esac
             |LD(elem): p -> eval([st(elem) : s, st, w], p)
             |ST(elem): p -> case s of 
                     elemo : ss -> eval([s, (st <- [ elem, elemo ] ), w], p)
                   esac
-            |Const(n): p-> eval([n : s, st, w], p)
+            |CONST(n): p-> eval([n : s, st, w], p)
         esac
     esac
 }	
