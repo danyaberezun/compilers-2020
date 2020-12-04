@@ -3,7 +3,7 @@
 import List;
 import State;
 
-fun evalOp(op, l, r)
+public fun evalOp(op, l, r)
 {
   case op of 
     "+"  -> l + r
