@@ -4,8 +4,6 @@ import List;
 import World;
 import State;
 import Expr;
-import Buffer;
-import Fun;
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -20,16 +18,23 @@ public fun showSMInsn (i) {
   esac
 }
 
-public fun showSM (prg) {
-  map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
-}
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
-}
 
+
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
+fun eval (c@[st, state, w], insns) {
+	case insns of
+		  READ : p -> local world = readWorld(w); eval([world[0] : st, state, world[1]], p)
+		| WRITE : p -> eval([st[1], state, writeWorld(st[0], w)], p)
+		| BINOP(op) : p -> eval([evalOp(op, st[1][0], st[0]) : st[1][1], state, w], p)
+		| CONST(n) : p -> eval([n : st, state, w], p)
+		| LD(x) : p -> eval([state(x) : st, state, w], p)
+		| ST(x) : p -> eval([st[1], state <- [x, st[0]], w], p)
+		| {} -> [st, state, w]
+	esac
+}
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
@@ -39,12 +44,28 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+
+ case expr of
+  	 Const (int)       -> singleton(CONST(int))
+  |Var (str)         -> singleton(LD(str))
+  | Binop (op, l, r)  -> compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+  esac
+  
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+
+case stmt of
+
+      Assn(s, expr) -> compileExpr(expr) +++ singleton(ST(s))
+    | Write (expr) -> compileExpr(expr) +++ singleton(WRITE)
+    | Read (s) -> singleton(READ) +++ singleton(ST(s))
+    | Seq (stmt1, stmt2) -> compileSM (stmt1) +++ compileSM (stmt2)
+    | Skip -> {}
+    
+  esac
+
 }
