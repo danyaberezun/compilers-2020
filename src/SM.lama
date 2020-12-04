@@ -46,7 +46,6 @@ public fun evalSM (input, insns) {
 fun compileExpr (expr) {
 
  case expr of
- {
   	 Const (int)       -> singleton(CONST(int))
   |Var (str)         -> singleton(LD(str))
   | Binop (op, l, r)  -> compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
