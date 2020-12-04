@@ -311,8 +311,8 @@ fun compile (env, code) {
                                | "*" -> [env, code <+ Mov (y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s) ]
                                | "/" -> [env, code <+ Mov (y, eax) <+Cltd <+ IDiv(x) <+ Mov(eax, s) ]
                                | "%" -> [env, code <+ Mov (y, eax) <+Cltd <+ IDiv(x) <+ Mov(edx, s) ]
-                               | "!!" -> [env, code <+ Mov (y, edx) <+ Binop ("orl", x, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
-                               | "&&" -> [env, code <+  Mov (y, edx) <+ Binop ("imull", x, edx) <+ Binop ("cmp", L (0), edx) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+                               | "!!" -> [env, code <+ Mov (y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s) ]
+                               | "&&" -> [env, code <+ Mov (y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s) ]
                                | _ -> [env, code <+ Mov (eax, x) <+ Binop("cmp", eax, y) <+ Set(suffix(op), "%al") <+ Mov(eax, s) ]
 
                             esac
