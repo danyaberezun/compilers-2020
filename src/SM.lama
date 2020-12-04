@@ -4,28 +4,11 @@ import List;
 import World;
 import State;
 import Expr;
-import Buffer;
-import Fun;
-
--- Stack code printer. Takes a list of SM instructions, return its
--- string representation.
-public fun showSMInsn (i) {
-  case i of
-    READ      -> sprintf ("READ")
-  | WRITE     -> sprintf ("WRITE")
-  | BINOP (s) -> sprintf ("BINOP %s", s)
-  | LD    (x) -> sprintf ("LD %s", x)
-  | ST    (x) -> sprintf ("ST %s", x)
-  | CONST (n) -> sprintf ("CONST %d", n)
-  esac
-}
-
-public fun showSM (prg) {
-  map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
-}
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
+
 fun eval (c, insns) 
 {										 
     case c of 
@@ -50,15 +33,17 @@ fun eval (c, insns)
 }	
 
 -- Runs a stack machine for a given input and a given program, returns an output
-public fun evalSM (input, insns) {
+public fun evalSM (input, insns) 
+{
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
-fun compileExpr (expr) 	
-{	  case expr of
+fun compileExpr (expr) 
+{		
+  case expr of
          Var(elem) -> singleton(LD(elem))
         |Const(n) -> singleton(Const(n))
         |Binop(op, l, r) -> compileExpr(l) +++ compileExpr(r) +++ singleton(Binop(op))
