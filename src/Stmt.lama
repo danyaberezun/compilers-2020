@@ -18,28 +18,32 @@ import World;
 --        if     (expr, stmt, stmt) |
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
+fun eval (c@[st, w], stmt) {
 
-fun eval (configuration, stmt) {
-	case configuration of [st, [i, o]] ->
-		case stmt of
-		    Assn   (x, expr)      -> [(st <- [x, evalExpr (st, expr)]), [i, o]]
-		  | Seq    (s1, s2) 	  -> eval (eval (configuration, s1), s2)
-		  | Skip         	  -> configuration
-		  | Read   (x)     	  -> case i of 
-							z : it -> [st <- [x, z], [it, o]]
-					     esac
-		  | Write  (expr) 	  -> [st, [i, evalExpr (st, expr) : o]]
-		  | If     (expr, s1, s2) -> if (evalExpr (configuration[0], expr)) then eval (configuration, s1) else eval (configuration, s2) fi
-		  | While  (expr, s)      -> if (evalExpr (configuration[0], expr)) then eval (configuration, Seq(s, stmt)) else eval (configuration, Skip) fi
-		  | Repeat (s, expr)      -> local c1 = eval (configuration, s);
-					     if (evalExpr (c1[0], expr)) then eval (c1, Skip) else eval (c1, Repeat(s, expr)) fi
-		  | _                     -> failure("Statement %s not found. \n", stmt)
-		  esac
-	esac 
+  case stmt of
+    Assn (x, expr)      ->  [ st <- [x, evalExpr(st, expr)], w ]
+  | Seq (stmt1, stmt2)  ->  eval( eval(c, stmt1), stmt2 )
+  | Read (x)            ->  local new_w = readWorld(w); [ st <- [ x, new_w[0] ], new_w[1] ]
+  | Skip                ->  c
+  | Write (expr)        ->  [ st, writeWorld( evalExpr(st, expr), w ) ]
+  | While (expr, s)     ->  case evalExpr(st, expr) of 
+                              0 -> [ st, w ]
+                            | _ -> eval( eval(c, s), stmt )
+                            esac
+  | If (expr, s1, s2)   ->  case evalExpr(st, expr) of 
+                              0 -> eval(c, s2)
+                            | _ -> eval(c, s1)
+                            esac
+  | Repeat (stmt, expr) ->  case eval(c, stmt) of 
+                              [new_st, new_w] -> case evalExpr(new_st, expr) of
+                                                    0 -> eval([new_st, new_w], Repeat(stmt, expr))
+                                                  | _ -> [ new_st, new_w ]
+                                                  esac
+                            esac
+  esac
 }
 
 -- Evaluates a program with a given input and returns an output
-
 public fun evalStmt (input, stmt) {
   eval ([emptyState, createWorld (input)], stmt).snd.getOutput
 }

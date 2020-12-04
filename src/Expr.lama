@@ -2,43 +2,131 @@
 
 import List;
 import State;
+import World;
 
--- The evaluator itself: takes a state and an expression, returns integer value
--- returns integer value
+-- As association map which maps "\otimes" into "\oplus"
+local ops = {
+  ["+" , infix + ],
+  ["-" , infix - ],
+  ["*" , infix * ],
+  ["/" , infix / ],
+  ["%" , infix % ],
+  ["==", infix ==],
+  ["!=", infix !=],
+  ["<" , infix < ],
+  ["<=", infix <=],
+  [">" , infix > ],
+  [">=", infix >=],
+  ["&&", infix &&],
+  ["!!", infix !!]
+};
 
+-- The evaluator for infix operators: takes an operator as a string
+-- and two operand values, and returns the result
+public fun evalOp (op, l, r) {
+  case assoc (ops, op) of
+    Some (f) -> f (l, r)
+  esac
+}
 
-public fun binopTranslate (operand, x, y)
-{
-	case operand of
-	  "+"  -> x  +  y
-	| "-"  -> x  -  y
-	| "*"  -> x  *  y
-	| "/"  -> x  /  y
-	| "%"  -> x  %  y
-	| "==" -> x  == y
-	| "!=" -> x  != y
-	| "<"  -> x  <  y
-	| "<=" -> x  <= y
-	| ">"  -> x  >  y
-	| ">=" -> x  >= y
-	| "&&" -> x  && y
-	| "!!" -> x  !! y
-	esac
+-- Evaluates an expression "expr" in a configuration "c".
+-- A configuration is a pair of a state "s" and a world "w".
+-- Returns a final configuration (if any)
+--
+-- A expression is represented by a data structure of the following shape:
+--
+-- expr = Assn   (expr, expr)         |
+--        Seq    (expr, expr)         |
+--        Skip                        |
+--        Read   (string)             |
+--        Write  (expr)               |
+--        if     (expr, expr, expr)   |
+--        While  (expr, expr)         |
+--        Repeat (expr, expr)         |
+--        Var    (string)             |
+--        Ref    (string)             |
+--        Const  (int)                |
+--        Binop  (string, expr, expr) |
+--        Ignore (expr)
+
+-- Evaluates a list of expressions, properly threading a configurations.
+-- Returns the final configuration and the list of values
+fun evalList (c, exprs) {
+  case foldl (fun ([c, vals], e) {
+                case eval (c, e) of
+                  [c, val] -> [c, val : vals]
+                esac
+              },
+              [c, {}],
+              exprs) of
+    [c, vals] -> [c, reverse (vals)]
+  esac
+}
+
+fun eval (c@[s, w@[in, out]], expr) {
+
+  case expr of 
+    Skip                  ->  [ c, Void ]
+  | Var      (x)          ->  [ c, s(x) ] 
+  | Const    (n)          ->  [ c, n ]
+  | Ref      (x)          ->  [ c, x ] 
+
+  | Ignore   (e)          ->  case eval(c, e) of [c, _] ->
+                                [ c, Void ]
+                              esac
+
+  | Read     (x)          ->  case readWorld (w) of [val, new_w] -> 
+                                [ [s <- [x, val], new_w], Void ] 
+                              esac
+
+  | Write    (e)          ->  case eval(c, e) of [[s, w], val] ->  
+                                [ [s, writeWorld (val, w)], Void ] 
+                              esac
+
+  | Binop    (op, l, r)   ->  case evalList(c, {l, r}) of [c, lval:rval:_] -> 
+                                [ c, evalOp(op, lval, rval) ]
+                              esac
+
+  | Assn     (x, e)       ->  case evalList(c, {e, x}) of [[s, w], val:ref:_] ->
+                                [ [s <- [ref, val], w], val ]
+                              esac
+
+  | Seq      (e1, e2)     ->  case evalList(c, {e1, e2}) of [c, _:res:_] ->
+                                [ c, res ]
+                              esac
+
+  | If     (cond, b1, b2) ->  case eval(c, cond) of [c, val] -> 
+                                if val then 
+                                  eval(c, b1) 
+                                else
+                                  eval(c, b2) 
+                                fi
+                              esac
+
+  | wh@While (cond, body) ->  case eval(c, cond) of [c, val] -> 
+                                if val then 
+                                  case eval(c, body) of [c, _] -> eval(c, wh) esac
+                                else 
+                                  [ c, Void ] 
+                                fi
+                              esac
+
+  | r@Repeat (body, cond) ->  case evalList(c, {body, cond}) of [c, _:val:_] -> 
+                                if val then 
+                                  [ c, Void ] 
+                                else 
+                                  eval(c, r) 
+                                fi
+                              esac
+
+  | _ -> failure("expression: %s is not yet implemented\n", expr.string)
+  esac
 }
 
 
--- An expression is represented by a data structure of the following shape:
---
--- expr = Var   (string)             |
---        Const (int)                |
---        Binop (string, expr, expr)
-
-
-public fun evalExpr (st, expr) 
-{
-  case expr of
-	  Var   (x)               -> st(x)
-	| Const (n)               -> n
-	| Binop (op, left, right) -> binopTranslate (op, evalExpr(st, left), evalExpr(st, right))
+-- Evaluates a program with a given input and returns an output
+public fun evalExpr (input, expr) {
+  case eval ([emptyState, createWorld (input)], expr) of
+    [c, _] -> c.snd.getOutput
   esac
 }
