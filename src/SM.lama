@@ -60,11 +60,11 @@ public fun compileSM (stmt) {
 
 case stmt of
 
-    | Assn(s, expr) -> compileExpr(expr) +++ singleton(ST(s))
+      Assn(s, expr) -> compileExpr(expr) +++ singleton(ST(s))
     | Write (expr) -> compileExpr(expr) +++ singleton(WRITE)
     | Read (s) -> singleton(READ) +++ singleton(ST(s))
     | Seq (stmt1, stmt2) -> compileSM (stmt1) +++ compileSM (stmt2)
-    Skip -> {}
+    | Skip -> {}
     
   esac
 
