@@ -13,13 +13,45 @@ fun inbr (l, p, r) {
 }
 
 -- Primary expression
-local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
-                            lident  @ fun (x) {Var (x)} |
-                            inbr (s ("("), exp, s (")"))),
-      exp = memo $ eta (failure ("expression parsing not implemented\n"));
+local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
+                                   x=lident  {Var (x)}               |
+                                   inbr[s("("), exp, s(")")]);
 
-local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
-   
+-- return S-expr "Binop" for evalExpr from Expr.lama
+local rBinop = fun(l, op, r) {Binop(op, l, r)};
 
+-- Operators
+local ops = { 
+              [Left, [s("!!"), rBinop] : {}],
+              [Left, [s("&&"), rBinop] : {}],
+              [Nona, [s("<") | s(">") | s("<=") | s(">=") | s("==") | s("!="), rBinop] : {}],
+              [Left, [s("+") | s("-"), rBinop] : {}],
+              [Left, [s("*") | s("/") | s("%"), rBinop] : {}]
+            };
+
+-- Expression parser (operators + primary operands)
+local exp = memo $ eta expr(ops, primary);
+
+-- Statements
+local assnStmt  = syntax(name=lident s[":="] value=exp {Assn(name, value)});
+local readStmt  = syntax(kRead   name=inbr[s("("), lident, s(")")] {Read(name)});
+local writeStmt = syntax(kWrite value=inbr[s("("), exp,    s(")")] {Write(value)});
+local skipStmt  = syntax(kSkip {Skip});
+
+local elseStmt = syntax(kElse statement=stmt kFi {statement} |
+                                   kElif condition=exp  kThen stmt1=stmt stmt2=elseStmt {If(condition, stmt1, stmt2)});                                   
+local ifStmt = syntax(kIf condition=exp kThen stmt1=stmt kFi {If(condition, stmt1, Skip)} |
+                                 kIf condition=exp kThen stmt1=stmt stmt2=elseStmt {If(condition, stmt1, stmt2)});
+
+local whileStmt  = syntax(kWhile  condition=exp  kDo    statement=stmt kOd {While(condition, statement)});
+local repeatStmt = syntax(kRepeat statement=stmt kUntil condition=exp      {Repeat (statement, condition)});
+
+local forStmt = syntax(kFor decl=stmt s[","] condition=exp s[","] change=stmt kDo statement=stmt kOd {Seq (decl, While (condition, Seq (statement, change)))});
+
+-- Statement parser
+local simple_stmt = memo $ eta syntax(assnStmt | readStmt | writeStmt | skipStmt | ifStmt | whileStmt | repeatStmt | forStmt);
+local stmt = memo $ eta syntax(simple_stmt | stmt1=simple_stmt s[";"] stmt2=stmt{Seq(stmt1, stmt2)});
+                                 
 -- Public top-level parser
 public parse = stmt;
+             
