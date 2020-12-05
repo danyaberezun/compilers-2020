@@ -106,7 +106,7 @@ fun eval (c@[state, world], expr) {
 --printf("Evaluating %s\n", expr.string);
 case expr of
 	Const (n) -> [c, n]
-	| Var (x) -> [c, state (x)]
+	| Var (x) -> [c, lookup (state, x)]
         | Binop (op, l, r) -> case evalList (c, {l, r}) of
 				[new_c, {value1, value2}] -> [new_c, evalOp (op, value1, value2)] 
 			      esac
@@ -118,10 +118,10 @@ case expr of
 				esac
 	| Skip -> [c, None]
 	| Read (to) -> case readWorld (world) of
-				[value, new_world] -> [[state <- [to, value], new_world], None]
+				[value, new_world] -> [[state <- [to, value], new_world], Void]
 		       esac
 	| Write (expression) -> case eval (c, expression) of
-					[new_c@[new_state, new_world], value] -> [[new_state, writeWorld (value, new_world)], None]
+					[new_c@[new_state, new_world], value] -> [[new_state, writeWorld (value, new_world)], Void]
 				esac
 	| If (condition, expr1, expr2) -> case eval (c, condition) of
 						[new_c, 0] -> eval (new_c, expr2)
@@ -133,11 +133,25 @@ case expr of
 									[latest_c, value] -> eval (latest_c, expr)
 								 esac
 					   esac
-	| Repeat (expression, condition) -> eval (c, Seq (expression, While (Binop ("==", condition, Const (0)), expression))) 
+	| Repeat (expression, condition) -> eval (c, Seq (expression, While (Binop ("==", condition, Const (0)), expression)))
 	| Ref (x) -> [c, Ref (x)]
 	| Ignore (expression) -> case eval (c, expression) of
 					[new_c, value] -> [new_c, None]
-				 esac 
+				 esac
+	| Scope (definitions, expression) -> case evalList ([enterScope (state), world], definitions) of
+						[new_c, value] -> case eval (new_c, expression) of
+									[last_c@[last_state, last_world], new_value] -> [[leaveScope (last_state), last_world], new_value]
+								  esac
+					     esac
+	| Call (name, real_args) -> case lookup (state, name) of
+				Fun (args, body) -> (*printf ("%s\n", args.string);*)case evalList (c, real_args) of
+							[new_c@[new_state, new_world], values] -> (*printf("%s%s\n", new_state.string, values.string);*)case eval( [foldl (fun (enter_state, [arg, val]) {addName (enter_state, arg, val)}, enterFunction(new_state), zip(args, values)), world], body) of
+										[[last_state, last_world], result] -> [[leaveFunction(new_state, getGlobal (last_state)), last_world], result]
+												  esac
+						    esac
+			       esac
+	| Local (definition) -> [[addNames (state, definition), world], Void]
+	| Fun (name, args, body) -> (*printf("%s %s %s\n", name.string, args.string, body.string);*)[[addFunction (state, name, args, body), world], Void]
 esac
 }
 
