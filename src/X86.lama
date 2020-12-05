@@ -362,7 +362,7 @@ fun epilogue (env) {
 
   if compare (env.currentFunction, "main") == 0
   then [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Binop ("^", eax, eax) <+ Ret <+ metaDef]
-  else case env.pop of
+  else case pop(env) of
          [y, env] -> [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Mov (y, eax) <+ Ret <+ metaDef]
        esac
   fi
@@ -402,7 +402,7 @@ fun call (env, fLabel, nA) {
       fun pushArgs (env, acc, n) {
         case n of
           0 -> [env, acc]
-        | n -> case env.pop of
+        | n -> case pop(env) of
                  [x, env] -> pushArgs (env, Push (x) : acc, n - 1)
                esac
         esac
@@ -410,7 +410,7 @@ fun call (env, fLabel, nA) {
         
       case pushArgs (env, {}, nA) of
         [env, pushArgs] ->
-           case env.allocate of
+           case allocate(env) of
              [y, env] ->
                [env, listBuffer (
                        deepFlatten $
@@ -441,6 +441,20 @@ fun suffix (op) {
   esac
 }
 
+fun opType (op) {
+    case op of
+      "&&" -> 0
+      |"!!" -> 0
+      |"<"  -> 1
+      | "<=" -> 1
+      | "==" -> 1
+      | "!=" -> 1
+      | ">=" -> 1
+      | ">"  -> 1
+      | _ -> 2
+    esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -450,11 +464,11 @@ fun compile (env, code) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
           READ ->
-            case env.allocate of
+            case allocate(env) of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
             esac             
         | WRITE ->
-            case env.pop of
+            case pop(env) of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
         (* Assignment *)
@@ -474,7 +488,50 @@ fun compile (env, code) {
          -- 1. generate proper prologue for BEGIN instruction (use "prologue" helper); use
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
-               
+
+        | CONST(n) -> case allocate(env) of 
+            [s, env] -> [env, code <+ Mov (L(n), s)]
+          esac
+        | LD(x) -> case allocate(env) of 
+            [s, env] -> [env, code <+> move (env.loc(x), s)]                
+          esac
+        | LDA (x) -> case allocate(env) of 
+            [s, env] -> [env, code <+ Lea(env.loc(x), eax) <+ Mov(eax, s)]                
+          esac
+        | ST(x) -> case pop(env) of 
+            [s, env] -> [env, code <+> move (s, env.loc(x))]      
+          esac
+        | STI -> case pop2(env) of
+            [s, addr, env] -> case allocate(env) of [s2, env] ->
+			    [env, code <+> move (s, I(0, addr)) <+> move(s, s2)]
+		    esac
+          esac
+        | DROP -> [pop(env)[1], code]
+        | BINOP(op) -> case pop2(env) of 
+            [x, y, env] -> case allocate(env) of 
+                [s, env] -> case [op, opType (op)] of
+                    [_, 0] -> [env, code<+ Mov (L (0), eax)
+                         <+ Mov (L (0), edx)
+                         <+ Binop ("cmp", L (0), x) 
+                         <+ Set ("ne", "%al")
+                         <+ Binop ("cmp", L (0), y)
+                         <+ Set ("ne", "%dl")
+                         <+ Binop (op, eax, edx)
+                         <+ Mov (edx, s)]
+                    | [_, 1] -> [env, code <+ Mov (L (0), eax)  <+ Mov(y, edx) <+ Binop("cmp", edx, x) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                    | ["/", 2] ->  [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, s)]
+                    | ["%", 2] -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, s)]
+                    | [_, 2] -> [env, code <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s)]
+                esac
+            esac
+          esac
+        | LABEL(l) -> [if isBarrier(env) then retrieveStack(env, l) else env fi, code <+ Label(l)]
+        | JMP(l) -> [setBarrier(setStack(env, l)), code <+ Jmp(l)]
+        | CJMP(t, l) -> case pop(env) of [s, env] -> [env.setStack(l), code <+ Mov(L(0), eax) <+ Binop("cmp", eax, s) <+ CJmp(t, l)] esac 
+        | GLOBAL(x) -> [addGlobal(env, x), code]  
+        | CALL(fLabel, nArgs) -> case call(env, fLabel, nArgs) of [env, fcode] -> [env, code <+> fcode] esac
+        | BEGIN (fLabel, nArgs, nLocals) -> [enterFunction(env, fLabel, nLocals), code <+> prologue(fLabel)]
+        | END -> case epilogue(env) of [env, ecode] -> [env, code <+> ecode] esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
         esac
