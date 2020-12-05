@@ -1,0 +1,77 @@
+-- Stack machine.
+
+import List;
+import World;
+import State;
+import Expr;
+import Buffer;
+import Fun;
+
+
+-- Stack machine interpreter. Takes an SM-configuration and a program,
+-- returns a final configuration
+-- conf@[st, env, wrld]
+
+fun eval (configuration , insns) {
+  local st;
+  local env;
+  local wrld;
+  st := configuration [0];
+  env := configuration [1];
+  wrld := configuration [2];
+  
+  case insns of 
+      {} -> configuration
+  | x:xs -> {
+
+      configuration := 
+        case x of 
+          BINOP (op) -> case st of 
+                          y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, wrld]
+                        esac
+        	| ST (x) -> case st of z:st -> [st, env <- [x, z], wrld] esac
+        	| LD (x) -> [env(x):st, env, wrld]
+        	| CONST (n) -> [n:st, env, wrld]
+		| READ -> case readWorld (wrld) of [z, wrld] -> [z:st, env, wrld] esac
+      		| WRITE -> case st of z:st -> [st, env, writeWorld (z, wrld)] esac
+        esac;
+
+      eval (configuration, xs)
+    }
+  esac
+}
+
+
+-- Runs a stack machine for a given input and a given program, returns an output
+public fun evalSM (input, insns) 
+{
+  eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
+}
+
+-- Compiles an expression into a stack machine code.
+-- Takes an expression, returns a list (of, possibly, lists)
+
+-- of stack machine instructions
+fun compileExpr (expr) 
+{
+  case expr of
+    Var (x) -> return singleton(LD(x))
+  | Const (n) -> return singleton(CONST(n))
+  | Binop (op, l, r) -> return compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+  esac
+}
+
+-- Compiles a statement into a stack machine code.
+-- Takes a statement, returns a list of stack machine
+-- instructions.
+
+public fun compileSM (stmt) 
+{
+  case stmt of
+    Assn (x, expr)-> return compileExpr(expr) +++  singleton(ST(x))
+	| Read (x)-> return singleton(READ) +++ singleton(ST(x))
+  	| Write (expr)-> return compileExpr(expr) +++ singleton(WRITE)
+  	| Seq (st1, st2)-> return compileSM(st1) +++ compileSM(st2)
+  	| Skip -> return {} 
+  esac
+}
