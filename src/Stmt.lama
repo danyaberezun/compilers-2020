@@ -16,14 +16,17 @@ import World;
 --        Read   (string)           |
 --        Write  (expr)             |
 fun eval (c, stmt) {
-      case stmt of
-            Seq(s1, s2) -> eval(eval(c, s1), s2)
-          | Write(s1) -> [c[0], writeWorld(evalExpr(c[0], s1), c[1])]
-          | Read(s1) ->
-                local my_result = readWorld(c[1]);
-                [c[0] <- [s1, my_result[0]], my_result[1]]
-          | Assn(x, s1) -> [c[0] <- [x, evalExpr(c[0], s1)], c[1]]
-        esac
+  case c of [st, world@[input, output]] ->
+    case stmt of
+         Skip -> c
+       | Read (var) -> case input of 
+            v : rest -> [st <- [var, v], [rest, output]] 
+          esac
+       | Write (expr) -> [st, [input, evalExpr(st, expr) : output]]
+       | Assn (var, expr) -> [(st <- [var, evalExpr(st, expr)]), [input, output]]
+       | Seq (s1, s2) -> eval (eval (c, s1), s2)
+    esac
+  esac
 }
 
 -- Evaluates a program with a given input and returns an output
