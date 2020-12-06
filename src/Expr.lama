@@ -22,7 +22,8 @@ public fun evalOp(op, l, r)
 	esac
 }
 
-public fun evalExpr (st, expr) {
+public fun evalExpr (st, expr)
+{
   case expr of 
     Var(x) -> st(x)
   | Const(n) -> n
