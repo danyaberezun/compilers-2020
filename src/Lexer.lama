@@ -78,9 +78,5 @@ public kRead    = s (rRead),
                                      | a             -> a
                                      esac)
                                 }
-<<<<<<< HEAD
                               });
 
-=======
-                              });
->>>>>>> A04-control-flow-int
