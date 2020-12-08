@@ -24,11 +24,12 @@ fun eval (c@[st, state, w], insns) {
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
+
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
- case expr of
+   case expr of
    		  Const(n) -> singleton(CONST(n))
         | Var(elem) -> singleton(LD(elem))
         | Binop(op, l, r) -> compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
@@ -39,7 +40,7 @@ fun compileExpr (expr) {
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
- case stmt of
+    case stmt of
 		  Assn(x, e) -> compileExpr(e) +++ singleton(ST(x))
 		| Write(x) -> compileExpr(x) +++ singleton(WRITE)
 		| Read(x) -> singleton(READ) +++ singleton(ST(x))
