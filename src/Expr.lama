@@ -100,6 +100,48 @@ fun evalList (c, exprs) {
   esac
 }
 
+fun sexpToStr(e)
+{
+	case e of 
+	  Sexp(tag, l) ->
+		if size(l) > 0 then 
+			tag ++ " (" ++ foldl(fun (str, t) {
+				if compare(str, "") then str ++ ", " ++ sexpToStr(t)
+				else sexpToStr(t)
+				fi
+			}, "", l)  ++ ")"
+		else tag
+		fi 
+	| _          -> e.string
+	esac
+}
+
+fun cmpSexp(c@[s, w], x, y)
+{
+	case y of
+	  Sexp(ty, ly) ->
+		case ty of 
+		  "_" -> c 
+		| _ ->
+			case x of
+			  Sexp(tx, lx) ->
+				if compare(ty, tx) == 0 && size(ly) == size(lx) then
+					local res = c;
+					while (size(ly) > 0 && compare(res, None)) do
+						res := cmpSexp(res, lx[0], ly[0]);
+						lx := lx[1];
+						ly := ly[1]
+					od;
+					res
+				else None
+				fi
+			| _ -> None
+			esac
+		esac
+	| Var (a) -> [addName(s, a) <- [a, Val(x)], w]
+	esac
+}
+
 (* Assignment *)
 fun eval (c@[s, w], expr) {
 	case expr of
@@ -198,9 +240,33 @@ fun eval (c@[s, w], expr) {
 		esac
 	| Builtin (f, args) ->
 		case evalList(c, args) of [[s1, w1], vals] ->
-			case evalBuiltin(f, vals, w1) of [res, w2] ->
-				[[s1, w2], res]
+			case [f, vals] of 
+			  ["stringval", {e@Sexp(_, _)}] -> [[s1, w1], sexpToStr(e)]
+			| _ ->
+				case evalBuiltin(f, vals, w1) of [res, w2] ->
+					[[s1, w2], res]
+				esac
 			esac
+		esac
+	| Sexp (tag, args) ->
+		case evalList(c, args) of [c1, vals] ->
+			[c1, Sexp(tag, vals)]
+		esac
+	| Case (x, l) ->
+		case eval(c, x) of [c, v] ->
+			local res = None, e = None;
+			while (size(l) > 0 && compare(res, None) == 0) do
+				res := cmpSexp([enterScope(s), w], v, l[0][0]);
+				e := l[0][1];
+				l := l[1]
+			od;
+			if compare(res, None) == 0 then
+				failure("My match failure %s\n", v.string)
+			else 
+				case eval(res, e) of [[s, w], v] -> 
+					[[leaveScope(s), w], v]
+				esac
+			fi
 		esac
 	esac
 }

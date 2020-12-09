@@ -158,7 +158,12 @@ local primary    = memo $ eta syntax (
 																		case x(Void) of Scope(defs, e1) ->
 																			assertVoid(a, Scope(defs, Seq(e1, While(e(Val), Seq(z(Void), y(Void))))), loc) 
 																		esac
-																	}}
+																	}} 															 |
+			loc=pos x=(uident|s["_"]) 											 {fun (a) { assertValue  (a, Sexp(x, {}), loc)}} |
+			loc=pos x=uident y=inbr[s("("), list0(syntax (e=exp {e(Val)})), s(")")] {fun (a) {assertValue (a, Sexp(x, y), loc)}} |
+			loc=pos kCase x=exp kOf y=list0By[syntax (p=primary s["->"] e=exp {[p(Val), e]}), s("|")] kEsac
+																	{ fun (a) { Case(x(Val), 
+																				foldr(fun (l, [p, e]) { [p, e(a) ]:l}, {}, y)) }}
 			(* End *)
 		),
 		
@@ -174,14 +179,15 @@ local primary    = memo $ eta syntax (
                                       [Left , map (binop, {"*", "/", "%"})]
                                      },
                                      postfix)),
----------------------------------------------------------------------(id)------------------------------------------------------------------------------------
---                                     postfix)(id)),
+---------------------------------------------------------------------(id)------------------------------------------------------------------------------------                                     postfix)(id)),
 
       postfix    = memo $ eta syntax (loc=pos e=primary ps=(i=inbr[s("["), exp, s("]")] {Index (i (Val))} |
-                                                            -s["."] kLength {Length}
+                                                            -s["."] kLength {Length}                      |
+                                                            -s[".string"]   {String} 
                                                            )* {fun (a) {foldl (fun (e, p) {                                                                            
                                                                                  case p of                                                                                   
                                                                                    Length    -> fun (a) {assertValue (a, Builtin ("length", singleton (e (Val))), loc)}
+                                                                                 | String    -> fun (a) {assertValue (a, Builtin ("stringval", singleton (e (Val))), loc)} 
                                                                                  | Index (i) ->
                                                                                      fun (a) {
                                                                                        case a of
