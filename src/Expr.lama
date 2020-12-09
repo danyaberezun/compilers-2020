@@ -102,7 +102,10 @@ fun evalList (c, exprs) {
 (* Assignment *)
 fun eval (c@[s, w], expr) {
   case expr of
-    Assn (x, e)  -> case evalList(c, {e, x}) of [[s, w], val:ref:_] -> [[s <- [ref, val], w], val] esac |
+    Assn (x, e)  -> case evalList(c, {x, e}) of 
+        [[s, w], {Ref(x), a}] -> [[s <- [x, Val(a)], w], a] |
+        [c, {ElemRef(arr, i), a}] -> arr[i] := a;[c, a] 
+    esac |
     Skip -> [c, Void] |
     If (cond, e1, e2) -> case eval(c, cond) of 
         [c, val] -> if val then eval(c, e1) else eval(c, e2) fi
@@ -116,8 +119,8 @@ fun eval (c@[s, w], expr) {
         [c, _:val:_] -> if val then [c, Void] else eval(c, expr) fi
     esac |
     Seq (e1, e2) -> case evalList(c, {e1, e2}) of [c, _:res:_] -> [c, res] esac |
-    Var (x) -> [c, s.lookup(x)] |
-    Ref (x) -> [c, x] |
+    Var (x) -> [c, case s.lookupVal(x) of Val(v) -> v esac] |
+    Ref (x) -> [c, Ref(x)] |
     Const (val) -> [c, val] |
     Binop (op, lhs, rhs) -> case evalList(c, {lhs, rhs}) of 
         [c, lval:rval:_] -> [c, evalOp(op, lval, rval)]
@@ -130,14 +133,14 @@ fun eval (c@[s, w], expr) {
     esac |
     Local(vars) -> [[s.addNames(vars), w], Void] |
     Fun (f, args, body) -> [[s.addFunction(f, args, body), w], Void] |
-    Call (f, exprs) -> case s.lookup(f) of 
+    Call (f, exprs) -> case s.lookupFun(f) of 
         Fun(args, body) -> case evalList(c, exprs) of 
             [[s, w], vals] -> case body of 
                 External -> case evalBuiltin(f, vals, w) of
                     [res, w] -> [[s, w], res]
                 esac |
                 _ -> local s2 = foldl(fun (s1, [arg, val]) {
-                    s1.addName(arg, val)
+                    s1.addName(arg, Val(val))
                     }, s.enterFunction, zip(args, vals));
                     case eval([s2, w], body) of 
                         [[s2, w], res] -> [[s.leaveFunction(s2.getGlobal), w], res]

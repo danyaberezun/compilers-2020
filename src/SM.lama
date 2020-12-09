@@ -522,7 +522,7 @@ public fun compileSM (expr) {
         esac
       esac
   }
-  case compileSMImpl(initCompEnv(), expr) of 
+  case compileSMImpl(beginScope(initCompEnv()), expr) of 
     [main, env] -> case compileFuns(env) of 
         [fis, _] -> deepFlatten({LABEL("main"), BEGIN("main", 0, getLocals(env)), main, END, fis})
     esac
