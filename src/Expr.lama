@@ -3,22 +3,22 @@
 import List;
 import State;
 
-public fun operation(op, l, r){
-    case op of
-          "+" -> l + r
-        | "-" -> l - r
-        | "*" -> l * r
-        | "/" -> l / r
-        | "%" -> l % r
-        | "!=" -> l != r
-        | ">" -> l > r
-        | "<" -> l < r
-        | "==" -> l == r
-        | "!!" -> l !! r
-        | "<=" -> l <= r
-        | ">=" -> l >= r
-        | "&&" -> l && r
-    esac   
+public fun evalOp (op, l, r) {
+case op of
+    "+" -> l + r
+    | "-" -> l - r
+    | "*" -> l * r
+    | "/" -> l / r
+    | "%" -> l % r
+    | "==" -> l == r
+    | "!=" -> l != r
+    | "<" -> l < r
+    | "<=" -> l <= r
+    | ">" -> l > r
+    | ">=" -> l >= r
+    | "&&" -> l && r
+    | "!!" -> l !! r
+esac
 }
 
 -- The evaluator itself: takes a state and an expression,
