@@ -31,6 +31,5 @@ local stmt = memo $ eta syntax (
   	st1=stmt s[";"] st2=stmt end          {Seq (st1, st2)}
 );
 
-
 -- Public top-level parser
 public parse = stmt;
