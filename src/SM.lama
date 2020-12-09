@@ -12,6 +12,8 @@ import Lexer;
 import Expr;
 import Buffer;
 
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
 public fun showSMInsn (i) {
@@ -23,7 +25,7 @@ public fun showSMInsn (i) {
     | Glb (x) -> x
     esac
   }
-  
+
   case i of
     READ             -> "READ"
   | WRITE            -> "WRITE"
@@ -41,7 +43,7 @@ public fun showSMInsn (i) {
   | GLOBAL (x)       -> sprintf ("GLOBAL %s", x)
   | END              -> sprintf ("END")
   | DUP              -> "DUP"
-  | DROP             -> "DROP"  
+  | DROP             -> "DROP"
   esac
 }
 
@@ -74,10 +76,12 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, a world and a program,
 -- returns a final output
+-- previous impl ref:
+--   https://github.com/kry127/compilers-2020/blob/20caaa88d46ee3caa895b8f3e9faeb6b4878f184/src/SM.lama#L65
 fun eval (env, w, insns) {
   -- Global state maps names of global variables to values
   local globalState = ref (fun (x) {error (sprintf ("name ""%s"" is undefined", x), getLoc (x))});
-  
+
   -- Make a fresh local state: a pair of arrays for arguments and local variables;
   -- takes the numbers of arguments and local variables respectively
   fun makeState (a, l) {
@@ -90,7 +94,7 @@ fun eval (env, w, insns) {
       Arg (i) -> args[i]
     | Loc (i) -> locs[i]
     | Glb (x) -> deref (globalState) (x)
-    esac 
+    esac
   }
 
   -- Assigns a value to a location
@@ -122,7 +126,7 @@ fun eval (env, w, insns) {
     failure ("SM interpreter is not implemented\n")
   }
   (* End *)
-  
+
   eval ([{}, {}, makeState (0, 0), w], insns) [3].getOutput
 }
 
@@ -138,7 +142,7 @@ fun makeCompEnv (nLabels, scopeDepth, state, nLocals, nArgs, functions) {
     [sprintf ("L%d", nLabels), makeCompEnv (nLabels+1, scopeDepth, state, nLocals, nArgs, functions)]
   }
 
-  -- Adds a new function 
+  -- Adds a new function
   fun rememberFun (fLabel, args, body) {
     makeCompEnv (nLabels,
                  scopeDepth,
@@ -175,7 +179,7 @@ fun makeCompEnv (nLabels, scopeDepth, state, nLocals, nArgs, functions) {
   fun addFun (name, fLabel, nargs) {
     makeCompEnv (nLabels, scopeDepth, addName (state, name, Fun (fLabel, nargs)), nLocals, nArgs, functions)
   }
-  
+
   -- Enters a function
   fun beginFun (state) {
     makeCompEnv (nLabels, 1, enterFunction (state), 0, 0, functions)
@@ -212,14 +216,14 @@ fun makeCompEnv (nLabels, scopeDepth, state, nLocals, nArgs, functions) {
      if scopeDepth == 1
      then [sprintf ("L%s", name),             makeCompEnv (nLabels  , scopeDepth, state, nLocals, nArgs, functions)]
      else [sprintf ("L%s_%d", name, nLabels), makeCompEnv (nLabels+1, scopeDepth, state, nLocals, nArgs, functions)]
-     fi 
+     fi
   }
 
   -- Checks if the current scope is a global
   fun isGlobal () {
     scopeDepth == 1
   }
-  
+
   [genLabel,
    rememberFun,
    beginScope,
@@ -313,6 +317,7 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
+
 -- Helper function: adds a bunch of arguments
 fun addArgs (env, names) {
   foldl (fun (env, name) {addArg (env, name)}, env, names)
@@ -326,8 +331,6 @@ fun addVars (env, names) {
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list of stack machine
 -- instructions.
-
-(* Assignment *)
 
 -- Some guidelines for compiling functions and scopes.
 --
@@ -348,7 +351,87 @@ fun addVars (env, names) {
 --    environment (use env.beginFun) and register arguments
 --    (use env.addArg).
 
-public fun compileSM (expr) {
-  failure ("compileSM not implemented\n")
+public fun compileSM (stmt) {
+-- converts end label to SM code
+  fun maybeJump(maybeLabel) {
+    case maybeLabel of Some(l) -> singleton(JMP(l)) | _ -> {} esac
+  }
+
+  -- Compiles an expression
+  -- Returns [labelGenerator, SMCode]
+  fun compileExpr (labelGenerator, stmt, endLabel) {
+    -- printf ("Statement to compile to SM: ""%s""\n", stmt.string);
+    case stmt of
+        Assn (name, expr) -> case compileExpr(labelGenerator, name, None) of
+          [lg, sm] -> case compileExpr(lg, expr, None) of
+            [lg2, sm2] -> [lg2, sm +++ sm2 +++ singleton(STI) +++ maybeJump(endLabel)]
+          esac
+        esac
+      | Seq (expr1, expr2) -> case compileExpr(labelGenerator, expr1, None) of
+          [lg, sm] -> case compileExpr(lg, expr2, endLabel) of
+            [lg2, sm2] -> [lg2, sm +++ sm2]
+          esac
+        esac
+      | Skip              -> [labelGenerator, maybeJump(endLabel)]
+      | Read (name) -> [labelGenerator, {READ, ST (name)} +++ maybeJump(endLabel)]
+      | Write (expr) -> case compileExpr(labelGenerator, expr, None) of
+           [lg, sm] -> [lg, sm +++ singleton(WRITE) +++ maybeJump(endLabel)]
+         esac
+      | If (cond, s1, s2) -> case endLabel of
+             Some(l2) -> case labelGenerator.genLabels(1) of
+               [l1, lg] -> case compileExpr(lg, cond, None) of
+                 [lg1, sm_expr] -> case compileExpr(lg1, s1, Some(l2)) of
+                   [lg2, sm1] -> case compileExpr(lg2, s2, Some(l2)) of
+                     [lg3, sm2] -> [lg3, sm_expr +++ singleton(CJMP(Z, l1))
+                                         +++ sm1 +++ singleton(LABEL(l1)) +++ sm2]
+                     esac
+                   esac
+                 esac
+               esac
+           | None     -> case labelGenerator.genLabels(2) of
+               [l1, l2, lg] -> case compileExpr(lg, cond, None) of
+                 [lg1, sm_expr] -> case compileExpr(lg1, s1, Some(l2)) of
+                   [lg2, sm1] -> case compileExpr(lg2, s2, Some(l2)) of
+                     [lg3, sm2] -> [lg3, sm_expr +++ singleton(CJMP(Z, l1))
+                                         +++ sm1 +++ singleton(LABEL(l1)) +++ sm2 +++ singleton(LABEL(l2))]
+                   esac
+                 esac
+               esac
+             esac
+           esac
+      | While (cond, s)   -> case labelGenerator.genLabels(2) of
+               [l1, l2, lg] -> case compileExpr(lg, cond, None) of
+                  [lg2, sm_expr] -> case compileExpr(lg2, s, Some(l1)) of
+                     [lg3, sm] -> [lg3, {JMP (l1), LABEL (l2)} +++ sm
+                         +++ singleton(LABEL(l1)) +++ sm_expr +++ singleton(CJMP(NZ, l2))
+                         +++ maybeJump(endLabel)]
+                     esac
+                  esac
+               esac
+      | Repeat (s, cond)  -> case labelGenerator.genLabels(2) of
+               [l1, l2, lg] -> case compileExpr(lg, s, Some(l1)) of
+                  [lg2, sm] -> case compileExpr(lg2, cond, None) of
+                    [lg3, sm_expr] -> [lg3,     singleton(LABEL(l2)) +++ sm
+                                       +++ singleton(LABEL(l1)) +++ sm_expr +++ singleton(CJMP(Z, l2))
+                                       +++ maybeJump(endLabel)]
+                    esac
+                  esac
+               esac
+      | Var (name) -> [labelGenerator, singleton(LD (name)) +++ maybeJump(endLabel)]
+      | Ref (name) -> [labelGenerator, singleton(LDA (name)) +++ maybeJump(endLabel)]
+      | Const (val) -> [labelGenerator, singleton(CONST (val)) +++ maybeJump(endLabel)]
+      | Binop (op, expr1, expr2) -> case compileExpr(labelGenerator, expr1, None) of
+                 [lg1, sm1] -> case compileExpr(lg1, expr2, None) of
+                   [lg2, sm2] -> [lg2, sm1 +++ sm2 +++ singleton(BINOP (op)) +++ maybeJump(endLabel)]
+                 esac
+               esac
+      | Ignore (expr)  -> case compileExpr(labelGenerator, expr, None) of
+              [lg2, sm] -> [labelGenerator, sm +++ singleton(DROP) +++ maybeJump(endLabel)]
+            esac
+    esac
+  }
+
+  local code = compileExpr(initCompEnv(), stmt, None)[1];
+  -- fprintf(stderr, "Stack machine code: %s\n", code.string);
+  code
 }
-(* End *)
