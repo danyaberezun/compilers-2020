@@ -16,9 +16,9 @@ SM.o: State.o World.o
 
 X86.o: SM.o
 
+
 %.o: %.lama
 	$(LAMAC) -I . -c $<
 
 clean:
 	rm -Rf *.s *.o *.i *~ *.html *.sm lama-impl
-
