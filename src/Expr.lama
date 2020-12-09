@@ -101,7 +101,66 @@ fun evalList (c, exprs) {
 
 (* Assignment *)
 fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+  case expr of
+    Assn (x, e)  -> case evalList(c, {e, x}) of [[s, w], val:ref:_] -> [[s <- [ref, val], w], val] esac |
+    Skip -> [c, Void] |
+    If (cond, e1, e2) -> case eval(c, cond) of 
+        [c, val] -> if val then eval(c, e1) else eval(c, e2) fi
+    esac | 
+    While (cond, body) -> case eval(c, cond) of 
+        [c, val] -> if val then case eval(c, body) of [c, _] -> eval(c, expr) esac
+                    else [c, Void] 
+                    fi
+    esac | 
+    Repeat (body, cond) -> case evalList(c, {body, cond}) of 
+        [c, _:val:_] -> if val then [c, Void] else eval(c, expr) fi
+    esac |
+    Seq (e1, e2) -> case evalList(c, {e1, e2}) of [c, _:res:_] -> [c, res] esac |
+    Var (x) -> [c, s.lookup(x)] |
+    Ref (x) -> [c, x] |
+    Const (val) -> [c, val] |
+    Binop (op, lhs, rhs) -> case evalList(c, {lhs, rhs}) of 
+        [c, lval:rval:_] -> [c, evalOp(op, lval, rval)]
+    esac |
+    Ignore (e) -> [eval(c, e).fst, Void] |
+    Scope(defs, e) -> case evalList([s.enterScope, w], defs) of 
+        [c, _] -> case eval(c, e) of
+            [[s, w], val] -> [[s.leaveScope, w], val]
+        esac
+    esac |
+    Local(vars) -> [[s.addNames(vars), w], Void] |
+    Fun (f, args, body) -> [[s.addFunction(f, args, body), w], Void] |
+    Call (f, exprs) -> case s.lookup(f) of 
+        Fun(args, body) -> case evalList(c, exprs) of 
+            [[s, w], vals] -> case body of 
+                External -> case evalBuiltin(f, vals, w) of
+                    [res, w] -> [[s, w], res]
+                esac |
+                _ -> local s2 = foldl(fun (s1, [arg, val]) {
+                    s1.addName(arg, val)
+                    }, s.enterFunction, zip(args, vals));
+                    case eval([s2, w], body) of 
+                        [[s2, w], res] -> [[s.leaveFunction(s2.getGlobal), w], res]
+                    esac
+            esac
+        esac
+    esac |
+    String(str) -> [c, str] |
+    Array (exprs) -> case evalList(c, exprs) of
+        [c, vals] -> [c, listArray(vals)]
+    esac |
+    Elem(arrExpr, indexExpr) -> case evalList(c, {arrExpr, indexExpr}) of 
+        [c, {arr, index}] -> [c, arr[index]]
+    esac |
+    ElemRef(arrExpr, indexExpr) -> case evalList(c, {arrExpr, indexExpr}) of 
+        [c, {arr, index}] -> [c, ElemRef(arr, index)]
+    esac |
+    Builtin(f, args) -> case evalList(c, args) of 
+        [[s, w], vals] -> case evalBuiltin(f, vals, w) of 
+            [res, w] -> [[s, w], res]
+        esac
+    esac
+  esac
 }
 (* End *)
 
