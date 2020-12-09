@@ -1,11 +1,23 @@
-.PHONY: all 
+SHELL := /bin/bash
 
-all:
-	make -C src 
-	make -C regression
+FILES=$(wildcard *.lama)
+ALL=$(sort $(FILES:.lama=.o))
+LAMAC=lamac
+
+all: $(ALL)
+
+Expr.o: State.o
+
+Stmt.o: State.o Expr.o World.o
+
+SM.o: State.o World.o Expr.o
+
+%.o: %.lama
+	$(LAMAC) -I . -c $<
+
+variate:
+	../variate -leave '\(\* Assignment' -remove '\(\* Implementation' -ending 'End \*\)' *.lama
 
 clean:
-	make clean -C src
-	make clean -C regression
-
+	rm -Rf *.s *.o *.i *~ *.html *.sm lama-impl
 
