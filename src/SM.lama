@@ -4,12 +4,60 @@ import List;
 import World;
 import State;
 import Expr;
+import Buffer;
+import Fun;
+
+-- Stack code printer. Takes a list of SM instructions, return its
+-- string representation.
+public fun showSMInsn (i) {
+  case i of
+    READ      -> sprintf ("READ")
+  | WRITE     -> sprintf ("WRITE")
+  | BINOP (s) -> sprintf ("BINOP %s", s)
+  | LD    (x) -> sprintf ("LD %s", x)
+  | ST    (x) -> sprintf ("ST %s", x)
+  | CONST (n) -> sprintf ("CONST %d", n)
+  esac
+}
+
+public fun showSM (prg) {
+  map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
+}
+
+public fun binopCalc (op, a, b) {
+	case op of
+			"+"  -> (a + b)
+		  | "-"  -> (a - b)
+		  | "*"  -> (a * b)
+		  | "/"  -> (a / b)
+		  | "%"  -> (a % b)
+		  | "==" -> (a == b)
+		  | "!=" -> (a != b)
+		  | "<"  -> (a < b)
+		  | "<=" -> (a <= b)
+		  | ">"  -> (a > b)
+		  | ">=" -> (a >= b)
+		  | "&&" -> (a && b)
+		  | "!!" -> (a !! b)
+		esac
+}
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
--- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+	if size(insns) <= 0 then c 
+	else
+		case insns[0] of
+			BINOP(op) -> eval([singleton(binopCalc(op, c[0][1][0], c[0][0])) +++ c[0][1][1], c[1], c[2]], insns[1])
+		  | CONST(n)  -> eval([singleton(n) +++ c[0], c[1], c[2]], insns[1])
+		  | LD(x)     -> eval([singleton(c[1](x)) +++ c[0], c[1], c[2]], insns[1])
+		  | ST(x)     -> eval([c[0][1], c[1] <- [x, c[0][0]], c[2]], insns[1])
+		  | READ        -> local r = readWorld(c[2]); 
+		 					 eval([singleton(r[0]) +++ c[0], c[1], r[1]], insns[1])
+		  | WRITE       -> local r = writeWorld(c[0][0], c[2]); eval([c[0][1], c[1], r], insns[1])
+		  | _             -> printf("??\n"); c
+		esac
+	fi
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -21,12 +69,23 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+	case expr of
+		Var(x)           -> singleton(LD(x))
+	  | Const(n)         -> singleton(CONST(n))
+	  | Binop(c, e1, e2) -> compileExpr(e1) +++ compileExpr(e2) +++ singleton(BINOP(c))
+	  | _                -> singleton("Can't recognize expr")
+	esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+	case stmt of
+	    Assn(x, e)       -> compileExpr(e) +++ singleton(ST(x))
+	  | Read(x)          -> singleton(READ) +++ singleton(ST(x))
+	  | Write(e)         -> compileExpr(e) +++ singleton(WRITE)
+	  | Seq(s1, s2)      -> compileSM(s1) +++ compileSM(s2)
+	  | _                -> singleton("Can't recognize stmt instruction")
+	esac
 }
