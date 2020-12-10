@@ -11,8 +11,6 @@ import List;
 -- The keys in this table is a (boxed) value, and values are
 -- pairs [line, column]
 local srcTab = emptyHashTab (1024, hash, compare);
-024, hash, flatCompare);
-
 
 -- A custom combinator to additionally add location info
 public fun located (p) {
@@ -98,3 +96,4 @@ public kRead    = s (rRead),
                                      esac)
                                 }
                               });
+
