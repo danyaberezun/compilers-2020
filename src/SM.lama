@@ -128,7 +128,6 @@ fun compileExpr (expr) {
     | _       -> failure("Expression %s not found. \n", expr)
     esac
 }
-}
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
