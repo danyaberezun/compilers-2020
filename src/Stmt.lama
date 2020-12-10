@@ -1,0 +1,38 @@
+-- Statement evaluator.
+
+import State;
+import Expr;
+import World;
+
+-- Evaluates a statement "stmt" in a configuration "c".
+-- A configuration is a pair of a state "s" and a world "w".
+-- Returns a final configuration (if any)
+--
+-- A statement is represented by a data structure of the following shape:
+--
+-- stmt = Assn   (string, expr)     |
+--        Seq    (stmt, stmt)       |
+--        Skip                      |
+--        Read   (string)           |
+--        Write  (expr)             |
+--        if     (expr, stmt, stmt) |
+--        While  (expr, stmt)       |
+--        Repeat (stmt, expr)
+
+fun eval (c, stmt) {
+  case stmt of
+   Seq(st1,st2)      -> eval(eval(c,st1),st2)
+   | Write(e)        -> [c[0], writeWorld(evalExpr(c[0], e), c[1])]
+   | Read(val)       -> local reader = readWorld(c[1]); [c[0] <- [val, reader[0]], reader[1]]
+   | Assn(val,st)    -> [c[0] <- [val, evalExpr(c[0], st)], c[1]]
+   | Skip            -> c
+   | While(e, st)    -> while evalExpr(c[0],e) != 0 do c := eval(c, st) od; c
+   | If(e, st1, st2) -> if evalExpr(c[0],e) then eval(c, st1) else eval(c,st2) fi
+   | Repeat(st, e)    -> repeat c := eval(c, st) until evalExpr(c[0],e); c
+  esac
+}
+
+-- Evaluates a program with a given input and returns an output
+public fun evalStmt (input, stmt) {
+  eval ([emptyState, createWorld (input)], stmt).snd.getOutput
+}
