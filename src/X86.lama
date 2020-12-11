@@ -482,6 +482,34 @@ fun suffix (op) {
   esac
 }
 
+fun isComparator(op) {
+  case op of
+    "<"  -> true
+  | "<=" -> true
+  | "==" -> true
+  | "!=" -> true
+  | ">=" -> true
+  | ">"  -> true
+  | _    -> false
+  esac
+}
+
+fun cmpEax(op, reg) {
+  singletonBuffer (Binop("cmp", reg, eax)) <+
+                   Set(suffix(op), "%al") <+
+                   Binop("&&", L(1), eax)
+}
+
+fun patchBuiltin(fname) {
+  case fname of
+    "stringval" -> "Bstring"
+  | "length" -> "Blength"
+  | "read" -> "Lread"
+  | "write" -> "Lwrite"
+  | _ -> fname
+	esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -489,15 +517,12 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+				fun generateCall(f, argsCnt) {
+				  case call(env, f, argsCnt) of [env, callCode] ->
+					  [env, code <+> callCode]
+					esac
+				}
         case i of
-          READ ->
-            case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
-        | WRITE ->
-            case env.pop of
-              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
-            esac
         (* Assignment *)
         
          -- Some guidelines for generating function calls:
@@ -516,7 +541,65 @@ fun compile (env, code) {
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
                
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+          CONST (n) -> 
+            case env.allocate of [s, env] ->
+						  [env, code <+ Mov (L(n), s)]
+            esac
+				| STRING (str) ->
+				    case addString(env, str) of [env, ref] ->
+				      case env.allocate of [s, env] ->
+							  case call(env, "Bstring", 1) of [env, callCode] ->
+						      [env, code <+> move(M("$" ++ ref), s) <+> callCode]
+								esac
+						  esac
+						esac
+        | GLOBAL (x) -> [addGlobal(env, x), code]
+        | LD (x) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move(env.loc(x), s)]
+            esac
+				| LDA (x) ->
+				    case env.allocate of
+						  [s, env] -> [env, code <+ Lea (env.loc(x), eax) <+ Mov(eax, s)]
+						esac
+        | ST (x) -> case env.pop of [s, env] -> [env, code <+ Mov (s, env.loc(x))] esac
+				| STI ->
+				    case pop2(env) of [s, ref, env] ->
+						  case allocate(env) of [s2, env] ->
+								[env, code <+> move (s, I(0, ref)) <+> move(s, s2)]
+							esac
+						esac
+				| DROP -> case env.pop of [_, env] -> [env, code] esac
+        | BINOP (op) ->
+            case env.pop2 of [x, y, env] ->
+              case env.allocate of [s, env] ->
+                if isComparator(op) then
+                  [env, code <+ Mov(y, eax) <+> cmpEax(op, x) <+ Mov(eax, s)]
+								else
+                  case op of
+                    "/"   -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(eax, s)]
+                  | "%"   -> [env, code <+ Mov(y, eax) <+ Cltd <+ IDiv(x) <+ Mov(edx, s)]
+                  | "!!"  -> [env, code <+ Mov(y, eax) <+ Binop("!!", x, eax) <+> cmpEax("!=", L(0)) <+ Mov(eax, s)]
+                  | "&&"  -> [env, code <+ Mov(y, eax) <+ Binop("*", x, eax) <+> cmpEax("!=", L(0)) <+ Mov(eax, s)]
+                  | _     -> [env, code <+ Mov(y, eax) <+ Binop(op, x, eax) <+ Mov(eax, s)]
+                  esac
+                fi
+              esac
+            esac
+				| JMP (l) -> [setBarrier(env, l), code <+ Jmp (l)]
+				| CJMP (c, l) ->
+				  case env.pop of
+				    [x, env] -> [setStack(env, l), code <+ Mov(x, eax) <+ Binop("cmp", L(0), eax) <+ CJmp(c , l)]
+					esac
+				| LABEL (l) -> [if isBarrier(env) then retrieveStack(env, l) else env fi, code <+ Label (l)]
+        | BEGIN (name, argsCnt, locCnt) -> [enterFunction(env, name, locCnt), code <+> prologue(name)]
+        | CALL (fLabel, n) -> generateCall(fLabel, n)
+				| BUILTIN (f, n) -> generateCall(patchBuiltin(f), n)
+        | END -> case epilogue(env) of [env, epCode] -> [env, code <+> epCode] esac
+				| ELEM -> generateCall("Belem", 2)
+				| STA -> generateCall("Bsta", 2)
+				| ARRAY (n) -> generateCall("Barray", n)
+        | _ -> failure("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
         esac
       }, [env, emptyBuffer ()], code)
