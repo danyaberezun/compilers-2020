@@ -8,7 +8,7 @@ import Ostap;
 import Parser;
 import Matcher;
 import Lexer;
-import Stmt;
+import Expr;
 import SM;
 import X86;
 import Manifest;
@@ -26,6 +26,7 @@ fun parseArgs (args) {
       SM -> smDump ::= true
     esac
   }
+
 
   fun setMode (m) {
     case deref (mode) of
@@ -70,7 +71,6 @@ fun peepSM (args, smCode) {
   smCode
 }
 
-
 local args = parseArgs (arrayList (sysargs).tl);
 
 -- The main part: parses input file, invokes interpreter/stack machine interpreter/x86
@@ -88,12 +88,11 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
                             | arg      -> f (stringInt (arg) : acc) esac
                           }
                         }) ({}));
-          
        iter (fun (x) {printf ("%d\n", x)},
              case mode of
-               Int -> evalStmt (input, program)
+               Int -> evalExpr (input, program)
              | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
-             esac)
+             esac) 
     esac
 | x@Fail (err, line, col) ->   
    failure ("%s at %d:%d\n", err.hd, line, col)
