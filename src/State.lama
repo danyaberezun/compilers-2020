@@ -68,6 +68,7 @@ fun makeState (scopes) {
       case scopes of        
         {_, _}     -> scopes
       | _ : scopes -> enterScopes (scopes)
+			| e -> failure("unexpected scopes!!! %s", scopes.string)
       esac
     }
 
@@ -97,7 +98,7 @@ fun makeState (scopes) {
 
     findGlobal (scopes)
   }
-  
+
   [lookup, assign, enterScope, leaveScope, addName, enterFunction, leaveFunction, getGlobal]
 }
 
