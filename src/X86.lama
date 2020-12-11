@@ -364,6 +364,86 @@ fun compile (env, code) {
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
         (* Assignment *)
+        | CONST (v) ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (L (v), s)]
+            esac
+        | DROP ->
+            case env.pop of
+              [_, env] -> [env, code]
+            esac
+        | LD (x) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move(env.loc(x), s)]
+            esac
+        | LDA (x) ->
+            case env.addGlobal(x).allocate of
+              [s, env] -> [env, code <+ Lea (env.loc(x), s)]
+            esac
+        | ST (x) ->
+            case env.addGlobal(x) of env ->
+              [env, code <+> move(env.peek, env.loc(x))]
+            esac
+        | STI ->
+            case env.pop of [s, env] ->
+              local x = env.peek;
+              [env, code <+> move(s, I (0, x)) <+ Mov (s, x)]
+            esac
+        | LABEL (label) -> [env.retrieveStack(label), code <+ Label (label)]
+        | JMP (label) -> [env.setStack(label), code <+ Jmp (label)]
+        | CJMP (tag, label) ->
+            case env.pop of [s, env] ->
+              [env.setStack(label), code <+ Binop ("cmp", L (0), s) <+ CJmp (tag, label)]
+            esac
+        | BINOP (op) ->
+            fun withOperands(code, x, y, action) {  -- moves first operand to register if both operands are memory
+              if (memOpnd(x) && memOpnd(y))
+                then action(code <+ Mov (x, edx), edx, y)
+                else action(code, x, y)
+              fi
+            }
+            fun plusLikeImpl (env, x, y, result) {
+              fun impl (code, x, y) {
+                code <+ Binop (op, y, x) <+ Mov (x, result)
+              }
+              [env, withOperands(code, x, y, impl)]
+            }
+            fun cmpImpl (env, x, y, result) {
+              fun impl (code, x, y) {
+                code
+                  <+ Binop ("cmp", y, x)
+                  <+ Mov (L (0), eax) <+ Set (suffix(op), "%al")
+                  <+ Mov (eax, result)
+              }
+              [env, withOperands(code, x, y, impl)]
+            }
+            fun logicalImpl (env, x, y, result) {
+              local code1 = code
+                  <+ Binop ("cmp", L (0), y) <+ Mov (L (0), eax) <+ Set (suffix("!="), "%al")
+                  <+ Mov (eax, edx)
+                  <+ Binop ("cmp", L (0), x) <+ Mov (L (0), eax) <+ Set (suffix("!="), "%al")
+                  <+ Binop (op, edx, eax) <+ Mov (eax, result);
+              [env, code1]
+            }
+            case env.pop2 of [y, x, env] ->
+              case env.allocate of [result, env] ->  -- вообще result будет равным x?
+                case op of
+                  "+"  -> plusLikeImpl(env, x, y, result)
+                | "-"  -> plusLikeImpl(env, x, y, result)
+                | "*"  -> plusLikeImpl(env, x, y, result)
+                | "&&"  -> logicalImpl(env, x, y, result)
+                | "!!"  -> logicalImpl(env, x, y, result)
+                | "/"  -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (eax, result)]
+                | "%"  -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (edx, result)]
+                | "<"  -> cmpImpl(env, x, y, result)
+                | "<=" -> cmpImpl(env, x, y, result)
+                | ">"  -> cmpImpl(env, x, y, result)
+                | ">=" -> cmpImpl(env, x, y, result)
+                | "==" -> cmpImpl(env, x, y, result)
+                | "!=" -> cmpImpl(env, x, y, result)
+                esac
+              esac
+            esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
         esac
