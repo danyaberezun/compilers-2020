@@ -71,7 +71,7 @@ fun eval (c@[s, w], expr) {
 				[new, {v1, v2}] -> [new, evalOp (op, v1, v2)] 
 			      esac
 	| Assn (to, from) -> case evalList (c, {to, from}) of
-				[new@[new_s, new_w], {Ref (place), v}] -> [[new_s <- [place, v, new_w], v]
+				[new@[new_s, new_w], {Ref (place), v}] -> [[new_s <- [place, v], new_w], v]
 			     esac
 	| Seq (expr1, expr2) -> case eval (c, expr1) of
 					[new, v] -> eval (new, expr2)
