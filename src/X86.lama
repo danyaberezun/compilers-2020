@@ -423,11 +423,20 @@ fun compile (env, code) {
                         esac
                   esac
             esac
-        | LABEL (l) -> [env, code <+ Label (l)]
-        | JMP (l) -> [env, code <+ Jmp (l)]
+        | LABEL (l) -> [if env.isBarrier then env.retrieveStack (l) else env fi, code <+ Label (l)]
+        | JMP (l) -> [env.setStack (l).setBarrier, code <+ Jmp (l)]
         | CJMP (c, l) -> case env.pop of
-              [x, env] -> [env, code <+ Mov (x, edx) <+ Binop ("cmp", L (0), edx) <+ CJmp (c, l)]
-            esac
+				                    [x, env] -> [env.setStack (l), code <+ Mov (x, edx) <+ Binop ("cmp", L (0), edx) <+ CJmp (c, l)]
+                          esac
+        | STI -> case env.pop2 of
+            [head, addr, env] -> case env.allocate of
+                    [space, env] -> [env, code <+> move (head, I (0, addr)) <+> move (head, space)]
+                    esac
+          esac
+        | LDA (x) -> case env.addGlobal (x).allocate of
+              [space, env] -> [env, code <+ Lea (env.loc(x), eax) <+ Mov (eax, space)]
+              esac
+        | DROP -> [env.pop[1], code]
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)

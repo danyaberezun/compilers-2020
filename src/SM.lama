@@ -65,11 +65,11 @@ case insns of
 	 | head : tail -> case head of
 					BINOP (op) -> case stack of 
 								second : first : stack -> eval (env, [evalOp(op, first, second) : stack, map, world], tail)
-						      esac
+						    esac
 					| CONST (n) -> eval (env, [n : stack, map, world], tail)
 					| WRITE -> case stack of
 								first : stack -> eval (env, [stack, map, writeWorld(first, world)], tail)
-						   esac
+						    esac
 					| READ -> eval (env, [fst (readWorld(world)) : stack, map, snd(readWorld(world))], tail)
 					| ST (x) -> case stack of
 								first : stack -> eval (env, [stack, map <- [x, first], world], tail)
@@ -81,14 +81,21 @@ case insns of
 								shead : stail -> case cond of
 										"z" -> case shead of 
 											0 -> eval (env, c, fromLabel(env, l))
-											| _ -> eval (env, c, tail)
+											| _ -> eval (env, [stail, map, world], tail)
 											esac
 										| "n" -> case shead of
-											0 -> eval (env, c, tail)
+											0 -> eval (env, [stail, map, world], tail)
 											| _ -> eval (env, c, fromLabel(env, l))
 											  esac
 										esac
 							esac
+					| LDA (x) -> eval (env, [Ref (x) : stack, map, world], tail)
+					| STI -> case stack of
+							head : Ref (x) : stail -> eval (env, [head : stail, map <- [x, head], world], tail)
+						 esac
+					| DROP -> case stack of
+							head : stail -> eval (env, [stail, map, world], tail)
+					esac
 				esac
 esac
 }
@@ -147,31 +154,54 @@ public fun compileSM (stmt) {
 	fun compileEnv(env, stmt) {
 	case stmt of 
 		  Read (x) -> [env, (READ:{}) +++ (ST (x):{})]
-		| Write (e) -> [env, compileExpr (e) +++ (WRITE:{})]
+		| Ref (x) -> [env, (LDA (x):{})]
+		| Ignore (x) -> case compileEnv (env, x) of
+					[env1, res] -> [env1, res +++ (DROP:{})]
+				esac
+		| Var (x) -> [env, (LD (x) : {})]
+		| Const (n) -> [env, (CONST (n) : {})]
+		| Binop (op, l, r) -> case compileEnv (env, l) of
+					[env1, lres] -> case compileEnv (env1, r) of
+								[env2, rres] -> [env2, lres +++ rres +++ (BINOP (op) : {})]
+							esac
+					esac
+		| Write (e) -> case compileEnv (env, e) of
+					[env1, res] -> [env1, res +++ (WRITE:{})]
+				esac
 		| Seq (s1, s2) -> case compileEnv (env, s1) of
 					[env1, stmt1] -> case compileEnv (env1, s2) of
 								[env2, stmt2] -> [env2, stmt1 +++ stmt2]
-                          esac
-                    esac
-		| Assn (x, e) -> [env, compileExpr (e) +++ (ST (x):{})]
+							esac
+				esac
+		| Assn (x, e) -> case compileEnv (env, x) of
+					[env1, var] -> case compileEnv (env1, e) of
+								[env2, res] -> [env2, var +++ res +++ (STI :{})]
+							esac
+				esac
 		| Skip -> [env, {}]
 		| If (e, s1, s2) -> case genLabels(env, 2) of 
-					[lelse, lfi, env1] -> case compileEnv (env1, s1) of
-								[env2, stmt1] -> case compileEnv (env2, s2) of
-										[env3, stmt2] -> [env3, compileExpr (e) +++ (CJMP ("z", lelse):{}) +++ stmt1 +++ (JMP (lfi):{}) +++ (LABEL (lelse):{}) +++ stmt2 +++ (LABEL (lfi):{})]
-                                esac
-                              esac
-				esac
+					[lelse, lfi, env1] -> case compileEnv(env1, e) of
+								[env2, e1] -> case compileEnv (env2, s1) of
+										[env3, stmt1] -> case compileEnv (env3, s2) of
+												[env4, stmt2] -> [env4, e1 +++ (CJMP ("z", lelse):{}) +++ stmt1 +++ (JMP (lfi):{}) +++ (LABEL (lelse):{}) +++ stmt2 +++ (LABEL (lfi):{})]
+												esac
+										esac
+								esac
+					esac
 		| While (e, s) -> case genLabels (env, 2) of 
-					[lwhile, lod, env1] -> case compileEnv (env1, s) of 
-								[env2, stmt1] -> [env2, (LABEL (lwhile):{}) +++ compileExpr (e) +++ (CJMP ("z",lod):{}) +++ stmt1 +++ (JMP (lwhile):{}) +++ (LABEL (lod):{})] 
+					[lwhile, lod, env1] -> case compileEnv (env1, e) of
+									[env2, res] -> case compileEnv (env2, s) of 
+												[env3, stmt1] -> [env3, (LABEL (lwhile):{}) +++ res +++ (CJMP ("z",lod):{}) +++ stmt1 +++ (JMP (lwhile):{}) +++ (LABEL (lod):{})]
+											esac
 								esac
 				esac
 		| Repeat (s, e) -> case genLabel (env) of 
-					[lrepeat, env1] -> case compileEnv (env1, s) of 
-							[env2, stmt1] -> [env2, (LABEL (lrepeat):{}) +++ stmt1 +++ compileExpr (e) +++ (CJMP ("z", lrepeat):{})]
-						     esac
-				   esac
+					[lrepeat, env1] -> case compileEnv (env1, e) of
+								[env2, cond] -> case compileEnv (env2, s) of 
+											[env3, stmt1] -> [env3, (LABEL (lrepeat):{}) +++ stmt1 +++ cond +++ (CJMP ("z", lrepeat):{})]
+										esac
+							esac
+				esac
 	esac
 	}
 compileEnv (initCompEnv (), stmt)[1]
