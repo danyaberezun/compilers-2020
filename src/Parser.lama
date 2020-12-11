@@ -93,7 +93,7 @@ fun expandScope (defs, expr) {
            },
            [{}, expr],
            defs) of
-    [defs, expr] -> Scope (defs, expr)
+    [defs, expr] -> scope (defs, expr)
   esac
 }
 
@@ -105,9 +105,17 @@ fun distributeScope (expr, exprConstructor) {
   esac
 }
 
+-- optimization: do not create scopes if defs are empty
+fun scope (defs, expr) {
+  case defs of
+    {} -> expr
+  | _ -> Scope (defs, expr)
+  esac
+}
+
 local stmtElse = memo $ eta syntax (
-    kElif e=exp kThen s1=stmt s2=stmtElse { fun (a) { If (e(Val), s1(a), s2(a)) } }
-  | kElse s=stmt kFi { s }
+    kElif e=exp kThen s1=scopeExpr s2=stmtElse { fun (a) { If (e(Val), s1(a), s2(a)) } }
+  | kElse s=scopeExpr kFi { s }
   | loc=pos kFi { fun (a) { assertVoid(a, Skip, loc) } }
   );
 local primary    = memo $ eta syntax (
@@ -130,15 +138,32 @@ local primary    = memo $ eta syntax (
                                     loc=pos kSkip { fun (a) { assertVoid(a, Skip, loc) } } |
                                     loc=pos kRead s["("] x=lident s[")"] { fun (a) { assertVoid(a, Read (x), loc) } } |
                                     loc=pos kWrite s["("] e=exp s[")"] { fun (a) { assertVoid(a, Write (e(Val)), loc) } } |
-                                    kIf e=exp kThen s1=stmt s2=stmtElse { fun (a) { If (e(Val), s1(a), s2(a)) } } |
-                                    loc=pos kWhile loc1=pos e=exp kDo s=stmt kOd { fun (a) { assertVoid(a, While (e(Val), s(Void)), loc) } } |
-                                    loc=pos kRepeat s=stmt kUntil e=basic { fun (a) { assertVoid(a, Repeat (s(Void), e(Val)), loc) } } |
-                                    loc=pos kFor s1=stmt s[","] e=exp s[","] s2=stmt kDo s3=stmt kOd { fun (a) {
-                                      local result = Seq (s1(Void), While (e(Val), Seq (s3(Void), s2(Void))));
-                                      assertVoid(a, result, loc)
-                                    } }
+                                    kIf e=basic kThen s1=scopeExpr s2=stmtElse { fun (a) { If (e(Val), s1(a), s2(a)) } } |
+                                    loc=pos kWhile loc1=pos e=basic kDo s=scopeExpr kOd { fun (a) { assertVoid(a, While (e(Val), s(Void)), loc) } } |
+                                    loc=pos kRepeat s=scopeExpr kUntil e=basic { fun (a) {
+                                      distributeScope(s(Void), fun (s) {
+                                        assertVoid(a, Repeat (s, e(Val)), loc)
+                                      })
+                                    } } |
+                                    loc=pos kFor s1=scopeExpr s[","] e=basic s[","] s2=basic kDo s3=scopeExpr kOd { fun (a) {
+                                      distributeScope(s1(Void), fun (s1) {
+                                        local result = Seq (s1, While (e(Val), Seq (s3(Void), s2(Void))));
+                                        assertVoid(a, result, loc)
+                                      })
+                                    } } |
+                                    inbr[s("{"), scopeExpr, s("}")]
                                     ),
-      scopeExpr = memo $ eta (syntax ($(failure ("scope expression parsing is not implemented\n")))),
+      local1 = memo $ eta (syntax (
+        x=lident { [x, None] } |
+        x=lident s["="] e=basic { [x, Some (e(Val))] }
+      )),
+      def = memo $ eta (syntax (
+        kLocal defs=list[local1] s[";"] { Local (defs) } |
+        kFun name=lident s["("] args=list0[lident] s[")"] s["{"] body=scopeExpr s["}"] { Fun (name, args, body(Weak)) }
+      )),
+      scopeExpr = memo $ eta (syntax (
+        defs=rep0[def] e=exp { fun (a) { expandScope(defs, e(a)) } }
+      )),
 (* End *)
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
@@ -152,7 +177,6 @@ local primary    = memo $ eta syntax (
                                      },
                                      primary)),
       exp        = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
-local stmt = exp;
 
 -- Public top-level parser
 public parse = syntax (s=scopeExpr {s (Void)});
