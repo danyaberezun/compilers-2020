@@ -158,14 +158,12 @@ public fun compileSM (stmt) {
     				esac
     	| Binop (op, l, r) -> case compileEnv (env, l) of
 					[env1, lres] -> case compileEnv (env1, r) of
-								[env2, rres] -> [env2, lres +++ 									rres +++ (BINOP (op) : {})]
+								[env2, rres] -> [env2, lres +++ 									rres +++ singleton(BINOP(op))]
 							esac
 				      esac
-    	| Seq(stmt1, stmt2) -> 
-          
-          case compileEnv(env, stmt1) of [env1, stmt1] -> 
-              case compileEnv(env1, stmt2) of [env2, stmt2] ->
-                [env2, stmt1 +++ stmt2]
+    	| Seq(stmt1, stmt2)   ->  case compileEnv(env, stmt1) of [env1, s1] -> 
+              case compileEnv(env1, stmt2) of [env2, s2] ->
+                [env2, s1 +++ s2]
               esac
           esac
 
@@ -173,7 +171,7 @@ public fun compileSM (stmt) {
                               case compileEnv(env1, e) of [env2, res] ->
                                  case compileEnv(env2, s) of [env3, stmt1] ->
                                   [env3, singleton(LABEL (label1)) +++ res +++ 
-                                  singleton(CJMP ("z",lod)) +++ stmt1 +++ singleton(JMP(lwhile)) +++ singleton(LABEL(lod))]
+                                  singleton(CJMP ("z",label2)) +++ stmt1 +++ singleton(JMP(label1)) +++ singleton(LABEL(label2))]
 					esac
                               esac
                           esac
