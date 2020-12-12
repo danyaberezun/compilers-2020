@@ -6,6 +6,7 @@ import World;
 import Stmt;
 import State;
 import SM;
+import X86;
 
 -- Embeds expression operands: strings are 
 -- embedded into identifiers, integer constants --- into
@@ -60,10 +61,11 @@ infixr >> before ::= (s1, s2) {
 
 -- Returns embedded program (thus, the file has to be recompiled as the
 -- program changes)
-public fun program () {
+fun program () {
   PROGRAM_BODY
 }
 
+<<<<<<< HEAD
 fun state (x) {
   Read (x)
 }
@@ -79,3 +81,18 @@ iter (fun (x) {printf ("%d\n", x)},
 	| _ -> failure ("Invalid compiler flag\n")
       esac
      )
+=======
+case sysargs of
+  [_] -> printf ("%s\n", compileX86 (compileSM (program ())))
+| _   ->
+  local input =
+    reverse (fix (fun (f) {fun (acc) {case readLine () of HASH unboxed -> acc | arg -> f (stringInt (arg) : acc) esac}}) ({}));
+  
+  iter (fun (x) {printf ("%d\n", x)},
+        case sysargs[1] of
+          "-i" -> evalStmt (input, program ())
+        | "-s" -> evalSM (input, compileSM (program ()))
+        esac
+       )
+esac
+>>>>>>> A01-straight-line-int-sm
