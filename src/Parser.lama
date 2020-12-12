@@ -52,6 +52,14 @@ fun binop (op) {
   ]
 }
 
+fun ifHelper(cond, x, y) {
+	fun(a) { If(cond(Var), x(a), y(a))}
+}
+
+local elifParser = memo $ eta syntax(
+				kElse x=exp { x } |
+				kElif e=exp kThen x=exp y=elifParser { ifHelper(e, x, y) });
+
 local primary  = memo $ eta syntax (
                                     -- decimal constant
                                     loc=pos x=decimal                                 {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
@@ -64,7 +72,15 @@ local primary  = memo $ eta syntax (
                                                                                          | _    -> Var (x)
                                                                                          esac
                                                                                       }} |
-                                    $(failure ("the rest of primary parsing in not implemented\n"))),
+                                    inbr[s ("("), exp, s (")")] |
+                                    loc=pos kRead x=inbr[s("("), lident, s(")")] {fun (a) { assertVoid(a, Read(x), loc) }} |
+                                    loc=pos kWrite x=inbr[s("("), exp, s(")")] {fun (a) { assertVoid(a, Write(x(Val)), loc) }} |
+                                    loc=pos kSkip	 { fun (a) { assertVoid(a, Skip, loc) }} |
+                                    loc=pos kWhile x=exp kDo y=exp kOd {fun (a) { assertVoid(a, While (x(Val), y(Void)),loc) }} |
+                                    loc=pos kFor i=exp s[","] x=exp s[","] y=exp kDo st=exp kOd {fun (a) { assertVoid(a, Seq (i(Void), While (x(Val), Seq (st(Void), y(Void)))), loc) }} |
+                                    loc=pos kRepeat x=exp kUntil e=inbr[s("("), exp, s(")")]  { fun (a) { assertVoid(a, Repeat(x(Void), e(Val)), loc) }} |
+                                    -loc=pos kIf e=exp kThen x=exp y=elifParser kFi { ifHelper(e, x, y) } |
+			                              loc=pos kIf e=exp kThen x=exp kFi { ifHelper(e, x, fun(a) { assertVoid(a, Skip, loc)})}),
       basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                         fun (l, loc, r) {
                                                           fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}

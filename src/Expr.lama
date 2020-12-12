@@ -63,30 +63,33 @@ fun evalList (c, exprs) {
   esac
 }
 
-public fun evalExpr (st, expr) {
+fun eval (c@[st, w], expr) {
   case expr of
-    Binop(op, l, r) -> (
-      case op of
-        "+"  -> infix + |
-        "-"  -> infix - |
-        "*"  -> infix * |
-        "/"  -> infix / |
-        "%"  -> infix % |
-        "==" -> infix == |
-        "!=" -> infix != |
-        "<"  -> infix < |
-        "<=" -> infix <= |
-        ">"  -> infix > |
-        ">=" -> infix >= |
-        "&&" -> infix && |
-        "!!" -> infix !!
-      esac 
-    )(evalExpr(st, l), evalExpr(st, r)) |
-    Var(x) -> st(x) |
-    Const(n) -> n
+    Binop(op, l, r) -> case evalList(c, {l, r}) of [c1, {lv, rv}] -> [c1, evalOp(op, lv, rv)] esac |
+    Var(x) -> [c, st(x)] |
+    Ref (x) -> [c, Ref (x)] |
+    Ignore (x) -> case eval (c, x) of [c, _] -> [c, Bot] esac |
+    Const(n) -> [c, n] |
+    Skip -> [c, Bot] |
+    Assn (x, val) -> case evalList(c, {x, val}) of [[st1, w1], {Ref (xx), vval}] -> [[st1 <- [xx, vval], w1], vval] esac |
+    Read (x) -> case readWorld(w) of [v, w1] -> [[st <- [x, v], w1], Bot] esac |
+    Write (e) -> case eval(c, e) of [[st1, w1], a] -> [[st1, writeWorld(a, w1)], Bot] esac |
+    Seq (s, t) -> eval(eval(c, s)[0], t) |
+    If (expr, trst, flst) -> 
+      case eval(c, expr) of 
+        [c, true] -> eval(c, trst) |
+        [c, false] -> eval(c, flst)
+      esac |
+    wh@While(cond, body) -> case eval(c, cond) of 
+      [c, true] -> case eval(c, body) of [c, _] -> eval(c, wh) esac |
+      [c, false] -> [c, Bot] 
+    esac |
+    r@Repeat(body, cond) ->  case evalList(c, {body, cond}) of 
+      [c, _:true:_] -> [c, Bot] |
+      [c, _:false:_] -> eval(c, r) 
+    esac
   esac
 }
-
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
