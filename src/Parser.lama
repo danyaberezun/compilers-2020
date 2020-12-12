@@ -4,6 +4,9 @@ import Ostap;
 import Lexer;
 import List;
 import Fun;
+import X86;
+import SM;
+
 
 -- A parser of "something" in brackets; l, r are left and right
 -- brackets as strings, p --- a parser of "something"
@@ -12,6 +15,14 @@ fun inbr (l, p, r) {
 }
 
 -- Primary expression
+
+-- косяк: если поставить {obj}, то это будет не лист, а скоуп
+-- (не забыть про это)
+-- obj:{} - list с 1 объектом
+-- singleton(obj) -> то же самое, почему я это только щас узнал
+-- fun arrayList (a)
+-- Converts an array to list (preserving the order of elements).
+
 local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
                                    x=lident  {Var (x)}               |
                                    inbr[s("("), exp, s(")")]),
@@ -22,4 +33,4 @@ local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
 
 -- Public top-level parser
 public parse = stmt;
-             
+
