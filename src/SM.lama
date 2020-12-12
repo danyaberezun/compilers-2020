@@ -78,11 +78,11 @@ fun eval (env, c, insns) {
 											                          esac
                                   esac          
                              esac
-      | LDA (x) -> eval (env, [Ref (x) : stack, st, w], other)
-			| STI -> case stack of
+      | LDA (x) : other -> eval (env, [Ref (x) : stack, st, w], other)
+			| STI : other -> case stack of
 							head : Ref (x) : nstack -> eval (env, [head : nstack, st <- [x, head], w], other)
 						 esac
-			| DROP -> case stack of
+			| DROP : other -> case stack of
 							head : nstack -> eval (env, [nstack, st, w], other)
 						  esac
     esac

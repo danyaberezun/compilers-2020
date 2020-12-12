@@ -71,17 +71,17 @@ fun eval (c@[st, w], expr) {
 				[new_c, {value1, value2}] -> [new_c, evalOp (op, value1, value2)] 
 			        esac
     | Assn (to, from) -> case evalList (c, {to, from}) of
-				[new_c@[new_st, new_w], {Ref (place), value}] -> [[new_s <- [place, value], new_w], value]
+				[new_c@[new_st, new_w], {Ref (place), value}] -> [[new_st <- [place, value], new_w], value]
 			     esac
     | Skip -> [c, None]
     | Seq (expr1, expr2) -> case eval (c, expr1) of
 					[new_c, value] -> eval (new_c, expr2)
 				  esac
     | Read (to) -> case readWorld (w) of
-				[value, new_w] -> [[s <- [to, value], new_w], None]
+				[value, new_w] -> [[st <- [to, value], new_w], None]
 		       esac
     | Write(expression) -> case eval(c,expression) of
-        [new_c@[new_st, new_w], value] -> [new_c@[new_st, writeWorld (value, new_world)], None]
+        [new_c@[new_st, new_w], value] -> [[new_st, writeWorld (value, new_w)], None]
             esac
     | If (cond, expr1, expr2) -> case eval (c, cond) of
 						  [new_c, 0] -> eval (new_c, expr2)
@@ -93,7 +93,7 @@ fun eval (c@[st, w], expr) {
 									          [latest_c, value] -> eval (latest_c, expr)
 								         esac
 					            esac
-    | Repeat (expression, cond) -> eval (c, Seq (expression, While (Binop ("==", condition, Const (0)), expression))) 
+    | Repeat (expression, cond) -> eval (c, Seq (expression, While (Binop ("==", cond, Const (0)), expression))) 
 	  | Ref (place) -> [c, Ref (place)]
 	  | Ignore (expression) -> case eval (c, expression) of
 					[new_c, value] -> [new_c, None]
