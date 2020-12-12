@@ -181,7 +181,8 @@ public fun compileSM (stmt) {
           case compileEnv(env0, expression) of [env1, expr] ->
             case compileEnv (env1, s1) of
 								[env2, stmt1] -> case compileEnv (env2, s2) of
-										[env3, stmt2] -> [env3, expr +++ singleton(CJMP ("z", lb_else)) +++ stmt1 +++ singleton(JMP (lb_fi)) +++ singleton(LABEL (lb_else)) +++ stmt2 +++ singleton(LABEL (lb_fi))]
+										[env3, stmt2] -> [env3, expr +++ singleton(CJMP ("z", lb_else)) +++ stmt1 +++ singleton(JMP (lb_fi)) 
+                    +++ singleton(LABEL (lb_else)) +++ stmt2 +++ singleton(LABEL (lb_fi))]
 										             esac
 							                    esac
 				                      esac

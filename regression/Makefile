@@ -19,10 +19,6 @@ expr_tests:
 	make -C deep-expressions
 
 clean:
-<<<<<<< HEAD
 	$(RM) *.s *.i *~ $(LOGS) $(TESTS) *.run *.sm
-=======
-	$(RM) *.s *.i *~ $(LOGS) $(TESTS) *.run
->>>>>>> origin/A05-control-flow-sm-x86
 	make -C expressions clean
 	make -C deep-expressions clean
