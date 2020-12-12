@@ -58,8 +58,8 @@ fun eval (env, c, insns) {
         {} -> c
       | BINOP (op) : other -> case stack of x : y : nstack -> eval (env, [evalOp (op, y, x) : nstack, st, w], other) esac
       | CONST (n) : other -> eval (env, [n : stack, st, w], other)
-      | READ      : other -> case i of x : ni -> eval (env, [x : stack, st, [ni, o]], other) esac
-      | WRITE     : other -> case stack of x : nstack -> eval (env, [nstack, st, [i, x : o]], other) esac
+      | READ : other -> eval (env, [fst (readWorld (w)) : stack, st, snd (readWorld (w))], other)
+      | WRITE     : other -> case stack of x : nstack -> eval (env, [nstack, st, writeWorld (x, w)], other) esac
       | LD    (x) : other -> eval (env, [st (x) : stack, st, w], other)
       | ST    (x) : other -> case stack of y : nstack -> eval (env, [nstack, (st <- [x, y]), w], other) esac
 
