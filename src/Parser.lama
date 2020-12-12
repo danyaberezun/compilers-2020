@@ -4,8 +4,6 @@ import Ostap;
 import Lexer;
 import List;
 import Fun;
-import SM;
-import X86;
 
 
 -- A parser of "something" in brackets; l, r are left and right
