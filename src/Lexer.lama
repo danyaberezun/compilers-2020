@@ -9,7 +9,7 @@ import List;
 -- A hashtable to keep a source code location information.
 -- The keys in this table is a (boxed) value, and values are
 -- pairs [line, column]
-local srcTab = emptyHashTab (1024, hash, flatCompare);
+local srcTab = emptyHashTab (1024, hash, compare);
 
 -- A custom combinator to additionally add location info
 public fun located (p) {
@@ -58,7 +58,7 @@ public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*
        rRepeat      = createRegexp ("repeat\\b", """repeat"""),
        rUntil       = createRegexp ("until\\b", """until"""),
        rFor         = createRegexp ("for\\b", """for""");
-      
+       
 local whiteSpace = token (rWhiteSpace);
 
 -- Public parsers for concrete tokens
@@ -95,4 +95,4 @@ public kRead    = s (rRead),
                                      esac)
                                 }
                               });
-
+                              

@@ -1,4 +1,5 @@
 -- Manifests a top-level environment
+
 import Lazy;
 import Fun;
 
@@ -15,6 +16,7 @@ public fun dumpSM (args, smCode) {
     fwrite (args.getBaseName ++ ".sm", force $ smCode)
   fi
 }
+
 
 public fun getBaseName (args) {
   force (lazy ({local name = args.getInFile;
