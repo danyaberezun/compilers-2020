@@ -8,7 +8,6 @@ import World;
 import State;
 import Expr;
 import Buffer;
-import Fun;
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -26,7 +25,7 @@ public fun showSMInsn (i) {
   | JMP   (l)    -> sprintf ("JMP %s", l)
   | CJMP  (c, l) -> sprintf ("CJMP %s, %s", c, l)
   | DUP          -> "DUP"
-  | DROP         -> "DROP"
+  | DROP         -> "DROP"  
   esac
 }
 
@@ -113,6 +112,14 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
+-- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
+-- returns a final configuration
+(* Assignment *)
+fun eval (env, c, insns) {
+  failure ("SM eval not implemented\n")
+}
+(* End *)
+
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
   eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
@@ -151,6 +158,7 @@ fun genLabels (env, n) {
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
+(* Assignment *)
 
 public fun compileSM (stmt) {
 	fun cmpSM (env, stmt) {
@@ -223,3 +231,4 @@ fun getEnd (st){
 			esac
 	esac
 }
+(* End *)

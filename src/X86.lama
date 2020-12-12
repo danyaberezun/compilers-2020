@@ -3,9 +3,9 @@
 import SM;
 import Collection;
 import List;
+import Manifest;
 import Buffer;
 import Fun;
-import Manifest;
 
 -- Assembler language interface
 -- The registers: 
@@ -27,7 +27,7 @@ local ebx = R (0),
 -- We need to know the word size to calculate offsets correctly
 local wordSize = 4;
 
--- We need to distinguish the following operand types:
+-- We need to distinguish the following operand types: 
 --    R (int)       -- hard register                    
 --    S (int)       -- a position on the hardware stack 
 --    M (string)    -- a named memory location          
@@ -144,7 +144,7 @@ fun makeEnv (stack, stackSlots, globals, barrier, stackMap) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-  -- popped items and an updated environment
+  -- popped items and an undated environment
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals, barrier, stackMap)]
@@ -280,7 +280,7 @@ fun initEnv () {
 -- Codegeneration helper functions
 -- Generates code section
 fun codeSection (text) {
-  singletonBuffer (Meta ("\t.text\n")) <+> text
+  Meta ("\t.text\n") : text
 }
 
 -- Generates data section
@@ -303,9 +303,9 @@ fun prologue (size) {
 -- Generates function epilogue
 fun epilogue () {
   singletonBuffer (Mov (ebp, esp)) <+
-  Pop   (ebp) <+
-  Binop ("^", eax, eax) <+
-  Ret
+   Pop   (ebp) <+
+   Binop ("^", eax, eax) <+
+   Ret
 }
 
 -- Checks if an operand resides on a stack
@@ -426,7 +426,9 @@ fun compile (env, code) {
 							esac
 					esac
 			esac
+        (* Assignment *)
         | _ -> failure ("Codegeneration for instruction %s is not yet implemented.\n", i.string)
+        (* End *)
         esac
       }, [env, emptyBuffer ()], code)
   }
@@ -448,14 +450,13 @@ public fun compileX86 (args, code) {
        fwrite (asmFile,
                map (insnString, 
                     getBuffer $
-                      singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-                      dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
+                      singletonBuffer ("\t.global\tmain\n") <+>
+                      dataSection (listBuffer $  map (dataDef, getGlobals (env))) <+>
                       codeSection (
                         singletonBuffer (Meta ("main:\n")) <+>
                         prologue (getStackSize (env)) <+>
                         code <+>
-                        epilogue ()
-                      )
+                        epilogue ())
                    ).stringcat);
                     
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)

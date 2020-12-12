@@ -1,0 +1,4 @@
+local x, y;
+
+write ((read (x); x) + (read (y); y))
+
