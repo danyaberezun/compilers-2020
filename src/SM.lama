@@ -65,19 +65,18 @@ fun eval (env, c, insns) {
 
       | LABEL (nm): other -> eval(env, c, other)
       | JMP (lb)  : other -> eval(env, c, fromLabel(env, lb)) 
-      | CJMP (cond,lb) : other -> 
-                             case stack of cmp : nstack ->
-                                  case cond of 
-                                        "z"  -> case cmp of 
-											                              0 -> eval (env, c, fromLabel (env, lb))
-											                            | _ -> eval (env, c, other)
-											                          esac
-                                      | "nz" -> case cmp of
-											                              0 -> eval (env, c, other)
-											                            | _ -> eval (env, c, fromLabel (env, lb))
-											                          esac
-                                  esac          
-                             esac
+      | CJMP (cond, l): other -> case stack of
+								shead : tail -> case cond of
+										"z" -> case shead of 
+											0 -> eval (env, c, fromLabel (env, l))
+											| _ -> eval (env, [tail, st, w], other)
+											esac
+										| "nz" -> case shead of
+											0 -> eval (env, [tail, st, w], other)
+											| _ -> eval (env, c, fromLabel (env, l))
+											 esac
+										esac
+							    esac
       | LDA (x) : other -> eval (env, [Ref (x) : stack, st, w], other)
 			| STI : other -> case stack of
 							head : Ref (x) : nstack -> eval (env, [head : nstack, st <- [x, head], w], other)
@@ -88,7 +87,6 @@ fun eval (env, c, insns) {
     esac
   esac
 }
-
 
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -147,7 +145,7 @@ public fun compileSM (stmt) {
 							                    esac
 				                   esac
 
-          | Read (x)       -> [env, {READ, ST (x)}]
+          | Read (x)       -> [env, singleton(READ)+++ singleton(ST (x))]
 
           | Write (expr) -> case compileEnv (env, expr) of
 					               [env1, var] -> [env1, var +++ (WRITE:{})]

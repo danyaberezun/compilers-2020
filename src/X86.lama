@@ -354,6 +354,7 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+        --printf ("Evaluating %s\n", i.string);
         case i of
           READ ->
             case env.allocate of
@@ -380,7 +381,6 @@ fun compile (env, code) {
         		[s, env] -> [env, code <+> move (env.loc(x), s)]
         	esac
         | BINOP (op) ->
-        
         	case env.pop2 of
         		[x, y, env] -> 
         			case env.allocate of
@@ -414,10 +414,9 @@ fun compile (env, code) {
                   [if env.isBarrier then env.retrieveStack(l) else env fi, code <+ Label(l)]
           | JMP(l) ->
                   [setBarrier(setStack(env, l)), code <+ Jmp(l)]
-          | CJMP(s1, l) ->
-                  case env.pop of
-                      [s2, env] -> [env.setStack(l), code <+ Mov(L(0), eax) <+ Binop("cmp", eax, s2) <+ CJmp(s1, l)]
-                  esac
+          | CJMP (c, l) -> case env.pop of
+				            [x, env] -> [env.setStack (l), code <+ Mov (x, edx) <+ Binop ("cmp", L (0), edx) <+ CJmp (c, l)]
+			          esac
           | STI -> 
 			      case env.pop2 of
 			      [s, adr, env1] -> 
