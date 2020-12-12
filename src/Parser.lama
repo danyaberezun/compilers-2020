@@ -71,7 +71,7 @@ fun list (item) {
 -- initializers into assignments
 fun expandScope (defs, expr) {
   fun expandDefs (defs, expr) {
-    foldr (fun ([defs, expr], def) {     
+    foldr (fun ([defs, expr], def) {
              case def of
                 [ident, None]         -> [ident : defs, expr]
              |  [ident, Some (value)] -> [ident : defs, Seq (Ignore (Assn (Ref (ident), value)), expr)]
@@ -81,7 +81,7 @@ fun expandScope (defs, expr) {
            defs)
   }
 
-  case 
+  case
     foldr (fun ([defs, expr], def) {
              case def of
                f@Fun (_, _, _) -> [f : defs, expr]
@@ -94,7 +94,7 @@ fun expandScope (defs, expr) {
            [{}, expr],
            defs) of
     [defs, expr] -> Scope (defs, expr)
-  esac  
+  esac
 }
 
 -- Helper AST function: distributes a scope through an expression
@@ -108,6 +108,17 @@ fun distributeScope (expr, exprConstructor) {
 local primary    = memo $ eta syntax (
                                       -- decimal constant
                                       loc=pos x=decimal                                 {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
+fun ifHelper(cond, x, y) {
+	fun(a) { If(cond(Var), x(a), y(a))}
+}
+
+local elifParser = memo $ eta syntax(
+				kElse x=exp { x } |
+				kElif e=exp kThen x=exp y=elifParser { ifHelper(e, x, y) });
+
+local primary  = memo $ eta syntax (
+                                    -- decimal constant
+                                    loc=pos x=decimal                                 {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
 
                                       -- identifier
                                       x=lident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? {fun (a) {
@@ -121,7 +132,15 @@ local primary    = memo $ eta syntax (
                                                                                                             esac
                                                                                                          }} |
 (* Assignment *)
-                                      $(failure ("the rest of primary parsing in not implemented\n"))),
+                                      inbr[s ("("), exp, s (")")] |
+                                                                          loc=pos kRead x=inbr[s("("), lident, s(")")] {fun (a) { assertVoid(a, Read(x), loc) }} |
+                                                                          loc=pos kWrite x=inbr[s("("), exp, s(")")] {fun (a) { assertVoid(a, Write(x(Val)), loc) }} |
+                                                                          loc=pos kSkip	 { fun (a) { assertVoid(a, Skip, loc) }} |
+                                                                          loc=pos kWhile x=exp kDo y=exp kOd {fun (a) { assertVoid(a, While (x(Val), y(Void)),loc) }} |
+                                                                          loc=pos kFor i=exp s[","] x=exp s[","] y=exp kDo st=exp kOd {fun (a) { assertVoid(a, Seq (i(Void), While (x(Val), Seq (st(Void), y(Void)))), loc) }} |
+                                                                          loc=pos kRepeat x=exp kUntil e=inbr[s("("), exp, s(")")]  { fun (a) { assertVoid(a, Repeat(x(Void), e(Val)), loc) }} |
+                                                                          -loc=pos kIf e=exp kThen x=exp y=elifParser kFi { ifHelper(e, x, y) } |
+                                      			                              loc=pos kIf e=exp kThen x=exp kFi { ifHelper(e, x, fun(a) { assertVoid(a, Skip, loc)})}),
       scopeExpr = memo $ eta (syntax ($(failure ("scope expression parsing is not implemented\n")))),
 (* End *)
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),

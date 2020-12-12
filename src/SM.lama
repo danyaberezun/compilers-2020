@@ -58,9 +58,40 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-(* Assignment *)
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, c@[st, state, w], insns) {
+  case insns of
+      {} -> c |
+      BINOP (op) : e -> case st of 
+        a:b:r -> eval(env, [evalOp(op, b, a):r, state, w], e)
+      esac |
+      CONST (n) : e   -> eval(env, [n:st, state, w], e) |
+      READ : e  ->
+        local tmp;
+        tmp := readWorld(w);
+        eval(env, [tmp[0]:st, state, tmp[1]], e) |
+      WRITE : e  -> case st of
+        a:r -> eval(env, [r, state, writeWorld(a, w)], e)
+      esac |
+      LD (x) : e  -> eval(env, [state(x) : st, state, w], e) |
+      LDA (x) : e  -> eval(env, [Ref (x) : st, state, w], e) |
+      ST (x) : e  -> case st of
+        a:r -> eval(env, [r, state <- [x, a], w], e)
+      esac |
+      STI : e  -> case st of
+        a : Ref (x) : r -> eval(env, [a:r, state <- [x, a], w], e)
+      esac |
+      LABEL (s) : e  -> eval(env, c, e) |
+		  JMP (l) : e  -> eval(env, c, fromLabel(env, l)) |
+		  CJMP (c, l) : e	->
+			case st of a : r ->
+        case c of
+        "z" -> if (a == 0) then eval(env, [r, state, w], fromLabel(env, l)) else eval(env, [r, state, w], e) fi |
+        "nz" -> if (a == 1) then eval(env, [r, state, w], fromLabel(env, l)) else eval(env, [r, state, w], e) fi
+			  esac
+      esac |
+      DUP : e -> case st of a:r -> eval(env, [a:a:r, state, w], e) esac |
+      DROP : e -> case st of a:r -> eval(env, [r, state, w], e) esac
+  esac
 }
 (* End *)
 
@@ -104,6 +135,56 @@ fun genLabels (env, n) {
 -- instructions.
 (* Assignment *)
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  fun helper(env, stmt, endIf) { 
+    case stmt of
+      Skip -> [env, {}] |
+      Var (x) -> [env, singleton(LD (x))] |
+      Ref (x) -> [env, singleton(LDA (x))] |
+      Const (x) -> [env, singleton(CONST (x))] |
+      Ignore (e) -> case helper(env, e, endIf) of [env, cmd] -> [env, cmd +++ singleton(DROP)] esac |
+      Assn (x, e) -> case helper (env, x, "") of [env, cmd1] ->
+        case helper (env, e, "") of [env, cmd2] -> [env, cmd1 +++ cmd2 +++ singleton(STI)] esac
+      esac |
+      Read (x) -> [env, {READ, ST(x)}] |
+      Write (e) -> case helper (env, e, "") of [env, cmd] -> [env, cmd +++ singleton(WRITE)] esac |
+      Seq(s1, s2) ->
+      case helper(env, s1, "") of [env, insns1] ->
+        case helper(env, s2, endIf) of [env, insns2] ->
+          [env, insns1 +++ insns2]
+        esac
+      esac |
+      If (e, s1, s2) -> case genLabels(env, 2) of [lElse, lFi, env] ->
+			  if compare(endIf, "") == 0 then endIf := lFi fi;
+        case helper(env, e, "") of [env, exprCmd] ->
+          case helper(env, s1, endIf) of [env, is1] ->
+            case helper(env, s2, endIf) of [env, is2] ->
+              [env, exprCmd +++
+                  singleton(CJMP("z", lElse)) +++
+                  is1 +++
+                  {JMP(endIf), LABEL(lElse)} +++
+                  is2 +++
+                  singleton(LABEL(lFi))]
+            esac
+          esac
+        esac
+      esac |
+      While(e, s)	-> case genLabels(env, 2) of [l1, l2, env] ->
+        case helper(env, e, "") of [env, exprCmd] ->
+          case helper(env, s, "") of [env, is] ->
+            [env, {JMP (l2), LABEL (l1)} +++ is +++ singleton(LABEL (l2)) +++ exprCmd +++ singleton(CJMP ("nz", l1))]
+          esac
+        esac
+		  esac |
+      Repeat (s, e) -> case genLabels(env, 1) of [l, env] ->
+        case helper(env, s, "") of [env, is] ->
+          case helper(env, e, "") of [env, exprCmd] -> [env, singleton(LABEL(l)) +++ is +++ exprCmd +++ singleton(CJMP("z", l))] esac
+        esac
+      esac |
+      Binop (op, e1, e2) -> case helper(env, e1, "") of [env, cmd1] ->
+        case helper(env, e2, "") of [env, cmd2] -> [env, cmd1 +++ cmd2 +++ singleton(BINOP (op))] esac
+      esac
+    esac
+  }
+  helper(initCompEnv(), stmt, "")[1]
 }
 (* End *)
