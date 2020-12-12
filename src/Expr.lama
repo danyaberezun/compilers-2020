@@ -103,3 +103,9 @@ esac
 }
 
 
+-- Evaluates a program with a given input and returns an output
+public fun evalExpr (input, expr) {
+  case eval ([emptyState, createWorld (input)], expr) of
+    [c, _] -> c.snd.getOutput
+  esac
+}
