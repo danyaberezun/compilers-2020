@@ -188,9 +188,9 @@ public fun compileSM (stmt) {
 
       | Repeat(s, e) ->  case genLabel(env) of [label, env1] ->
                               case compileEnv(env1, e) of [env2, cond] ->
-                                  case case compileEnv(env2, s) of [env3, stmt1] ->
+                                  case compileEnv(env2, s) of [env3, stmt1] ->
                                 [env3, singleton(LABEL(label)) +++ stmt1 +++ cond +++ singleton(CJMP("z", label))]
-                              esac
+                                  esac
                             esac
                            esac
 
