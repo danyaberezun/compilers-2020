@@ -7,6 +7,7 @@ import Collection;
 import List;
 
 -- A set of all keywords
+
 local keywords =
    foldl (addSet,
           emptySet (compare),
@@ -43,7 +44,7 @@ public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*
       rRepeat      = createRegexp ("repeat\\b", """repeat"""),
       rUntil       = createRegexp ("until\\b", """until"""),
       rFor         = createRegexp ("for\\b", """for""");
-      
+
 local whiteSpace = token (rWhiteSpace);
 
 -- Public parsers for concrete tokens
@@ -79,4 +80,3 @@ public kRead    = s (rRead),
                                      esac)
                                 }
                               });
-
