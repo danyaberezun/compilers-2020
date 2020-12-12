@@ -64,6 +64,7 @@ fun evalList (c, exprs) {
 }
 
 fun eval (c@[st, w], expr) {
+  --printf("Evaluating %s\n", expr.string);
   case expr of
 	    Const (n) -> [c, n]
 	  | Var (x) -> [c, st(x)]
