@@ -30,7 +30,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
 	  },
 	  operations = {
 	  		[Left, [s("+") | s("-"), binop_operation]:{}],
-	  		[Left, [s("*")] | s("/") | s("%"), binop_operation]:{}],
+	  		[Left, [s("*") | s("/") | s("%"), binop_operation]:{}],
 	  		[Left, [s("&&"), binop_operation]:{}],
 	  		[Left, [s("!!"), binop_operation]:{}],
 	  		[Nona, [s("==") | s("!=") | s("<=") | s(">=") |  s("<") | s(">"), binop_operation]:{}], -- ',' allowed?
