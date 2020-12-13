@@ -19,7 +19,7 @@ fun binOpop(l, op, r) {
 
 local oper = {[Left, [s("!!"), binOpop] : {}],
              	[Left, [s("&&"), binOpop]: {}],
-             	[Nona, [s("==") | s("!=") | s("<") | s(">") | s(">=") | s("<="), binop] : {}],
+             	[Nona, [s("==") | s("!=") | s("<") | s(">") | s(">=") | s("<="), binOpop] : {}],
              	[Left, [s("+") | s("-"), binOpop] : {}],
              	[Left, [s("*") | s("/") | s("%"), binOpop] : {}]
 };
