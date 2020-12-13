@@ -21,9 +21,9 @@ fun eval (c, stmt) {
     case c of [state, [in, out]] ->
         case stmt of
              Skip -> c
-            |Read (el) -> case in of elemo : i -> [state <- [elem, elemo], [i, out]] esac
+            |Read (el) -> case in of elemo : i -> [state <- [el, elemo], [i, out]] esac
             |Write (expr) -> [state, [in, expression (state, expr) : out]]
-            |Assn (elem, expr) -> [state <- [elem, expression (state, expr)], [in, out]]
+            |Assn (el, expr) -> [state <- [el, expression (state, expr)], [in, out]]
             |Seq (s1, s2) -> eval (eval (c, s1), s2)
             |If (expr, s1, s2) -> if (expression (c[0], expr)) then eval (c, s1) else eval (c, s2) fi
             |Repeat (s, expr) -> local c_new = eval (c, s);
