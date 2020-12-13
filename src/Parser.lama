@@ -33,7 +33,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
 	  	   [Left, [s("+") | s("-"), binop] : {}],
 	  	   [Left, [s("*") | s("/") | s("%"), binop] : {}]},
 
-    exp = memo $ eta expr (ops, primary);
+    exp = memo $ eta expr (ops, primary)(id);
 
 
 local stmt = memo $ eta syntax (
@@ -44,5 +44,5 @@ local stmt = memo $ eta syntax (
 	);
    
 
--- Public top-level parser
+-- -- Public top-level parser
 public parse = stmt;

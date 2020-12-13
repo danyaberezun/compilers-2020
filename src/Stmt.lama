@@ -21,10 +21,10 @@ fun eval (condition, statement) {
 	case condition of [state, [in, out]] -> 
 		case statement of
 			  Skip -> condition
+			| Read(elem) -> case in of el : inn -> [state <- [elem, el], [inn, out]] esac
+			| Write(elem) -> [state, [in, evalExpr(state, elem) : out]]
 			| Assn(elem, e) -> [(state <- [elem, evalExpr(state, e)]), [in, out]]
 			| Seq(s1, s2) -> eval(eval(condition, s1), s2)
-			| Read(elem) -> case in of el : in__ -> [state <- [elem, el], [in__, out]] esac
-			| Write(elem) -> [state, [in, evalExpr(state, elem) : out]]
 		esac
 	esac
 }

@@ -666,9 +666,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (27) / 
+# LINE (28) / 
 
-	.stabn 68,0,27,.L1-initParser
+	.stabn 68,0,28,.L1-initParser
 
 .L1:
 
@@ -691,9 +691,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (28) / 
+# LINE (30) / 
 
-	.stabn 68,0,28,.L2-initParser
+	.stabn 68,0,30,.L2-initParser
 
 .L2:
 
@@ -785,9 +785,9 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%esi
-# LINE (29) / 
+# LINE (31) / 
 
-	.stabn 68,0,29,.L3-initParser
+	.stabn 68,0,31,.L3-initParser
 
 .L3:
 
@@ -879,9 +879,9 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%edi
-# LINE (30) / 
+# LINE (32) / 
 
-	.stabn 68,0,30,.L4-initParser
+	.stabn 68,0,32,.L4-initParser
 
 .L4:
 
@@ -1205,9 +1205,9 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	-4(%ebp)
-# LINE (31) / 
+# LINE (33) / 
 
-	.stabn 68,0,31,.L5-initParser
+	.stabn 68,0,33,.L5-initParser
 
 .L5:
 
@@ -1357,9 +1357,9 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	-8(%ebp)
-# LINE (32) / 
+# LINE (34) / 
 
-	.stabn 68,0,32,.L6-initParser
+	.stabn 68,0,34,.L6-initParser
 
 .L6:
 
@@ -1625,9 +1625,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (33) / 
+# LINE (36) / 
 
-	.stabn 68,0,33,.L7-initParser
+	.stabn 68,0,36,.L7-initParser
 
 .L7:
 
@@ -1654,23 +1654,28 @@ L1:
 	movl	%eax,	%esi
 	popl	%ecx
 	popl	%ebx
-# LD (Global ("ops")) / 
-
-	movl	global_ops,	%edi
-# LD (Global ("primary")) / 
-
-	movl	global_primary,	%eax
-	movl	%eax,	-4(%ebp)
-# CALLC (2, false) / 
+# CLOSURE ("Lid", []) / 
 
 	pushl	%ebx
 	pushl	%ecx
 	pushl	%esi
-	pushl	-4(%ebp)
+	pushl	$Lid
+	pushl	$1
+	call	Bclosure
+	addl	$8,	%esp
+	movl	%eax,	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+# CALLC (1, false) / 
+
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
 	pushl	%edi
 	movl	%esi,	%edx
 	call	*(%esi)
-	addl	$8,	%esp
+	addl	$4,	%esp
 	popl	%esi
 	popl	%ecx
 	popl	%ebx
@@ -1691,9 +1696,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (36) / 
+# LINE (39) / 
 
-	.stabn 68,0,36,.L8-initParser
+	.stabn 68,0,39,.L8-initParser
 
 .L8:
 
@@ -1736,9 +1741,9 @@ L1:
 	movl	%eax,	%ebx
 # DROP / 
 
-# LINE (45) / 
+# LINE (48) / 
 
-	.stabn 68,0,45,.L9-initParser
+	.stabn 68,0,48,.L9-initParser
 
 .L9:
 
@@ -1786,13 +1791,13 @@ LinitParser_epilogue:
 
 Llambda_3:
 
-# BEGIN ("Llambda_3", 1, 0, [], ["__tmp90"], [{ blab="L111"; elab="L112"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_3", 1, 0, [], ["__tmp91"], [{ blab="L110"; elab="L111"; names=[]; subs=[]; }]) / 
 
 	.type lambda_3, @function
 
 	.stabs "lambda_3:F1",36,0,0,Llambda_3
 
-	.stabs "__tmp90:p1",160,0,0,8
+	.stabs "__tmp91:p1",160,0,0,8
 
 	.cfi_startproc
 
@@ -1809,21 +1814,21 @@ Llambda_3:
 	movl	$filler,	%esi
 	movl	$LSLlambda_3_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L111") / 
+# SLABEL ("L110") / 
 
-L111:
+L110:
 
-# LINE (37) / 
+# LINE (40) / 
 
-	.stabn 68,0,37,0
+	.stabn 68,0,40,0
 
-	.stabn 68,0,37,.L10-Llambda_3
+	.stabn 68,0,40,.L10-Llambda_3
 
 .L10:
 
-# LD (Global ("kWrite")) / 
+# LD (Global ("kRead")) / 
 
-	movl	global_kWrite,	%ebx
+	movl	global_kRead,	%ebx
 # CLOSURE ("Llambda_4_2", []) / 
 
 	pushl	%ebx
@@ -1840,15 +1845,15 @@ L111:
 	call	Lseq
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# LINE (38) / 
+# LINE (41) / 
 
-	.stabn 68,0,38,.L11-Llambda_3
+	.stabn 68,0,41,.L11-Llambda_3
 
 .L11:
 
-# LD (Global ("kRead")) / 
+# LD (Global ("kWrite")) / 
 
-	movl	global_kRead,	%ecx
+	movl	global_kWrite,	%ecx
 # CLOSURE ("Llambda_5_2", []) / 
 
 	pushl	%ebx
@@ -1869,9 +1874,9 @@ L111:
 	addl	$8,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# LINE (39) / 
+# LINE (42) / 
 
-	.stabn 68,0,39,.L12-Llambda_3
+	.stabn 68,0,42,.L12-Llambda_3
 
 .L12:
 
@@ -1902,9 +1907,9 @@ L111:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%esi
-# LINE (40) / 
+# LINE (43) / 
 
-	.stabn 68,0,40,.L13-Llambda_3
+	.stabn 68,0,43,.L13-Llambda_3
 
 .L13:
 
@@ -1977,9 +1982,9 @@ L111:
 	movl	%ebp,	%esp
 	popl	%ebp
 	jmp	*%eax
-# SLABEL ("L112") / 
+# SLABEL ("L111") / 
 
-L112:
+L111:
 
 # END / 
 
@@ -2005,7 +2010,7 @@ LLlambda_3_epilogue:
 
 Llambda_7_2:
 
-# BEGIN ("Llambda_7_2", 1, 0, [], ["x1"], [{ blab="L130"; elab="L131"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_7_2", 1, 0, [], ["x1"], [{ blab="L129"; elab="L130"; names=[]; subs=[]; }]) / 
 
 	.type lambda_7_2, @function
 
@@ -2028,9 +2033,9 @@ Llambda_7_2:
 	movl	$filler,	%esi
 	movl	$LSLlambda_7_2_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L130") / 
+# SLABEL ("L129") / 
 
-L130:
+L129:
 
 # STRING (";") / 
 
@@ -2062,9 +2067,9 @@ L130:
 	call	Lseq
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# SLABEL ("L131") / 
+# SLABEL ("L130") / 
 
-L131:
+L130:
 
 # END / 
 
@@ -2090,13 +2095,13 @@ LLlambda_7_2_epilogue:
 
 Llambda_8_3:
 
-# BEGIN ("Llambda_8_3", 1, 0, [Arg (0)], ["__tmp60"], [{ blab="L136"; elab="L137"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_8_3", 1, 0, [Arg (0)], ["__tmp61"], [{ blab="L135"; elab="L136"; names=[]; subs=[]; }]) / 
 
 	.type lambda_8_3, @function
 
 	.stabs "lambda_8_3:F1",36,0,0,Llambda_8_3
 
-	.stabs "__tmp60:p1",160,0,0,8
+	.stabs "__tmp61:p1",160,0,0,8
 
 	.cfi_startproc
 
@@ -2116,9 +2121,9 @@ Llambda_8_3:
 	movl	$filler,	%esi
 	movl	$LSLlambda_8_3_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L136") / 
+# SLABEL ("L135") / 
 
-L136:
+L135:
 
 # LD (Global ("stmt")) / 
 
@@ -2143,9 +2148,9 @@ L136:
 	addl	$8,	%esp
 	popl	%edx
 	movl	%eax,	%ebx
-# SLABEL ("L137") / 
+# SLABEL ("L136") / 
 
-L137:
+L136:
 
 # END / 
 
@@ -2172,7 +2177,7 @@ LLlambda_8_3_epilogue:
 
 Llambda_9_4:
 
-# BEGIN ("Llambda_9_4", 1, 0, [Access (0)], ["x2"], [{ blab="L141"; elab="L142"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_9_4", 1, 0, [Access (0)], ["x2"], [{ blab="L140"; elab="L141"; names=[]; subs=[]; }]) / 
 
 	.type lambda_9_4, @function
 
@@ -2198,9 +2203,9 @@ Llambda_9_4:
 	movl	$filler,	%esi
 	movl	$LSLlambda_9_4_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L141") / 
+# SLABEL ("L140") / 
 
-L141:
+L140:
 
 # LD (Global ("end")) / 
 
@@ -2226,9 +2231,9 @@ L141:
 	addl	$8,	%esp
 	popl	%edx
 	movl	%eax,	%ebx
-# SLABEL ("L142") / 
+# SLABEL ("L141") / 
 
-L142:
+L141:
 
 # END / 
 
@@ -2255,13 +2260,13 @@ LLlambda_9_4_epilogue:
 
 Llambda_10_5:
 
-# BEGIN ("Llambda_10_5", 1, 0, [Access (0); Arg (0)], ["__tmp59"], [{ blab="L146"; elab="L147"; names=[]; subs=[{ blab="L149"; elab="L150"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("Llambda_10_5", 1, 0, [Access (0); Arg (0)], ["__tmp60"], [{ blab="L145"; elab="L146"; names=[]; subs=[{ blab="L148"; elab="L149"; names=[]; subs=[]; }]; }]) / 
 
 	.type lambda_10_5, @function
 
 	.stabs "lambda_10_5:F1",36,0,0,Llambda_10_5
 
-	.stabs "__tmp59:p1",160,0,0,8
+	.stabs "__tmp60:p1",160,0,0,8
 
 	.cfi_startproc
 
@@ -2281,13 +2286,13 @@ Llambda_10_5:
 	movl	$filler,	%esi
 	movl	$LSLlambda_10_5_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L146") / 
+# SLABEL ("L145") / 
 
-L146:
+L145:
 
-# SLABEL ("L149") / 
+# SLABEL ("L148") / 
 
-L149:
+L148:
 
 # LD (Access (0)) / 
 
@@ -2307,13 +2312,13 @@ L149:
 	addl	$16,	%esp
 	popl	%edx
 	movl	%eax,	%ebx
-# SLABEL ("L150") / 
+# SLABEL ("L149") / 
 
-L150:
+L149:
 
-# SLABEL ("L147") / 
+# SLABEL ("L146") / 
 
-L147:
+L146:
 
 # END / 
 
@@ -2340,7 +2345,7 @@ LLlambda_10_5_epilogue:
 
 Llambda_6_2:
 
-# BEGIN ("Llambda_6_2", 1, 0, [], ["x"], [{ blab="L153"; elab="L154"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_6_2", 1, 0, [], ["x"], [{ blab="L152"; elab="L153"; names=[]; subs=[]; }]) / 
 
 	.type lambda_6_2, @function
 
@@ -2363,15 +2368,15 @@ Llambda_6_2:
 	movl	$filler,	%esi
 	movl	$LSLlambda_6_2_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L153") / 
+# SLABEL ("L152") / 
 
-L153:
+L152:
 
-# LINE (39) / 
+# LINE (42) / 
 
-	.stabn 68,0,39,0
+	.stabn 68,0,42,0
 
-	.stabn 68,0,39,.L14-Llambda_6_2
+	.stabn 68,0,42,.L14-Llambda_6_2
 
 .L14:
 
@@ -2405,9 +2410,9 @@ L153:
 	call	Lseq
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# SLABEL ("L154") / 
+# SLABEL ("L153") / 
 
-L154:
+L153:
 
 # END / 
 
@@ -2433,13 +2438,13 @@ LLlambda_6_2_epilogue:
 
 Llambda_11_8:
 
-# BEGIN ("Llambda_11_8", 1, 0, [Arg (0)], ["__tmp50"], [{ blab="L159"; elab="L160"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_11_8", 1, 0, [Arg (0)], ["__tmp51"], [{ blab="L158"; elab="L159"; names=[]; subs=[]; }]) / 
 
 	.type lambda_11_8, @function
 
 	.stabs "lambda_11_8:F1",36,0,0,Llambda_11_8
 
-	.stabs "__tmp50:p1",160,0,0,8
+	.stabs "__tmp51:p1",160,0,0,8
 
 	.cfi_startproc
 
@@ -2459,9 +2464,9 @@ Llambda_11_8:
 	movl	$filler,	%esi
 	movl	$LSLlambda_11_8_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L159") / 
+# SLABEL ("L158") / 
 
-L159:
+L158:
 
 # LD (Global ("exp")) / 
 
@@ -2486,9 +2491,9 @@ L159:
 	addl	$8,	%esp
 	popl	%edx
 	movl	%eax,	%ebx
-# SLABEL ("L160") / 
+# SLABEL ("L159") / 
 
-L160:
+L159:
 
 # END / 
 
@@ -2515,7 +2520,7 @@ LLlambda_11_8_epilogue:
 
 Llambda_12_9:
 
-# BEGIN ("Llambda_12_9", 1, 0, [Access (0)], ["y"], [{ blab="L164"; elab="L165"; names=[]; subs=[{ blab="L167"; elab="L168"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("Llambda_12_9", 1, 0, [Access (0)], ["y"], [{ blab="L163"; elab="L164"; names=[]; subs=[{ blab="L166"; elab="L167"; names=[]; subs=[]; }]; }]) / 
 
 	.type lambda_12_9, @function
 
@@ -2541,13 +2546,13 @@ Llambda_12_9:
 	movl	$filler,	%esi
 	movl	$LSLlambda_12_9_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L164") / 
+# SLABEL ("L163") / 
 
-L164:
+L163:
 
-# SLABEL ("L167") / 
+# SLABEL ("L166") / 
 
-L167:
+L166:
 
 # LD (Access (0)) / 
 
@@ -2567,13 +2572,13 @@ L167:
 	addl	$16,	%esp
 	popl	%edx
 	movl	%eax,	%ebx
-# SLABEL ("L168") / 
+# SLABEL ("L167") / 
 
-L168:
+L167:
 
-# SLABEL ("L165") / 
+# SLABEL ("L164") / 
 
-L165:
+L164:
 
 # END / 
 
@@ -2600,13 +2605,13 @@ LLlambda_12_9_epilogue:
 
 Llambda_5_2:
 
-# BEGIN ("Llambda_5_2", 1, 0, [], ["__tmp43"], [{ blab="L171"; elab="L172"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_5_2", 1, 0, [], ["__tmp44"], [{ blab="L170"; elab="L171"; names=[]; subs=[]; }]) / 
 
 	.type lambda_5_2, @function
 
 	.stabs "lambda_5_2:F1",36,0,0,Llambda_5_2
 
-	.stabs "__tmp43:p1",160,0,0,8
+	.stabs "__tmp44:p1",160,0,0,8
 
 	.cfi_startproc
 
@@ -2623,216 +2628,17 @@ Llambda_5_2:
 	movl	$filler,	%esi
 	movl	$LSLlambda_5_2_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L171") / 
+# SLABEL ("L170") / 
 
-L171:
+L170:
 
-# LINE (38) / 
+# LINE (41) / 
 
-	.stabn 68,0,38,0
+	.stabn 68,0,41,0
 
-	.stabn 68,0,38,.L15-Llambda_5_2
+	.stabn 68,0,41,.L15-Llambda_5_2
 
 .L15:
-
-# STRING ("(") / 
-
-	movl	$string_15,	%ebx
-	pushl	%ebx
-	call	Bstring
-	addl	$4,	%esp
-	movl	%eax,	%ebx
-# CALL ("Ls", 1, false) / 
-
-	pushl	%ebx
-	call	Ls
-	addl	$4,	%esp
-	movl	%eax,	%ebx
-# LD (Global ("lident")) / 
-
-	movl	global_lident,	%ecx
-# STRING (")") / 
-
-	movl	$string_16,	%esi
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%esi
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ecx
-	popl	%ebx
-	movl	%eax,	%esi
-# CALL ("Ls", 1, false) / 
-
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%esi
-	call	Ls
-	addl	$4,	%esp
-	popl	%ecx
-	popl	%ebx
-	movl	%eax,	%esi
-# CALL ("Linbr", 3, false) / 
-
-	pushl	%esi
-	pushl	%ecx
-	pushl	%ebx
-	call	Linbr
-	addl	$12,	%esp
-	movl	%eax,	%ebx
-# CLOSURE ("Llambda_13_12", []) / 
-
-	pushl	%ebx
-	pushl	$Llambda_13_12
-	pushl	$1
-	call	Bclosure
-	addl	$8,	%esp
-	movl	%eax,	%ecx
-	popl	%ebx
-# CALL ("Li__Infix_64", 2, true) / 
-
-	pushl	%ecx
-	pushl	%ebx
-	call	Li__Infix_64
-	addl	$8,	%esp
-	movl	%eax,	%ebx
-# SLABEL ("L172") / 
-
-L172:
-
-# END / 
-
-	movl	%ebx,	%eax
-LLlambda_5_2_epilogue:
-
-	movl	%ebp,	%esp
-	popl	%ebp
-	.cfi_restore	5
-
-	.cfi_def_cfa	4, 4
-
-	ret
-	.cfi_endproc
-
-	.set	LLlambda_5_2_SIZE,	0
-
-	.set	LSLlambda_5_2_SIZE,	0
-
-	.size Llambda_5_2, .-Llambda_5_2
-
-# LABEL ("Llambda_13_12") / 
-
-Llambda_13_12:
-
-# BEGIN ("Llambda_13_12", 1, 0, [], ["x"], [{ blab="L181"; elab="L182"; names=[]; subs=[{ blab="L184"; elab="L185"; names=[]; subs=[]; }]; }]) / 
-
-	.type lambda_13_12, @function
-
-	.stabs "lambda_13_12:F1",36,0,0,Llambda_13_12
-
-	.stabs "x:p1",160,0,0,8
-
-	.cfi_startproc
-
-	.cfi_adjust_cfa_offset	4
-
-	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
-
-	movl	%esp,	%ebp
-	.cfi_def_cfa_register	5
-
-	subl	$LLlambda_13_12_SIZE,	%esp
-	movl	%esp,	%edi
-	movl	$filler,	%esi
-	movl	$LSLlambda_13_12_SIZE,	%ecx
-	rep movsl	
-# SLABEL ("L181") / 
-
-L181:
-
-# SLABEL ("L184") / 
-
-L184:
-
-# LD (Arg (0)) / 
-
-	movl	8(%ebp),	%ebx
-# SEXP ("Read", 1) / 
-
-	movl	$23109769,	%ecx
-	pushl	%ecx
-	pushl	%ebx
-	pushl	$5
-	call	Bsexp
-	addl	$12,	%esp
-	movl	%eax,	%ebx
-# SLABEL ("L185") / 
-
-L185:
-
-# SLABEL ("L182") / 
-
-L182:
-
-# END / 
-
-	movl	%ebx,	%eax
-LLlambda_13_12_epilogue:
-
-	movl	%ebp,	%esp
-	popl	%ebp
-	.cfi_restore	5
-
-	.cfi_def_cfa	4, 4
-
-	ret
-	.cfi_endproc
-
-	.set	LLlambda_13_12_SIZE,	0
-
-	.set	LSLlambda_13_12_SIZE,	0
-
-	.size Llambda_13_12, .-Llambda_13_12
-
-# LABEL ("Llambda_4_2") / 
-
-Llambda_4_2:
-
-# BEGIN ("Llambda_4_2", 1, 0, [], ["__tmp37"], [{ blab="L187"; elab="L188"; names=[]; subs=[]; }]) / 
-
-	.type lambda_4_2, @function
-
-	.stabs "lambda_4_2:F1",36,0,0,Llambda_4_2
-
-	.stabs "__tmp37:p1",160,0,0,8
-
-	.cfi_startproc
-
-	.cfi_adjust_cfa_offset	4
-
-	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
-
-	movl	%esp,	%ebp
-	.cfi_def_cfa_register	5
-
-	subl	$LLlambda_4_2_SIZE,	%esp
-	movl	%esp,	%edi
-	movl	$filler,	%esi
-	movl	$LSLlambda_4_2_SIZE,	%ecx
-	rep movsl	
-# SLABEL ("L187") / 
-
-L187:
-
-# LINE (37) / 
-
-	.stabn 68,0,37,0
-
-	.stabn 68,0,37,.L16-Llambda_4_2
-
-.L16:
 
 # STRING ("(") / 
 
@@ -2879,6 +2685,205 @@ L187:
 	call	Linbr
 	addl	$12,	%esp
 	movl	%eax,	%ebx
+# CLOSURE ("Llambda_13_12", []) / 
+
+	pushl	%ebx
+	pushl	$Llambda_13_12
+	pushl	$1
+	call	Bclosure
+	addl	$8,	%esp
+	movl	%eax,	%ecx
+	popl	%ebx
+# CALL ("Li__Infix_64", 2, true) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	Li__Infix_64
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# SLABEL ("L171") / 
+
+L171:
+
+# END / 
+
+	movl	%ebx,	%eax
+LLlambda_5_2_epilogue:
+
+	movl	%ebp,	%esp
+	popl	%ebp
+	.cfi_restore	5
+
+	.cfi_def_cfa	4, 4
+
+	ret
+	.cfi_endproc
+
+	.set	LLlambda_5_2_SIZE,	0
+
+	.set	LSLlambda_5_2_SIZE,	0
+
+	.size Llambda_5_2, .-Llambda_5_2
+
+# LABEL ("Llambda_13_12") / 
+
+Llambda_13_12:
+
+# BEGIN ("Llambda_13_12", 1, 0, [], ["x"], [{ blab="L180"; elab="L181"; names=[]; subs=[{ blab="L183"; elab="L184"; names=[]; subs=[]; }]; }]) / 
+
+	.type lambda_13_12, @function
+
+	.stabs "lambda_13_12:F1",36,0,0,Llambda_13_12
+
+	.stabs "x:p1",160,0,0,8
+
+	.cfi_startproc
+
+	.cfi_adjust_cfa_offset	4
+
+	pushl	%ebp
+	.cfi_adjust_cfa_offset	4
+
+	movl	%esp,	%ebp
+	.cfi_def_cfa_register	5
+
+	subl	$LLlambda_13_12_SIZE,	%esp
+	movl	%esp,	%edi
+	movl	$filler,	%esi
+	movl	$LSLlambda_13_12_SIZE,	%ecx
+	rep movsl	
+# SLABEL ("L180") / 
+
+L180:
+
+# SLABEL ("L183") / 
+
+L183:
+
+# LD (Arg (0)) / 
+
+	movl	8(%ebp),	%ebx
+# SEXP ("Write", 1) / 
+
+	movl	$1653680651,	%ecx
+	pushl	%ecx
+	pushl	%ebx
+	pushl	$5
+	call	Bsexp
+	addl	$12,	%esp
+	movl	%eax,	%ebx
+# SLABEL ("L184") / 
+
+L184:
+
+# SLABEL ("L181") / 
+
+L181:
+
+# END / 
+
+	movl	%ebx,	%eax
+LLlambda_13_12_epilogue:
+
+	movl	%ebp,	%esp
+	popl	%ebp
+	.cfi_restore	5
+
+	.cfi_def_cfa	4, 4
+
+	ret
+	.cfi_endproc
+
+	.set	LLlambda_13_12_SIZE,	0
+
+	.set	LSLlambda_13_12_SIZE,	0
+
+	.size Llambda_13_12, .-Llambda_13_12
+
+# LABEL ("Llambda_4_2") / 
+
+Llambda_4_2:
+
+# BEGIN ("Llambda_4_2", 1, 0, [], ["__tmp38"], [{ blab="L186"; elab="L187"; names=[]; subs=[]; }]) / 
+
+	.type lambda_4_2, @function
+
+	.stabs "lambda_4_2:F1",36,0,0,Llambda_4_2
+
+	.stabs "__tmp38:p1",160,0,0,8
+
+	.cfi_startproc
+
+	.cfi_adjust_cfa_offset	4
+
+	pushl	%ebp
+	.cfi_adjust_cfa_offset	4
+
+	movl	%esp,	%ebp
+	.cfi_def_cfa_register	5
+
+	subl	$LLlambda_4_2_SIZE,	%esp
+	movl	%esp,	%edi
+	movl	$filler,	%esi
+	movl	$LSLlambda_4_2_SIZE,	%ecx
+	rep movsl	
+# SLABEL ("L186") / 
+
+L186:
+
+# LINE (40) / 
+
+	.stabn 68,0,40,0
+
+	.stabn 68,0,40,.L16-Llambda_4_2
+
+.L16:
+
+# STRING ("(") / 
+
+	movl	$string_15,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# LD (Global ("lident")) / 
+
+	movl	global_lident,	%ecx
+# STRING (")") / 
+
+	movl	$string_16,	%esi
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	%esi
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	call	Ls
+	addl	$4,	%esp
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	%esi
+# CALL ("Linbr", 3, false) / 
+
+	pushl	%esi
+	pushl	%ecx
+	pushl	%ebx
+	call	Linbr
+	addl	$12,	%esp
+	movl	%eax,	%ebx
 # CLOSURE ("Llambda_14_15", []) / 
 
 	pushl	%ebx
@@ -2895,9 +2900,9 @@ L187:
 	call	Li__Infix_64
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# SLABEL ("L188") / 
+# SLABEL ("L187") / 
 
-L188:
+L187:
 
 # END / 
 
@@ -2923,7 +2928,7 @@ LLlambda_4_2_epilogue:
 
 Llambda_14_15:
 
-# BEGIN ("Llambda_14_15", 1, 0, [], ["x"], [{ blab="L197"; elab="L198"; names=[]; subs=[{ blab="L200"; elab="L201"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("Llambda_14_15", 1, 0, [], ["x"], [{ blab="L196"; elab="L197"; names=[]; subs=[{ blab="L199"; elab="L200"; names=[]; subs=[]; }]; }]) / 
 
 	.type lambda_14_15, @function
 
@@ -2946,33 +2951,33 @@ Llambda_14_15:
 	movl	$filler,	%esi
 	movl	$LSLlambda_14_15_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L197") / 
+# SLABEL ("L196") / 
 
-L197:
+L196:
 
-# SLABEL ("L200") / 
+# SLABEL ("L199") / 
 
-L200:
+L199:
 
 # LD (Arg (0)) / 
 
 	movl	8(%ebp),	%ebx
-# SEXP ("Write", 1) / 
+# SEXP ("Read", 1) / 
 
-	movl	$1653680651,	%ecx
+	movl	$23109769,	%ecx
 	pushl	%ecx
 	pushl	%ebx
 	pushl	$5
 	call	Bsexp
 	addl	$12,	%esp
 	movl	%eax,	%ebx
-# SLABEL ("L201") / 
+# SLABEL ("L200") / 
 
-L201:
+L200:
 
-# SLABEL ("L198") / 
+# SLABEL ("L197") / 
 
-L198:
+L197:
 
 # END / 
 
@@ -2998,13 +3003,13 @@ LLlambda_14_15_epilogue:
 
 Llambda_2:
 
-# BEGIN ("Llambda_2", 1, 0, [], ["__tmp31"], [{ blab="L203"; elab="L204"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_2", 1, 0, [], ["__tmp30"], [{ blab="L202"; elab="L203"; names=[]; subs=[]; }]) / 
 
 	.type lambda_2, @function
 
 	.stabs "lambda_2:F1",36,0,0,Llambda_2
 
-	.stabs "__tmp31:p1",160,0,0,8
+	.stabs "__tmp30:p1",160,0,0,8
 
 	.cfi_startproc
 
@@ -3021,30 +3026,45 @@ Llambda_2:
 	movl	$filler,	%esi
 	movl	$LSLlambda_2_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L203") / 
+# SLABEL ("L202") / 
 
-L203:
+L202:
 
-# LINE (33) / 
+# LINE (36) / 
 
-	.stabn 68,0,33,0
+	.stabn 68,0,36,0
 
-	.stabn 68,0,33,.L17-Llambda_2
+	.stabn 68,0,36,.L17-Llambda_2
 
 .L17:
 
+# LD (Global ("ops")) / 
+
+	movl	global_ops,	%ebx
+# LD (Global ("primary")) / 
+
+	movl	global_primary,	%ecx
+# CALL ("Lexpr", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	Lexpr
+	addl	$8,	%esp
+	movl	%eax,	%ebx
 # LD (Arg (0)) / 
 
-	movl	8(%ebp),	%ebx
-# CALL ("Lexpr", 1, true) / 
+	movl	8(%ebp),	%ecx
+# CALLC (1, true) / 
 
-	movl	%ebx,	8(%ebp)
+	movl	%ecx,	8(%ebp)
+	movl	%ebx,	%edx
+	movl	(%edx),	%eax
 	movl	%ebp,	%esp
 	popl	%ebp
-	jmp	Lexpr
-# SLABEL ("L204") / 
+	jmp	*%eax
+# SLABEL ("L203") / 
 
-L204:
+L203:
 
 # END / 
 
@@ -3070,17 +3090,17 @@ LLlambda_2_epilogue:
 
 Llambda_1:
 
-# BEGIN ("Llambda_1", 3, 0, [], ["left"; "op"; "right"], [{ blab="L207"; elab="L208"; names=[]; subs=[{ blab="L210"; elab="L211"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("Llambda_1", 3, 0, [], ["l"; "op"; "r"], [{ blab="L209"; elab="L210"; names=[]; subs=[{ blab="L212"; elab="L213"; names=[]; subs=[]; }]; }]) / 
 
 	.type lambda_1, @function
 
 	.stabs "lambda_1:F1",36,0,0,Llambda_1
 
-	.stabs "left:p1",160,0,0,8
+	.stabs "l:p1",160,0,0,8
 
 	.stabs "op:p1",160,0,0,12
 
-	.stabs "right:p1",160,0,0,16
+	.stabs "r:p1",160,0,0,16
 
 	.cfi_startproc
 
@@ -3097,19 +3117,19 @@ Llambda_1:
 	movl	$filler,	%esi
 	movl	$LSLlambda_1_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L207") / 
+# SLABEL ("L209") / 
 
-L207:
+L209:
 
-# SLABEL ("L210") / 
+# SLABEL ("L212") / 
 
-L210:
+L212:
 
-# LINE (27) / 
+# LINE (28) / 
 
-	.stabn 68,0,27,0
+	.stabn 68,0,28,0
 
-	.stabn 68,0,27,.L18-Llambda_1
+	.stabn 68,0,28,.L18-Llambda_1
 
 .L18:
 
@@ -3133,13 +3153,13 @@ L210:
 	call	Bsexp
 	addl	$20,	%esp
 	movl	%eax,	%ebx
-# SLABEL ("L211") / 
+# SLABEL ("L213") / 
 
-L211:
+L213:
 
-# SLABEL ("L208") / 
+# SLABEL ("L210") / 
 
-L208:
+L210:
 
 # END / 
 
@@ -3165,7 +3185,7 @@ LLlambda_1_epilogue:
 
 Llambda_0:
 
-# BEGIN ("Llambda_0", 1, 0, [], ["__tmp29"], [{ blab="L215"; elab="L216"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_0", 1, 0, [], ["__tmp29"], [{ blab="L217"; elab="L218"; names=[]; subs=[]; }]) / 
 
 	.type lambda_0, @function
 
@@ -3188,9 +3208,9 @@ Llambda_0:
 	movl	$filler,	%esi
 	movl	$LSLlambda_0_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L215") / 
+# SLABEL ("L217") / 
 
-L215:
+L217:
 
 # LINE (24) / 
 
@@ -3370,9 +3390,9 @@ L215:
 	movl	%ebp,	%esp
 	popl	%ebp
 	jmp	*%eax
-# SLABEL ("L216") / 
+# SLABEL ("L218") / 
 
-L216:
+L218:
 
 # END / 
 
@@ -3398,7 +3418,7 @@ LLlambda_0_epilogue:
 
 Llambda_17_21:
 
-# BEGIN ("Llambda_17_21", 1, 0, [], ["__tmp24"], [{ blab="L235"; elab="L236"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_17_21", 1, 0, [], ["__tmp24"], [{ blab="L237"; elab="L238"; names=[]; subs=[]; }]) / 
 
 	.type lambda_17_21, @function
 
@@ -3421,16 +3441,16 @@ Llambda_17_21:
 	movl	$filler,	%esi
 	movl	$LSLlambda_17_21_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L235") / 
+# SLABEL ("L237") / 
 
-L235:
+L237:
 
 # LD (Arg (0)) / 
 
 	movl	8(%ebp),	%ebx
-# SLABEL ("L236") / 
+# SLABEL ("L238") / 
 
-L236:
+L238:
 
 # END / 
 
@@ -3456,7 +3476,7 @@ LLlambda_17_21_epilogue:
 
 Llambda_16_21:
 
-# BEGIN ("Llambda_16_21", 1, 0, [], ["x"], [{ blab="L238"; elab="L239"; names=[]; subs=[{ blab="L241"; elab="L242"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("Llambda_16_21", 1, 0, [], ["x"], [{ blab="L240"; elab="L241"; names=[]; subs=[{ blab="L243"; elab="L244"; names=[]; subs=[]; }]; }]) / 
 
 	.type lambda_16_21, @function
 
@@ -3479,13 +3499,13 @@ Llambda_16_21:
 	movl	$filler,	%esi
 	movl	$LSLlambda_16_21_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L238") / 
+# SLABEL ("L240") / 
 
-L238:
+L240:
 
-# SLABEL ("L241") / 
+# SLABEL ("L243") / 
 
-L241:
+L243:
 
 # LINE (25) / 
 
@@ -3507,13 +3527,13 @@ L241:
 	call	Bsexp
 	addl	$12,	%esp
 	movl	%eax,	%ebx
-# SLABEL ("L242") / 
+# SLABEL ("L244") / 
 
-L242:
+L244:
 
-# SLABEL ("L239") / 
+# SLABEL ("L241") / 
 
-L239:
+L241:
 
 # END / 
 
@@ -3539,7 +3559,7 @@ LLlambda_16_21_epilogue:
 
 Llambda_15_21:
 
-# BEGIN ("Llambda_15_21", 1, 0, [], ["x"], [{ blab="L244"; elab="L245"; names=[]; subs=[{ blab="L247"; elab="L248"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("Llambda_15_21", 1, 0, [], ["x"], [{ blab="L246"; elab="L247"; names=[]; subs=[{ blab="L249"; elab="L250"; names=[]; subs=[]; }]; }]) / 
 
 	.type lambda_15_21, @function
 
@@ -3562,13 +3582,13 @@ Llambda_15_21:
 	movl	$filler,	%esi
 	movl	$LSLlambda_15_21_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L244") / 
+# SLABEL ("L246") / 
 
-L244:
+L246:
 
-# SLABEL ("L247") / 
+# SLABEL ("L249") / 
 
-L247:
+L249:
 
 # LINE (24) / 
 
@@ -3596,13 +3616,13 @@ L247:
 	call	Bsexp
 	addl	$12,	%esp
 	movl	%eax,	%ebx
-# SLABEL ("L248") / 
+# SLABEL ("L250") / 
 
-L248:
+L250:
 
-# SLABEL ("L245") / 
+# SLABEL ("L247") / 
 
-L245:
+L247:
 
 # END / 
 
@@ -3628,7 +3648,7 @@ LLlambda_15_21_epilogue:
 
 Linbr:
 
-# BEGIN ("Linbr", 3, 0, [], ["l"; "p"; "r"], [{ blab="L251"; elab="L252"; names=[]; subs=[{ blab="L254"; elab="L255"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("Linbr", 3, 0, [], ["l"; "p"; "r"], [{ blab="L253"; elab="L254"; names=[]; subs=[{ blab="L256"; elab="L257"; names=[]; subs=[]; }]; }]) / 
 
 	.type inbr, @function
 
@@ -3655,13 +3675,13 @@ Linbr:
 	movl	$filler,	%esi
 	movl	$LSLinbr_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L251") / 
+# SLABEL ("L253") / 
 
-L251:
+L253:
 
-# SLABEL ("L254") / 
+# SLABEL ("L256") / 
 
-L254:
+L256:
 
 # LINE (12) / 
 
@@ -3692,13 +3712,13 @@ L254:
 	call	Lseq
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# SLABEL ("L255") / 
+# SLABEL ("L257") / 
 
-L255:
+L257:
 
-# SLABEL ("L252") / 
+# SLABEL ("L254") / 
 
-L252:
+L254:
 
 # END / 
 
@@ -3724,7 +3744,7 @@ LLinbr_epilogue:
 
 Llambda_18_28:
 
-# BEGIN ("Llambda_18_28", 1, 0, [Arg (1); Arg (2)], ["__tmp20"], [{ blab="L258"; elab="L259"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_18_28", 1, 0, [Arg (1); Arg (2)], ["__tmp20"], [{ blab="L260"; elab="L261"; names=[]; subs=[]; }]) / 
 
 	.type lambda_18_28, @function
 
@@ -3750,9 +3770,9 @@ Llambda_18_28:
 	movl	$filler,	%esi
 	movl	$LSLlambda_18_28_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L258") / 
+# SLABEL ("L260") / 
 
-L258:
+L260:
 
 # LD (Access (0)) / 
 
@@ -3777,9 +3797,9 @@ L258:
 	addl	$8,	%esp
 	popl	%edx
 	movl	%eax,	%ebx
-# SLABEL ("L259") / 
+# SLABEL ("L261") / 
 
-L259:
+L261:
 
 # END / 
 
@@ -3806,7 +3826,7 @@ LLlambda_18_28_epilogue:
 
 Llambda_19_29:
 
-# BEGIN ("Llambda_19_29", 1, 0, [Access (1)], ["__tmp18"], [{ blab="L263"; elab="L264"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_19_29", 1, 0, [Access (1)], ["__tmp18"], [{ blab="L265"; elab="L266"; names=[]; subs=[]; }]) / 
 
 	.type lambda_19_29, @function
 
@@ -3832,9 +3852,9 @@ Llambda_19_29:
 	movl	$filler,	%esi
 	movl	$LSLlambda_19_29_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L263") / 
+# SLABEL ("L265") / 
 
-L263:
+L265:
 
 # LD (Access (0)) / 
 
@@ -3859,9 +3879,9 @@ L263:
 	addl	$8,	%esp
 	popl	%edx
 	movl	%eax,	%ebx
-# SLABEL ("L264") / 
+# SLABEL ("L266") / 
 
-L264:
+L266:
 
 # END / 
 
@@ -3888,7 +3908,7 @@ LLlambda_19_29_epilogue:
 
 Llambda_20_30:
 
-# BEGIN ("Llambda_20_30", 1, 0, [Arg (0)], ["__tmp19"], [{ blab="L268"; elab="L269"; names=[]; subs=[]; }]) / 
+# BEGIN ("Llambda_20_30", 1, 0, [Arg (0)], ["__tmp19"], [{ blab="L270"; elab="L271"; names=[]; subs=[]; }]) / 
 
 	.type lambda_20_30, @function
 
@@ -3914,16 +3934,16 @@ Llambda_20_30:
 	movl	$filler,	%esi
 	movl	$LSLlambda_20_30_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L268") / 
+# SLABEL ("L270") / 
 
-L268:
+L270:
 
 # LD (Access (0)) / 
 
 	movl	4(%edx),	%ebx
-# SLABEL ("L269") / 
+# SLABEL ("L271") / 
 
-L269:
+L271:
 
 # END / 
 

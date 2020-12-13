@@ -339,6 +339,8 @@ fun compile (env, code) {
         -- 
         -- 
         -- 
+
+
         | CONST (elem) -> case env.allocate of [s, env] -> [env, code <+ Mov(L(elem), s)] esac  -- allocate возвращает пару все что я понял
         | LD (elem) -> case env.allocate of [s, env] -> [env, code <+> move(env.loc(elem), s)] esac
         | ST (elem) -> case env.addGlobal(elem).pop of [s, env] -> [env, code <+> move(s, env.loc(elem))] esac
@@ -348,11 +350,11 @@ fun compile (env, code) {
               case op of 
                 "%" -> [env, code <+ Mov(s1, eax) <+ Cltd <+ IDiv(s2) <+ Mov(edx, s)]
               | "/" -> [env, code <+ Mov(s1, eax) <+ Cltd <+ IDiv(s2) <+ Mov(eax, s)]
-              | "!!" -> [env, code <+ Mov(s1, edx) <+ Binop("orl", s2, edx) <+ Binop("cmp", L(0), edx) <+ Set("ne", "%al") <+ Mov(eax, s)]
-              | "&&" -> [env, code <+ Mov(s1, edx) <+ Binop("imull", s2, edx) <+ Binop("cmp", L(0), edx) <+ Set("ne", "%al") <+ Mov(eax, s)]
+              | "!!" -> [env, code <+ Mov(s1, edx) <+ Binop("!!", s2, edx) <+ Binop("cmp", L(0), edx) <+ Mov(L(0), eax) <+ Set("ne", "%al") <+ Mov(eax, s)]
+              | "&&" -> [env, code <+ Mov(s1, edx) <+ Binop("*", s2, edx)  <+ Binop("cmp", L(0), edx) <+ Mov(L(0), eax) <+ Set("ne", "%al") <+ Mov(eax, s)]
               | op -> 
                 case op_type(op) of
-                  0 -> [env, code <+ Mov(s2, edx) <+ Binop("cmp", edx, s1) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                  0 -> [env, code <+ Mov(s2, edx) <+ Binop("cmp", edx, s1) <+ Mov(L(0), eax) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
                 | 1 -> [env, code <+ Mov(s1, eax) <+ Binop(op, s2, eax) <+ Mov(eax, s)]
                 esac
               esac

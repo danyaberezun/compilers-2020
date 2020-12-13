@@ -75,4 +75,3 @@ main:
 	popl	%ebp
 	xorl	%eax,	%eax
 	ret
-

@@ -25,6 +25,7 @@ main:
 # BINOP <
 	movl	%ecx,	%edx
 	cmpl	%edx,	%ebx
+	movl	$0,	%eax
 	setl	%al
 	movl	%eax,	%ebx
 # ST z
@@ -42,6 +43,7 @@ main:
 # BINOP <=
 	movl	%ecx,	%edx
 	cmpl	%edx,	%ebx
+	movl	$0,	%eax
 	setle	%al
 	movl	%eax,	%ebx
 # ST z
@@ -59,6 +61,7 @@ main:
 # BINOP ==
 	movl	%ecx,	%edx
 	cmpl	%edx,	%ebx
+	movl	$0,	%eax
 	sete	%al
 	movl	%eax,	%ebx
 # ST z
@@ -76,6 +79,7 @@ main:
 # BINOP !=
 	movl	%ecx,	%edx
 	cmpl	%edx,	%ebx
+	movl	$0,	%eax
 	setne	%al
 	movl	%eax,	%ebx
 # ST z
@@ -93,6 +97,7 @@ main:
 # BINOP >=
 	movl	%ecx,	%edx
 	cmpl	%edx,	%ebx
+	movl	$0,	%eax
 	setge	%al
 	movl	%eax,	%ebx
 # ST z
@@ -110,6 +115,7 @@ main:
 # BINOP >
 	movl	%ecx,	%edx
 	cmpl	%edx,	%ebx
+	movl	$0,	%eax
 	setg	%al
 	movl	%eax,	%ebx
 # ST z
@@ -124,4 +130,3 @@ main:
 	popl	%ebp
 	xorl	%eax,	%eax
 	ret
-
