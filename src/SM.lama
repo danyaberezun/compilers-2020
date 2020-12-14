@@ -55,7 +55,30 @@ fun fromLabel (env, lab) {
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+  case c of [s, st, world@[input, output]] ->
+    case insns of {} -> c
+      | inst : irest -> case inst of
+        BINOP (op) -> case s of rhs : lhs : rest -> eval (env, [evalBinop (op, lhs, rhs) : rest, st, world], irest) esac
+        | CONST (n) -> eval (env, [n : s, st, world], irest)
+        | READ -> case readWorld(world) of [x, newWorld] -> eval(env, [x: s, st, newWorld], irest) esac
+        | WRITE -> case s of x : rest -> 
+            local newWorld = writeWorld(x, world);
+            eval(env, [rest, st, newWorld], irest)
+          esac
+        | LD (var) -> eval (env, [st (var) : s, st, world], irest)
+        | ST (var) -> case s of var2 : rest -> eval (env, [s, (st <- [var, var2]), world], irest) esac
+        | LABEL (s)    -> eval(env, c, irest)
+        | JMP   (l)    -> eval(env, c, fromLabel(env, l))
+        | CJMP  (cf, l) -> 
+            local program = case s of expr : other -> case cf of
+              "z" -> if expr then irest else fromLabel(env, l) fi
+              | "nz" -> if expr then fromLabel(env, l) else irest fi
+              esac
+            esac;
+            eval(env, c, program)
+      esac
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -97,12 +120,45 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+     Const (numb) -> singleton(CONST (numb))
+   | Var (var) -> singleton(LD (var))
+   | Binop (op, lhs, rhs) -> compileExpr(lhs) +++ compileExpr(rhs) +++ singleton(BINOP (op))
+  esac
+}
+
+fun compileSMEnv(env, stmt) {
+  case stmt of
+     Assn (var, expr) -> [env, compileExpr(expr) +++ singleton(ST (var))]
+    | Skip -> [env, {}]
+    | Read (var) -> [env, {READ, ST (var)}]
+    | Write (expr) -> [env, compileExpr(expr) +++ singleton(WRITE)]
+    | While (expr, s) -> case genLabels(env, 2) of [le, ls, myenv] -> 
+      case compileSMEnv(myenv, s) of 
+        [myenv2, inst] -> [myenv2, {JMP(le), LABEL(ls)} +++ inst +++ singleton(LABEL(le)) +++ compileExpr(expr) +++ singleton(CJMP("nz", ls))]
+      esac  
+    esac
+    | If (expr, s1, s2) -> case genLabels(env, 2) of [lex, lel, myenv] -> 
+      case compileSMEnv(myenv, s1) of [myenv1, inst1] ->
+        case compileSMEnv(myenv1, s2) of [myenv2, inst2] ->
+          [myenv2, compileExpr(expr) +++ singleton(CJMP("z", lel)) +++ inst1 +++ {JMP(lex), LABEL(lel)} +++ inst2 +++ singleton(LABEL(lex))]
+        esac
+      esac
+    esac
+    | Repeat (s, expr) -> case genLabel(env) of [ls, myenv] ->
+        case compileSMEnv(myenv, s) of 
+          [myenv2, inst] -> [myenv2, singleton(LABEL(ls)) +++ inst +++ compileExpr(expr) +++ singleton(CJMP("z", ls))]
+        esac  
+      esac
+    | Seq (s1, s2) -> case compileSMEnv(env, s1) of [myenv1, sm1] ->
+      case compileSMEnv(myenv1, s2) of [myenv2, sm2] -> [myenv2, sm1 +++ sm2] esac
+   esac
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  compileSMEnv(initCompEnv(), stmt)[1]
 }
