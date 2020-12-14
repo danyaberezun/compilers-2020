@@ -488,7 +488,7 @@ fun call (env, fLabel, nA) {
         [env, pushArgs] ->
            case env.allocate of
              [y, env] ->
-               [env, listBuffer (flatten $ {pushRegs,
+               [env, listBuffer (deepFlatten $ {pushRegs,
                                  reverse (pushArgs),
                                  case extraArg of Some (n) -> Push (L (box $ n)) | _ -> {} esac,
                                  Call (fLabel),
@@ -523,7 +523,7 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
-        printf("kek\n");
+        -- printf("%s\n", i.string);
         case i of
         (* Assignment *)
         
