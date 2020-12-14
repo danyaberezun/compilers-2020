@@ -57,19 +57,72 @@ fun binop (op) {
   ]
 }
 
+-- Helper parser: parses a (possible empty) list of items separated by ","
+fun list0 (item) {
+  list0By (item, s(","))
+}
+
+-- Helper parser: parses a non-empty list of items separated by ","
+fun list (item) {
+  listBy (item, s(","))
+}
+
+-- Helper AST function: expands a "raw" scope expression, reifying
+-- initializers into assignments
+fun expandScope (defs, expr) {
+  fun expandDefs (defs, expr) {
+    foldr (fun ([defs, expr], def) {     
+             case def of
+                [ident, None]         -> [ident : defs, expr]
+             |  [ident, Some (value)] -> [ident : defs, Seq (Ignore (Assn (Ref (ident), value)), expr)]
+             esac
+           },
+           [{}, expr],
+           defs)
+  }
+
+  case 
+    foldr (fun ([defs, expr], def) {
+             case def of
+               f@Fun (_, _, _) -> [f : defs, expr]
+             | Local (ds)      ->
+                 case expandDefs (ds, expr) of
+                   [ds, expr] -> [Local (ds) : defs, expr]
+                 esac
+             esac
+           },
+           [{}, expr],
+           defs) of
+    [defs, expr] -> Scope (defs, expr)
+  esac  
+}
+
+-- Helper AST function: distributes a scope through an expression
+fun distributeScope (expr, exprConstructor) {
+  case expr of
+    Scope (defs, sexpr) -> Scope (defs, exprConstructor (sexpr))
+  | _                   -> exprConstructor (expr)
+  esac
+}
+
 local primary  = memo $ eta syntax (
           -- decimal constant
           loc=pos x=decimal {
-            fun (a) {assertValue (a, Const (stringInt (x)), loc)}
+            fun (a) { assertValue (a, Const (stringInt (x)), loc) }
           } |
 
           -- identifier
-          x=lident {
-            fun (a) { case a of
-                        Ref  -> Ref (x)
-                      | Void -> Ignore (Var (x))
-                      | _    -> Var (x)
-                      esac }
+          x=lident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? {
+            fun (a) {
+              case args of
+                None -> case a of
+                          Ref  -> Ref (x)
+                        | Void -> Ignore (Var (x))
+                        | _    -> Var (x)
+                        esac
+              | Some (args) -> assertValue (a, Call (x, args))
+              esac
+            }
           } |
 
           -- skip
@@ -88,39 +141,66 @@ local primary  = memo $ eta syntax (
           } |
 
           -- while
-          loc=pos kWhile ex=exp body=inbr[kDo, exp, kOd] {
-            fun(a) { assertVoid(a, While(ex(Val), body(Void)), loc) } 
+          loc=pos kWhile cond=exp body=inbr[kDo, scopeExpr, kOd] {
+            fun(a) { assertVoid(a, While(cond(Val), body(Void)), loc) }
           } |
 
           -- repeat until
-          loc=pos kRepeat body=exp kUntil cond=inbr[s("("),exp,s(")")] {
-            fun(a) { assertVoid(a, Repeat(body(Void), cond(Val)), loc) } 
+          loc=pos kRepeat body=scopeExpr kUntil cond=inbr[s("("), exp, s(")")] {
+            fun(a) { assertVoid(a, distributeScope(body(Void), fun(body) { Repeat(body, cond(Val)) }), loc) }
           } |
 
           -- for
-          loc=pos -kFor init=exp s[","] cond=exp s[","] step=exp -kDo body=exp -kOd { 
-            fun(a) { assertVoid(a, Seq( init(a), While(cond(Val), Seq(body(Void), step(Void))) ), loc) } 
+          loc=pos -kFor init=scopeExpr s[","] cond=exp s[","] step=exp body=inbr[kDo, scopeExpr, kOd] {
+            fun(a) { assertVoid(a, distributeScope(init(Void), fun(init) { Seq(init, While(cond(Val), Seq(body(Void), step(Void)))) }), loc) }
           } |
           
-          -- if - then - else 
+          -- if - then - else
           -kIf ifParser |
 
-          inbr[s("("), exp, s(")")]
-          ),
+          inbr[s("("), exp, s(")")] |
+
+          inbr[s("{"), scopeExpr, s("}")]
+      ),
 
 
-      elseParser = memo $ eta syntax ( 
-          -kElse e=exp -kFi | 
+      elseParser = memo $ eta syntax (
+          -kElse e=exp -kFi |
           -kElif ifParser   |
-          loc=pos empty -kFi { 
-            fun(a) { assertVoid(a, Skip, loc) } 
-          }),
+          loc=pos empty -kFi {
+            fun(a) { assertVoid(a, Skip, loc) }
+          }
+      ),
 
 
-      ifParser = memo $ eta syntax ( 
+      ifParser = memo $ eta syntax (
           loc=pos ex=exp -kThen s1=exp else_part=elseParser {
-            fun(a) { If (ex(Val), s1(a), else_part(a)) } 
-          }),
+            fun(a) { If (ex(Val), s1(a), else_part(a)) }
+          }
+      ),
+
+
+      varsParser = memo $ eta syntax (
+          x=lident { [x, None] } |
+          x=lident s["="] val=basic { [ x, Some(val(Val)) ] }
+      ),
+
+      defsParser = memo $ eta syntax (
+          kLocal vars=list[varsParser] s[";"] { Local(vars) } |
+          kFun fname=lident args=inbr[s("("), list0(lident), s(")")] body=exp { Fun(fname, args, body(Weak)) }
+      ),
+
+      scopeExpr = memo $ eta syntax (
+          e=exp {
+            fun(a) { expandScope({}, e(a)) }
+          } |
+          d=rep[defsParser] e=exp {
+            fun(a) { expandScope(d, e(a)) }
+          } |
+          d=rep[defsParser] {
+            fun(a) { expandScope(d, Skip) }
+          }
+      ),
 
 
       basic    = memo $ eta (expr (

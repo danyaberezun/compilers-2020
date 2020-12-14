@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 local x, y;
 
-=======
->>>>>>> A06-all-expressions
 read (x);
 read (y);
 
