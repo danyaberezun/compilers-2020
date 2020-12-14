@@ -1,3 +1,5 @@
+-- X86 codegeneration interface
+-- We use stack machine programs as intermediate representation
 import SM;
 import Collection;
 import List;
@@ -84,16 +86,27 @@ fun insnString (insn) {
   esac
 }
 
+-- Environment for symbolic interpreter
+-- An environment holds
+--    a symbolic stack
+--    a maximal stack depth reached so far
+--    a set of global variable names
+
 fun makeEnv (stack, stackSlots, globals) {
+  -- Returns an internal name for a global variable
   fun globalName (name) {
     "global_" ++ name
   }
 
+  -- Returns a string representation of the environment
   fun envString () {
     sprintf ("Stack     : %s\nStackSlots: %d\nGlobals   : %s\n", stack.string, stackSlots, elements (globals).string)
   }
   
-   fun allocate () {
+  -- Allocates a new position on the symbolic stack;
+  -- returns a pair: a location for allocated item and
+  -- an updated environment
+  fun allocate () {
     case 
       case stack of
         {}        -> [ebx, 0]
@@ -104,34 +117,43 @@ fun makeEnv (stack, stackSlots, globals) {
     of [x, n] -> [x, makeEnv (x : stack, if n > stackSlots then n else stackSlots fi, globals)]esac
   }
 
+  -- Pushes an item on the symbolic state; returns an updated envirtonment
   fun push (y) {
     makeEnv (y : stack, stackSlots, globals)
   }
 
+  -- Pops one item from the symbolic stack; returns a pair: a popped
+  -- item and an updated environment
   fun pop () {
     case stack of
       x : stack -> [x, makeEnv (stack, stackSlots, globals)]
     esac
   }
 
+  -- Pops two items from the symbolic stack; returns a triple:
+  -- popped items and an updated environment
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
     esac
   }
 
+  -- Adds a global variable; returns an updated environment
   fun addGlobal (name) {
     makeEnv (stack, stackSlots, addSet (globals, globalName (name)))
   }
 
-   fun loc (name) {
+  -- References a global variable
+  fun loc (name) {
     M (globalName (name))
   }
   
-   fun getGlobals () {
+  -- Gets a list of global variables from the environment
+  fun getGlobals () {
     globals.elements
   }
 
+  -- Gets a maximal stack size from the environment
   fun getStackSize () {
     stackSlots
   }
@@ -139,6 +161,7 @@ fun makeEnv (stack, stackSlots, globals) {
   [envString, allocate, push, pop, pop2, addGlobal, loc, getGlobals, getStackSize]
 }
 
+-- Exported accessors
 fun envString (env) {
   env [0] ()
 }
@@ -175,27 +198,35 @@ fun getStackSize (env) {
   env [8] ()
 }
 
+-- Creates an initial environment
 fun initEnv () {
   makeEnv (0, emptySet (compare), emptySet (compare))
 }
 
+-- Codegeneration helper functions
+-- Generates code section
 fun codeSection (text) {
   singletonBuffer (Meta ("\t.text\n")) <+> text
 }
+
+-- Generates data section
 fun dataSection (text) {
   singletonBuffer (Meta ("\t.data\n")) <+> text
 }
 
+-- Generates data definition
 fun dataDef (name) {
   Meta (sprintf ("%s:\t.int\t0\n", name))
 }
 
+-- Generates function prologue
 fun prologue (size) {
   singletonBuffer (Push (ebp)) <+
   Mov   (esp, ebp) <+
   Binop ("-", L (wordSize*size), esp)
 }
 
+-- Generates function epilogue
 fun epilogue () {
   singletonBuffer (Mov (ebp, esp)) <+
   Pop   (ebp) <+
@@ -203,6 +234,7 @@ fun epilogue () {
   Ret
 }
 
+-- Checks if an operand resides on a stack
 fun stackOpnd (opnd) {
   case opnd of
     S (_) -> true
@@ -210,6 +242,7 @@ fun stackOpnd (opnd) {
   esac      
 }
 
+-- Checks if an operand resides in memory
 fun memOpnd (opnd) {
   case opnd of
     S (_) -> true
@@ -218,6 +251,8 @@ fun memOpnd (opnd) {
   esac
 }
 
+-- Generates a move between locations, using
+-- intermediate register if needed
 fun move (from, to) {
   if memOpnd (from) && memOpnd (to)
   then singletonBuffer (Mov (from, eax)) <+ Mov (eax, to)
@@ -225,6 +260,8 @@ fun move (from, to) {
   fi
 }
 
+-- Gets a suffix for Set instruction from
+-- source language comparison operator
 fun suffix (op) {
   case op of
     "<"  -> "l"
@@ -236,6 +273,8 @@ fun suffix (op) {
   esac
 }
 
+-- Compiles stack machine code into a list of x86 instructions. Takes an environment
+-- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
   fun compile (env, code) {
     foldl (
@@ -285,6 +324,8 @@ fun compile (env, code) {
   compile (env, code) 
 }
 
+-- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
+-- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
   case compile (initEnv (), code) of
     [env, code] ->
