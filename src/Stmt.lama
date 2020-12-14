@@ -33,8 +33,11 @@ fun eval (c@[st, [i, o]], stmt) {
     	if (evalExpr(c1[0], expr)) then eval(c1, Skip) else eval(c1, Repeat(s, expr)) fi
   esac
 
-}
+--        if     (expr, stmt, stmt) |
+--        While  (expr, stmt)       |
+--        Repeat (stmt, expr)
 
+}
 -- Evaluates a program with a given input and returns an output
 public fun evalStmt (input, stmt) {
   eval ([emptyState, createWorld (input)], stmt).snd.getOutput
