@@ -502,6 +502,20 @@ fun call (env, fLabel, nA) {
 }
 (* End *)
 
+fun opType (op) {
+    case op of
+      "&&" -> 0
+      |"!!" -> 0
+      |"<"  -> 1
+      | "<=" -> 1
+      | "==" -> 1
+      | "!=" -> 1
+      | ">=" -> 1
+      | ">"  -> 1
+      | _ -> 2
+    esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {  
@@ -509,15 +523,8 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+        printf("kek\n");
         case i of
-          READ ->
-            case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
-        | WRITE ->
-            case env.pop of
-              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
-            esac
         (* Assignment *)
         
          -- Some guidelines for generating function calls:
@@ -535,7 +542,69 @@ fun compile (env, code) {
          -- 1. generate proper prologue for BEGIN instruction (use "prologue" helper); use
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
-               
+        CONST(n) -> case allocate(env) of 
+            [s, env] -> [env, code <+ Mov (L(box(n)), s)]
+          esac
+        | LD(x) -> case allocate(env) of 
+            [s, env] -> [env, code <+> move (env.loc(x), s)]                
+          esac
+        | LDA (x) -> case allocate(env) of 
+            [s, env] -> [env, code <+ Lea(env.loc(x), eax) <+ Mov(eax, s)]                
+          esac
+        | ST(x) -> case pop(env) of 
+            [s, env] -> [env, code <+> move (s, env.loc(x))]      
+          esac
+        | STI -> case pop2(env) of
+            [s, addr, env] -> case allocate(env) of [s2, env] ->
+			    [env, code <+> move (s, I(0, addr)) <+> move(s, s2)]
+		    esac
+          esac
+        | DROP -> [pop(env)[1], code]
+        | BINOP(op) -> case pop2(env) of 
+            [x, y, env] -> case allocate(env) of 
+                [s, env] -> case [op, opType (op)] of
+                    [_, 0] -> [env, code<+ Mov (L (0), eax)
+                         <+ Mov (L (0), edx)
+                         <+ Binop ("cmp", L (box(0)), x) 
+                         <+ Set ("ne", "%al")
+                         <+ Binop ("cmp", L (box(0)), y)
+                         <+ Set ("ne", "%dl")
+                         <+ Binop (op, eax, edx)
+                         <+ Mov (edx, s) <+> toFixedNum(s)]
+                    | [_, 1] -> [env, code <+ Mov (L (box(0)), eax) 
+                         <+ Mov(y, edx)
+                         <+ Binop("cmp", edx, x) 
+                         <+ Set(suffix(op), "%al") 
+                         <+ Mov(eax, s) <+> toFixedNum(s)]
+                    | ["/", 2] ->  [env, code <+ Sar1(x) <+ Sar1(y) <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, s) <+> toFixedNum(s)]
+                    | ["%", 2] -> [env, code <+ Sar1(x) <+ Sar1(y) <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, s) <+> toFixedNum(s)]
+                    | [_, 2] -> [env, code <+ Sar1(x) <+ Sar1(y) <+ Mov(x, eax) <+ Binop(op, y, eax) <+ Mov(eax, s) <+> toFixedNum(s)]
+                esac
+            esac
+          esac
+        | LABEL(l) -> [if isBarrier(env) then retrieveStack(env, l) else env fi, code <+ Label(l)]
+        | JMP(l) -> [setBarrier(setStack(env, l)), code <+ Jmp(l)]
+        | CJMP(t, l) -> case pop(env) of [s, env] -> [env.setStack(l), code <+ Mov(L(box(0)), eax) <+ Binop("cmp", eax, s) <+ CJmp(t, l)] esac 
+        | GLOBAL(x) -> [addGlobal(env, x), code]  
+        | CALL(fLabel, nArgs) -> local fname = case fLabel of 
+                "read" -> "Lread" |
+                "write" -> "Lwrite" |
+                _ -> fLabel
+            esac;
+            case call(env, fname, nArgs) of [env, fcode] -> [env, code <+> fcode] esac
+        | BEGIN (fLabel, nArgs, nLocals) -> [enterFunction(env, fLabel, nLocals), code <+> prologue(fLabel)]
+        | END -> case epilogue(env) of [env, ecode] -> [env, code <+> ecode] esac
+        | STRING(str) -> case addString(env, str) of 
+            [env, name] -> case allocate(env) of 
+                [s, env] -> case call(env, "Bstring", 1) of
+                    [env, code1] -> [env, code <+> move(M("$" ++ name), s) <+> code1]
+                esac
+            esac
+          esac
+        | ARRAY (n) -> case call(env, "Barray", n) of [env, code1] -> [env, code <+> code1] esac 
+        | ELEM -> case call(env, "Belem", 2) of [env, code1] -> [env, code <+> code1] esac
+        | STA -> case call(env, "Bsta", 2) of [env, code1] -> [env, code <+> code1] esac
+        | BUILTIN (f, a) -> case call(env, "B" ++ f, a) of [env, code1] -> [env, code <+> code1] esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
         esac
