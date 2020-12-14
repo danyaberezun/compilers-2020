@@ -30,4 +30,4 @@ public fun evalOp (op, l, r) {
     | Const (n)         -> n
     | Binop (op, l, r)  -> evalOp (op, evalExpr(st, l), evalExpr(st, r))
     esac
-} 
+}
