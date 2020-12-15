@@ -16,12 +16,12 @@ fun inbr (l, p, r) {
 local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
                             lident  @ fun (x) {Var (x)} |
                             inbr (s ("("), exp, s (")"))),
-  BinOp = fun (l, op, r) {Binop (op, l, r)},
-  oper = {[Left, [s ("!!"), BinOp] : {}],
-         [Left, [s ("&&"), BinOp] : {}],
-         [Nona, [s ("<") | s (">") | s ("<=") | s (">=") | s ("==") | s ("!="), BinOp] : {}],
-         [Left, [s ("+") | s ("-"), BinOp] : {}],
-         [Left, [s ("*") | s ("/") | s ("%"), BinOp] : {}]},
+  binOp = fun (l, op, r) {Binop (op, l, r)},
+  oper = {[Left, [s ("!!"), binOp] : {}],
+         [Left, [s ("&&"), binOp] : {}],
+         [Nona, [s ("<") | s (">") | s ("<=") | s (">=") | s ("==") | s ("!="), binOp] : {}],
+         [Left, [s ("+") | s ("-"), binOp] : {}],
+         [Left, [s ("*") | s ("/") | s ("%"), binOp] : {}]},
 
 exp = memo $ eta expr (oper, primary) ;
 
