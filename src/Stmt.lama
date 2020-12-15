@@ -25,7 +25,7 @@ fun eval (c, stmt) {
         Skip -> c
       | Read (el) -> case in of elemo : i -> [state <- [el, elemo], [i, out]] esac
       | Write (expr) -> [state, [in, evalExpr (state, expr) : out]]
-      | Assn (el, expr) -> [state <- [el, expreevalExprssion (state, expr)], [in, out]]
+      | Assn (el, expr) -> [state <- [el, evalExpr (state, expr)], [in, out]]
       | Seq (s1, s2) -> eval (eval (c, s1), s2)
       | If (expr, s1, s2) -> if (evalExpr (c[0], expr)) then eval (c, s1) else eval (c, s2) fi
       | Repeat (s, expr) -> local c_new = eval (c, s);
