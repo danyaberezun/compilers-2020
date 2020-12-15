@@ -76,13 +76,13 @@ fun eval (c@[s, w], expr) {
 		If(cond, exp1, exp2)	-> case eval(c, cond) of 
 						[n_c, 0]	-> eval(n_c, exp2) |
 						[n_c, _ ]	-> eval(n_c, exp1) esac |
-		While(cond, exp)	-> case eval(c, cond) of
+		While(cond, exp1)	-> case eval(c, cond) of
 						[n_c, 0]	-> [n_c, None] |
-						[n_c, _ ]	-> case eval(n_c, exp) of [last_c, value] -> eval(last_c, exp) esac
+						[n_c, _ ]	-> case eval(n_c, exp1) of [last_c, value] -> eval(last_c, expr) esac
 						esac |
-		Repeat(exp, cond)	-> eval(c, Seq(exp, While(Binop("==", cond, Const(0)), exp))) |
+		Repeat(exp1, cond)	-> eval(c, Seq(exp1, While(Binop("==", cond, Const(0)), exp1))) |
 		Ref(x)			-> [c, Ref(x)]		|
-		Ignore(exp)		-> case eval(c, exp) of [n_c, value] -> [n_c, None] esac
+		Ignore(exp1)		-> case eval(c, exp1) of [n_c, value] -> [n_c, None] esac
 	esac
 }
 
