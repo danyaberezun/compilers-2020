@@ -31,7 +31,7 @@ local stmt = memo $ eta syntax (
   x=lident s[":="] y=exp                {Assn (x, y)} |
   x1=stmt s[";"] x2=stmt end            {Seq (x1, x2)}|
   kSkip                                 {Skip}      |
-  kIf cond=exp kThen s1=seqq s2=ifTailParser   {If (cond, s1, s2)} |
+  kIf cond=exp kThen s1=seqq s2=ifParser       {If (cond, s1, s2)} |
   kWhile cond=exp kDo s=seqq kOd               {While (cond, s)}   |
   kRepeat s=seqq kUntil cond=exp               {Repeat (s, cond)}  |
   kFor e1=seqq s[","] e2=exp s[","] e3=seqq kDo s=seqq kOd {Seq (e1, While(e2, Seq(s, e3)))}
