@@ -69,7 +69,7 @@ fun eval (c@[s, w], expr) {
 		Var(x)			-> [c, s(x)]		|
 		Binop(op, l, r)	-> case evalList(c, {l, r}) of [n_c, {v1, v2}] -> [n_c, evalOp(op, v1, v2)] esac |
 		Assn(to, from)		-> case evalList(c, {to, from}) of [n_c@[n_s, n_w], {Ref (place), value}] -> [[n_s <- [place, value], n_w], value] esac |
-		Seq(exp1, exp2)	-> case eval(c, exp1) of [n_c, value] -> eval(new_c, exp2) esac |
+		Seq(exp1, exp2)	-> case eval(c, exp1) of [n_c, value] -> eval(n_c, exp2) esac |
 		Skip			-> [c, None]		|
 		Read(to)		-> case readWorld(w) of [value, n_w] -> [[s <- [to, value], n_w], None] esac |
 		Write(from)		-> case eval(c, from) of [n_c@[n_s, n_w], val] -> [[n_s, writeWorld(val, n_w)], None] esac |
@@ -84,4 +84,11 @@ fun eval (c@[s, w], expr) {
 		Ref(x)			-> [c, Ref(x)]		|
 		Ignore(exp)		-> case eval(c, exp) of [n_c, value] -> [n_c, None] esac
 	esac
+}
+
+-- Evaluates a program with a given input and returns an output
+public fun evalExpr (input, expr) {
+  case eval ([emptyState, createWorld (input)], expr) of
+    [c, _] -> c.snd.getOutput
+  esac
 }

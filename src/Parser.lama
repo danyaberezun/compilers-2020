@@ -56,12 +56,12 @@ fun binop (op) {
 local elseBranch = memo $ eta syntax (
 				kFi {fun (attr) {assertVoid(attr, Skip, loc)}}	|
 				kElse statement=exp kFi {fun (attr) {statement(attr)}}|
-				kElif condition=exp kThen statement1=stmt statement2=elseBranch {fun (a) {If (condition(Val), statement1(a), statement2(a))}}
+				kElif condition=exp kThen statement1=exp statement2=elseBranch {fun (a) {If (condition(Val), statement1(a), statement2(a))}}
 				);
 				
 -- Primary expression
-local primary = memo $ eta 
-			(loc = pos x = decimal {fun(a){assertValue(a, Const(straingtInt(x)), loc)}}	|
+local primary = memo $ eta syntax
+			(loc = pos x = decimal {fun(a){assertValue(a, Const(stringInt(x)), loc)}}	|
 			x = lident {fun(a) {case a of
 						Ref 	-> Ref(x) |
 						Void	-> Ignore(Var(x)) |
@@ -69,12 +69,12 @@ local primary = memo $ eta
 						esac
 					}} |
 			loc = pos kRead x=inbr[s("("), lident, s(")")] {fun(attr) {assertVoid(attr, Read (x), loc)}}	|
-			loc = pos kWrite e=inbr[s("("), exp, s(")")] {fun(attr) {assertVoid(attr, Write (e(Val)), loc)}	|
+			loc = pos kWrite e=inbr[s("("), exp, s(")")] {fun(attr) {assertVoid(attr, Write (e(Val)), loc)}}	|
 			loc = pos kSkip {fun(attr) {assertVoid(attr, Skip, loc)}} 						|
-			loc = pos kIf condition=exp kThen statement1=stmt statement2=elseBranch {fun(attr) {If (condition(Val), statement1(attr), statement2(attr))}} |
-			loc = pos kWhile condition=exp kDo statement=stmt kOd {fun(attr) {assertVoid(attr, While (condition(Val), statement(Void)), loc)}}  |
-			loc = pos kRepeat statement=stmt kUntil condition=exp {fun(attr) {assertVoid(attr, Repeat (statement(Void), condition(Val)), loc)}} |
-			loc = pos kFor declaration=stmt s[","] condition=exp s[","] change=stmt kDo statement=stmt kOd {fun(attr) {assertVoid(attr, Seq (declaration(Void), While (condition(Val), Seq (statement(Void), change(Void)))), loc)}} ),
+			loc = pos kIf condition=exp kThen statement1=exp statement2=elseBranch {fun(attr) {If (condition(Val), statement1(attr), statement2(attr))}} |
+			loc = pos kWhile condition=exp kDo statement=exp kOd {fun(attr) {assertVoid(attr, While (condition(Val), statement(Void)), loc)}}  |
+			loc = pos kRepeat statement=exp kUntil condition=exp {fun(attr) {assertVoid(attr, Repeat (statement(Void), condition(Val)), loc)}} |
+			loc = pos kFor declaration=exp s[","] condition=exp s[","] change=exp kDo statement=exp kOd {fun(attr) {assertVoid(attr, Seq (declaration(Void), While (condition(Val), Seq (statement(Void), change(Void)))), loc)}} ),
 	basic = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                 	fun (l, loc, r) {
                                                           fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)} }])],

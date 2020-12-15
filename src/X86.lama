@@ -28,7 +28,6 @@ local ebx = R (0),
 local wordSize = 4;
 
 -- We need to distinguish the following operand types: 
-<<<<<<< HEAD
 --    R (int)       -- hard register                    
 --    S (int)       -- a position on the hardware stack 
 --    M (string)    -- a named memory location          
