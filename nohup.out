@@ -1,0 +1,14 @@
+OpenJDK 64-Bit Server VM warning: Option UseConcMarkSweepGC was deprecated in version 9.0 and will likely be removed in a future release.
+2020-12-13 23:34:57,148 [    333]   WARN - llij.ide.plugins.PluginManager - Resource bundle redefinition for plugin 'com.jetbrains.pycharm.pro.customization'. Old value: messages.ActionsBundle, new value: messages.PyBundle 
+2020-12-13 23:34:59,421 [   2606]   WARN - nSystem.impl.ActionManagerImpl - keymap "Visual Studio" not found [Plugin: com.intellij] 
+2020-12-13 23:34:59,424 [   2609]   WARN - nSystem.impl.ActionManagerImpl - keymap "Eclipse" not found [Plugin: com.intellij] 
+2020-12-13 23:34:59,425 [   2610]   WARN - nSystem.impl.ActionManagerImpl - keymap "NetBeans 6.5" not found [Plugin: com.intellij] 
+2020-12-13 23:34:59,425 [   2610]   WARN - nSystem.impl.ActionManagerImpl - keymap "Visual Studio" not found [Plugin: com.intellij] 
+2020-12-13 23:34:59,443 [   2628]   WARN - nSystem.impl.ActionManagerImpl - keymap "Visual Studio" not found [Plugin: HtmlTools] 
+2020-12-13 23:34:59,576 [   2761]   WARN - nSystem.impl.ActionManagerImpl - keymap "Eclipse" not found [Plugin: JavaScript] 
+2020-12-13 23:34:59,576 [   2761]   WARN - nSystem.impl.ActionManagerImpl - keymap "Visual Studio" not found [Plugin: JavaScript] 
+2020-12-13 23:34:59,631 [   2816]   WARN - nSystem.impl.ActionManagerImpl - keymap "Eclipse" not found [Plugin: Pythonid] 
+2020-12-13 23:34:59,631 [   2816]   WARN - nSystem.impl.ActionManagerImpl - keymap "NetBeans 6.5" not found [Plugin: Pythonid] 
+2020-12-13 23:34:59,638 [   2823]   WARN - nSystem.impl.ActionManagerImpl - keymap "Visual Studio" not found [Plugin: Pythonid] 
+2020-12-13 23:34:59,638 [   2823]   WARN - nSystem.impl.ActionManagerImpl - keymap "Eclipse" not found [Plugin: Pythonid] 
+2020-12-13 23:35:51,527 [  54712]   WARN - ystem.impl.ActionPopupMenuImpl - 1298ms to fill popup menu EditorTabPopup 
