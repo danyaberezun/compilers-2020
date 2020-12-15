@@ -13,7 +13,7 @@ import Buffer;
 -- string representation.
 public fun showSMInsn (i) {
   case i of
-    READ         -> sprintf ("READ")
+  READ         -> sprintf ("READ")
   | WRITE        -> sprintf ("WRITE")
   | BINOP (s)    -> sprintf ("BINOP %s", s)
   | LD    (x)    -> sprintf ("LD %s", x)
@@ -53,6 +53,7 @@ fun fromLabel (env, lab) {
 }
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
+
 -- returns a final configuration
 fun eval (c@[stack, state, world@[input, output]], insns) {
 	case insns of
@@ -71,7 +72,6 @@ fun eval (c@[stack, state, world@[input, output]], insns) {
 									  esac
 	esac
 }
-
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
@@ -131,4 +131,3 @@ public fun compileSM (stmt) {
      	| Skip -> {}
   esac
 }
-

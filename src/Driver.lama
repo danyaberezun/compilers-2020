@@ -18,7 +18,7 @@ import Manifest;
 -- defined in the unit Manifest
 fun parseArgs (args) {
   local mode   = ref (Comp),
-        infile = ref ({}),
+ infile = ref ({}),
         smDump = ref (false);
 
   fun setDump (m) {
@@ -26,7 +26,6 @@ fun parseArgs (args) {
       SM -> smDump ::= true
     esac
   }
-  
   fun setMode (m) {
     case deref (mode) of
       Comp -> mode ::= m
@@ -47,7 +46,7 @@ fun parseArgs (args) {
               {}    -> skip
             | h : t ->
                case h of
-                 "-i"  -> setMode (Int)
+  "-i"  -> setMode (Int)
                | "-s"  -> setMode (SM)
                | "-ds" -> setDump (SM)
                | fn    -> setInFile (fn)
@@ -57,7 +56,7 @@ fun parseArgs (args) {
          }
       })(args);
 
-  [fun () {deref (mode)},
+[fun () {deref (mode)},
    fun () {case deref(infile) of #unboxed -> failure ("input file name not set\n") | fn -> fn esac},
    fun () {deref (smDump)}
   ]        
@@ -76,7 +75,7 @@ local args = parseArgs (arrayList (sysargs).tl);
 case parseString (parse |> bypass (end), fread (args.getInFile)) of
   Succ (program) ->
     case args.getMode of
-      Comp -> compileX86 (args, peepSM (args, compileSM (program)))
+Comp -> compileX86 (args, peepSM (args, compileSM (program)))
     | mode ->
        local input =
           reverse (fix (fun (f) {
@@ -90,7 +89,7 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
        iter (fun (x) {printf ("%d\n", x)},
              case mode of
                Int -> evalStmt (input, program)
-             | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
+| SM  -> evalSM   (input, peepSM (args, compileSM (program)))
              esac)
     esac
 | x@Fail (err, line, col) ->   
