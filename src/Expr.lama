@@ -1,3 +1,4 @@
+
 -- Expression evaluator
 
 import List;
@@ -63,28 +64,45 @@ fun evalList (c, exprs) {
   esac
 }
 
-fun eval (c@[s, w], expr) {
-	case expr of 
-		Const(x)		-> [c, x]		|
-		Var(x)			-> [c, s(x)]		|
-		Binop(op, l, r)	-> case evalList(c, {l, r}) of [n_c, {v1, v2}] -> [n_c, evalOp(op, v1, v2)] esac |
-		Assn(to, from)		-> case evalList(c, {to, from}) of [n_c@[n_s, n_w], {Ref (place), value}] -> [[n_s <- [place, value], n_w], value] esac |
-		Seq(exp1, exp2)	-> case eval(c, exp1) of [n_c, value] -> eval(n_c, exp2) esac |
-		Skip			-> [c, None]		|
-		Read(to)		-> case readWorld(w) of [value, n_w] -> [[s <- [to, value], n_w], None] esac |
-		Write(from)		-> case eval(c, from) of [n_c@[n_s, n_w], val] -> [[n_s, writeWorld(val, n_w)], None] esac |
-		If(cond, exp1, exp2)	-> case eval(c, cond) of 
-						[n_c, 0]	-> eval(n_c, exp2) |
-						[n_c, _ ]	-> eval(n_c, exp1) esac |
-		While(cond, exp1)	-> case eval(c, cond) of
-						[n_c, 0]	-> [n_c, None] |
-						[n_c, _ ]	-> case eval(n_c, exp1) of [last_c, value] -> eval(last_c, expr) esac
-						esac |
-		Repeat(exp1, cond)	-> eval(c, Seq(exp1, While(Binop("==", cond, Const(0)), exp1))) |
-		Ref(x)			-> [c, Ref(x)]		|
-		Ignore(exp1)		-> case eval(c, exp1) of [n_c, value] -> [n_c, None] esac
-	esac
+fun eval (c@[state, world], expr) {
+--printf("Evaluating %s\n", expr.string);
+case expr of
+	Const (n) -> [c, n]
+	| Var (x) -> [c, state (x)]
+        | Binop (op, l, r) -> case evalList (c, {l, r}) of
+				[n_c, {value1, value2}] -> [n_c, evalOp (op, value1, value2)] 
+			      esac
+	| Assn (to, from) -> case evalList (c, {to, from}) of
+				[n_c@[n_state, n_world], {Ref (place), value}] -> [[n_state <- [place, value], n_world], value]
+			     esac
+	| Seq (expr1, expr2) -> case eval (c, expr1) of
+					[n_c, value] -> eval (n_c, expr2)
+				esac
+	| Skip -> [c, None]
+	| Read (to) -> case readWorld (world) of
+				[value, n_world] -> [[state <- [to, value], n_world], None]
+		       esac
+	| Write (expression) -> case eval (c, expression) of
+					[n_c@[n_state, n_world], value] -> [[n_state, writeWorld (value, n_world)], None]
+				esac
+	| If (condition, expr1, expr2) -> case eval (c, condition) of
+						[n_c, 0] -> eval (n_c, expr2)
+						| [n_c, _ ] -> eval (n_c, expr1)
+					  esac
+	| While (condition, expression) -> case eval (c, condition) of
+						[n_c, 0] -> [n_c, None]
+						| [n_c, _ ] -> case eval (n_c, expression)  of
+									[latest_c, value] -> eval (latest_c, expr)
+								 esac
+					   esac
+	| Repeat (expression, condition) -> eval (c, Seq (expression, While (Binop ("==", condition, Const (0)), expression))) 
+	| Ref (x) -> [c, Ref (x)]
+	| Ignore (expression) -> case eval (c, expression) of
+					[n_c, value] -> [n_c, None]
+				 esac 
+esac
 }
+
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
