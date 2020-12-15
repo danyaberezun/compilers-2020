@@ -15,7 +15,6 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
-
 fun eval (c, stmt) {
     case c of [state, [in, out]] ->
         case stmt of
