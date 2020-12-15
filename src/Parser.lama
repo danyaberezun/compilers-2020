@@ -18,13 +18,16 @@ fun inbr (l, p, r) {
 local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
                                    x=lident  {Var (x)}               |
                                    inbr[s("("), exp, s(")")]),
+								   
       binop = fun (l, op, r) {Binop(op, l, r)},
+	  
       ops = {[Left, [s("!!"), binop] : {}],
              [Left, [s("&&"), binop]: {}],
              [Nona, [s("<") | s(">") | s(">=") | s("<=") | s("==") | s("!="), binop] : {}],
              [Left, [s("+") | s("-"), binop] : {}],
              [Left, [s("*") | s("/") | s("%"), binop] : {}]},
       exp = memo $ eta expr(ops, primary);
+	  
 local stmt = memo $ eta syntax (
        kWrite x = inbr[s("("), exp, s(")")] {Write(x)} |
        kRead x = inbr[s("("), lident, s(")")] {Read(x)} |
@@ -46,4 +49,3 @@ local simpleStmt = memo $ eta syntax (stmt |
        s1=stmt s[";"] s2=simpleStmt {Seq (s1, s2)});
 -- Public top-level parser
 public parse = stmt;
-             
