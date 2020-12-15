@@ -68,6 +68,7 @@ local primary = memo $ eta syntax
 						_	-> Var(x) 
 						esac
 					}} |
+			inbr[s ("("), exp, s (")")]                          |
 			loc = pos kRead x=inbr[s("("), lident, s(")")] {fun(attr) {assertVoid(attr, Read (x), loc)}}	|
 			loc = pos kWrite e=inbr[s("("), exp, s(")")] {fun(attr) {assertVoid(attr, Write (e(Val)), loc)}}	|
 			loc = pos kSkip {fun(attr) {assertVoid(attr, Skip, loc)}} 						|
