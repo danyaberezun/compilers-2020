@@ -86,6 +86,7 @@ case insns of
 										esac
 							esac
 				esac
+				
 esac
 }
 
