@@ -1,6 +1,6 @@
-	.file "/home/toliman/LamaProject/compilers-2020/src/Stmt.lama"
+	.file "/compilers-2020/src/Stmt.lama"
 
-	.stabs "/home/toliman/LamaProject/compilers-2020/src/Stmt.lama",100,0,0,.Ltext
+	.stabs "/compilers-2020/src/Stmt.lama",100,0,0,.Ltext
 
 	.globl	LevalStmt
 
@@ -49,6 +49,8 @@ filler:	.fill	7, 4, 1
 # EXTERN ("Lunzip") / 
 
 # EXTERN ("Lzip") / 
+
+# EXTERN ("LdeepFlatten") / 
 
 # EXTERN ("Lflatten") / 
 
@@ -188,8 +190,6 @@ initStmt:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	movl	_init,	%eax
 	test	%eax,	%eax
 	jz	_continue
@@ -198,7 +198,9 @@ _continue:
 
 	movl	$1,	_init
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -259,10 +261,10 @@ LevalStmt:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -280,13 +282,19 @@ L4:
 
 L7:
 
-# LINE (35) / 
+# LINE (34) / 
 
-	.stabn 68,0,35,0
+	.stabn 68,0,34,0
 
-	.stabn 68,0,35,.L0-LevalStmt
+	.stabn 68,0,34,.L0-LevalStmt
 
 .L0:
+
+# LINE (35) / 
+
+	.stabn 68,0,35,.L1-LevalStmt
+
+.L1:
 
 # CLOSURE ("LemptyState", []) / 
 
@@ -339,6 +347,10 @@ L7:
 # SLABEL ("L8") / 
 
 L8:
+
+# LABEL ("L6") / 
+
+L6:
 
 # SLABEL ("L5") / 
 
@@ -426,10 +438,10 @@ Leval:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -451,9 +463,9 @@ L19:
 
 	.stabn 68,0,21,0
 
-	.stabn 68,0,21,.L1-Leval
+	.stabn 68,0,21,.L2-Leval
 
-.L1:
+.L2:
 
 # LD (Arg (0)) / 
 
@@ -707,9 +719,9 @@ L29:
 
 # LINE (22) / 
 
-	.stabn 68,0,22,.L2-Leval
+	.stabn 68,0,22,.L3-Leval
 
-.L2:
+.L3:
 
 # LD (Arg (1)) / 
 
@@ -766,9 +778,9 @@ L38:
 
 # LINE (23) / 
 
-	.stabn 68,0,23,.L3-Leval
+	.stabn 68,0,23,.L4-Leval
 
-.L3:
+.L4:
 
 # LD (Arg (0)) / 
 
@@ -879,9 +891,9 @@ L45:
 
 # LINE (24) / 
 
-	.stabn 68,0,24,.L4-Leval
+	.stabn 68,0,24,.L5-Leval
 
-.L4:
+.L5:
 
 # LD (Local (1)) / 
 
@@ -1079,9 +1091,9 @@ L52:
 
 L47:
 
-# FAIL ((24, 25), true) / 
+# FAIL ((24, 24), true) / 
 
-	pushl	$51
+	pushl	$49
 	pushl	$49
 	pushl	$string_0
 	pushl	%ebx
@@ -1096,7 +1108,6 @@ L46:
 
 # JMP ("L18") / 
 
-	jmp	L18
 # SLABEL ("L44") / 
 
 L44:
@@ -1196,9 +1207,9 @@ L68:
 
 # LINE (25) / 
 
-	.stabn 68,0,25,.L5-Leval
+	.stabn 68,0,25,.L6-Leval
 
-.L5:
+.L6:
 
 # LD (Local (2)) / 
 
@@ -1403,9 +1414,9 @@ L83:
 
 # LINE (26) / 
 
-	.stabn 68,0,26,.L6-Leval
+	.stabn 68,0,26,.L7-Leval
 
-.L6:
+.L7:
 
 # LD (Local (2)) / 
 
@@ -1616,9 +1627,9 @@ L99:
 
 # LINE (27) / 
 
-	.stabn 68,0,27,.L7-Leval
+	.stabn 68,0,27,.L8-Leval
 
-.L7:
+.L8:
 
 # LD (Arg (0)) / 
 
@@ -1658,9 +1669,9 @@ L98:
 
 L31:
 
-# FAIL ((22, 8), true) / 
+# FAIL ((22, 7), true) / 
 
-	pushl	$17
+	pushl	$15
 	pushl	$45
 	pushl	$string_0
 	pushl	%ebx
@@ -1679,14 +1690,13 @@ L28:
 
 # JMP ("L18") / 
 
-	jmp	L18
 # LABEL ("L21") / 
 
 L21:
 
-# FAIL ((21, 7), true) / 
+# FAIL ((21, 6), true) / 
 
-	pushl	$15
+	pushl	$13
 	pushl	$43
 	pushl	$string_0
 	pushl	%ebx

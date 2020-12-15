@@ -33,7 +33,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
 	  	   [Left, [s("+") | s("-"), binop] : {}],
 	  	   [Left, [s("*") | s("/") | s("%"), binop] : {}]},
 
-    exp = memo $ eta expr (ops, primary)(id);
+    exp = memo $ eta expr (ops, primary);
 
 
 local stmt = memo $ eta syntax (

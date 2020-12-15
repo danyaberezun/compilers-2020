@@ -1,6 +1,6 @@
-	.file "/home/toliman/LamaProject/compilers-2020/src/SM.lama"
+	.file "/compilers-2020/src/SM.lama"
 
-	.stabs "/home/toliman/LamaProject/compilers-2020/src/SM.lama",100,0,0,.Ltext
+	.stabs "/compilers-2020/src/SM.lama",100,0,0,.Ltext
 
 	.globl	LcompileSM
 
@@ -99,6 +99,8 @@ filler:	.fill	12, 4, 1
 # EXTERN ("Lunzip") / 
 
 # EXTERN ("Lzip") / 
+
+# EXTERN ("LdeepFlatten") / 
 
 # EXTERN ("Lflatten") / 
 
@@ -238,8 +240,6 @@ initSM:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	movl	_init,	%eax
 	test	%eax,	%eax
 	jz	_continue
@@ -248,7 +248,9 @@ _continue:
 
 	movl	$1,	_init
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -337,10 +339,10 @@ LcompileSM:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -1097,9 +1099,9 @@ L58:
 
 L9:
 
-# FAIL ((74, 8), true) / 
+# FAIL ((74, 7), true) / 
 
-	pushl	$17
+	pushl	$15
 	pushl	$149
 	pushl	$string_0
 	pushl	%ebx
@@ -1176,10 +1178,10 @@ LcompileExpr:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -1708,9 +1710,9 @@ L93:
 
 L70:
 
-# FAIL ((61, 8), true) / 
+# FAIL ((61, 7), true) / 
 
-	pushl	$17
+	pushl	$15
 	pushl	$123
 	pushl	$string_0
 	pushl	%ebx
@@ -1767,10 +1769,10 @@ LevalSM:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -1788,17 +1790,23 @@ L104:
 
 L107:
 
-# LINE (52) / 
+# LINE (51) / 
 
-	.stabn 68,0,52,0
+	.stabn 68,0,51,0
 
-	.stabn 68,0,52,.L9-LevalSM
+	.stabn 68,0,51,.L9-LevalSM
 
 .L9:
 
 # CONST (0) / 
 
 	movl	$1,	%ebx
+# LINE (52) / 
+
+	.stabn 68,0,52,.L10-LevalSM
+
+.L10:
+
 # CLOSURE ("LemptyState", []) / 
 
 	pushl	%ebx
@@ -1859,6 +1867,10 @@ L107:
 # SLABEL ("L108") / 
 
 L108:
+
+# LABEL ("L106") / 
+
+L106:
 
 # SLABEL ("L105") / 
 
@@ -1992,10 +2004,10 @@ Leval:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -2017,9 +2029,9 @@ L121:
 
 	.stabn 68,0,36,0
 
-	.stabn 68,0,36,.L10-Leval
+	.stabn 68,0,36,.L11-Leval
 
-.L10:
+.L11:
 
 # LD (Arg (0)) / 
 
@@ -2332,9 +2344,9 @@ L131:
 
 # LINE (38) / 
 
-	.stabn 68,0,38,.L11-Leval
+	.stabn 68,0,38,.L12-Leval
 
-.L11:
+.L12:
 
 # LD (Arg (1)) / 
 
@@ -2370,9 +2382,9 @@ L138:
 
 # LINE (39) / 
 
-	.stabn 68,0,39,.L12-Leval
+	.stabn 68,0,39,.L13-Leval
 
-.L12:
+.L13:
 
 # LD (Arg (0)) / 
 
@@ -2592,9 +2604,9 @@ L147:
 
 # LINE (40) / 
 
-	.stabn 68,0,40,.L13-Leval
+	.stabn 68,0,40,.L14-Leval
 
-.L13:
+.L14:
 
 # LD (Local (4)) / 
 
@@ -2920,9 +2932,9 @@ L156:
 
 L149:
 
-# FAIL ((40, 42), true) / 
+# FAIL ((40, 41), true) / 
 
-	pushl	$85
+	pushl	$83
 	pushl	$81
 	pushl	$string_0
 	pushl	%ebx
@@ -2937,7 +2949,6 @@ L148:
 
 # JMP ("L120") / 
 
-	jmp	L120
 # SLABEL ("L146") / 
 
 L146:
@@ -3146,9 +3157,9 @@ L176:
 
 # LINE (41) / 
 
-	.stabn 68,0,41,.L14-Leval
+	.stabn 68,0,41,.L15-Leval
 
-.L14:
+.L15:
 
 # LD (Local (6)) / 
 
@@ -3353,9 +3364,9 @@ L192:
 
 # LINE (42) / 
 
-	.stabn 68,0,42,.L15-Leval
+	.stabn 68,0,42,.L16-Leval
 
-.L15:
+.L16:
 
 # LD (Local (1)) / 
 
@@ -3559,9 +3570,9 @@ L199:
 
 L194:
 
-# FAIL ((42, 33), true) / 
+# FAIL ((42, 32), true) / 
 
-	pushl	$67
+	pushl	$65
 	pushl	$85
 	pushl	$string_0
 	pushl	%ebx
@@ -3576,7 +3587,6 @@ L193:
 
 # JMP ("L120") / 
 
-	jmp	L120
 # SLABEL ("L191") / 
 
 L191:
@@ -3732,9 +3742,9 @@ L218:
 
 # LINE (43) / 
 
-	.stabn 68,0,43,.L16-Leval
+	.stabn 68,0,43,.L17-Leval
 
-.L16:
+.L17:
 
 # LD (Local (4)) / 
 
@@ -3945,9 +3955,9 @@ L225:
 
 L220:
 
-# FAIL ((43, 34), true) / 
+# FAIL ((43, 33), true) / 
 
-	pushl	$69
+	pushl	$67
 	pushl	$87
 	pushl	$string_0
 	pushl	%ebx
@@ -3962,7 +3972,6 @@ L219:
 
 # JMP ("L120") / 
 
-	jmp	L120
 # SLABEL ("L217") / 
 
 L217:
@@ -4171,9 +4180,9 @@ L244:
 
 # LINE (44) / 
 
-	.stabn 68,0,44,.L17-Leval
+	.stabn 68,0,44,.L18-Leval
 
-.L17:
+.L18:
 
 # LD (Local (3)) / 
 
@@ -4443,9 +4452,9 @@ L261:
 
 # LINE (45) / 
 
-	.stabn 68,0,45,.L18-Leval
+	.stabn 68,0,45,.L19-Leval
 
-.L18:
+.L19:
 
 # LD (Local (4)) / 
 
@@ -4648,9 +4657,9 @@ L268:
 
 L263:
 
-# FAIL ((45, 38), true) / 
+# FAIL ((45, 37), true) / 
 
-	pushl	$77
+	pushl	$75
 	pushl	$91
 	pushl	$string_0
 	pushl	%ebx
@@ -4669,14 +4678,13 @@ L260:
 
 # JMP ("L120") / 
 
-	jmp	L120
 # LABEL ("L133") / 
 
 L133:
 
-# FAIL ((38, 10), true) / 
+# FAIL ((38, 9), true) / 
 
-	pushl	$21
+	pushl	$19
 	pushl	$77
 	pushl	$string_0
 	pushl	%ebx
@@ -4695,14 +4703,13 @@ L130:
 
 # JMP ("L120") / 
 
-	jmp	L120
 # LABEL ("L123") / 
 
 L123:
 
-# FAIL ((36, 7), true) / 
+# FAIL ((36, 6), true) / 
 
-	pushl	$15
+	pushl	$13
 	pushl	$73
 	pushl	$string_0
 	pushl	%ebx
@@ -4757,10 +4764,10 @@ LshowSM:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -4778,13 +4785,19 @@ L280:
 
 L283:
 
+# LINE (23) / 
+
+	.stabn 68,0,23,0
+
+	.stabn 68,0,23,.L20-LshowSM
+
+.L20:
+
 # LINE (24) / 
 
-	.stabn 68,0,24,0
+	.stabn 68,0,24,.L21-LshowSM
 
-	.stabn 68,0,24,.L19-LshowSM
-
-.L19:
+.L21:
 
 # CLOSURE ("Llambda_0_51", []) / 
 
@@ -4812,6 +4825,10 @@ L283:
 # SLABEL ("L284") / 
 
 L284:
+
+# LABEL ("L282") / 
+
+L282:
 
 # SLABEL ("L281") / 
 
@@ -4851,10 +4868,10 @@ Llambda_0_51:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -4900,6 +4917,10 @@ L291:
 # SLABEL ("L292") / 
 
 L292:
+
+# LABEL ("L290") / 
+
+L290:
 
 # SLABEL ("L289") / 
 
@@ -4963,10 +4984,10 @@ LshowSMInsn:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -4988,9 +5009,9 @@ L299:
 
 	.stabn 68,0,13,0
 
-	.stabn 68,0,13,.L20-LshowSMInsn
+	.stabn 68,0,13,.L22-LshowSMInsn
 
-.L20:
+.L22:
 
 # LD (Arg (0)) / 
 
@@ -5047,9 +5068,9 @@ L308:
 
 # LINE (14) / 
 
-	.stabn 68,0,14,.L21-LshowSMInsn
+	.stabn 68,0,14,.L23-LshowSMInsn
 
-.L21:
+.L23:
 
 # STRING ("READ") / 
 
@@ -5131,9 +5152,9 @@ L316:
 
 # LINE (15) / 
 
-	.stabn 68,0,15,.L22-LshowSMInsn
+	.stabn 68,0,15,.L24-LshowSMInsn
 
-.L22:
+.L24:
 
 # STRING ("WRITE") / 
 
@@ -5254,9 +5275,9 @@ L324:
 
 # LINE (16) / 
 
-	.stabn 68,0,16,.L23-LshowSMInsn
+	.stabn 68,0,16,.L25-LshowSMInsn
 
-.L23:
+.L25:
 
 # STRING ("BINOP %s") / 
 
@@ -5381,9 +5402,9 @@ L333:
 
 # LINE (17) / 
 
-	.stabn 68,0,17,.L24-LshowSMInsn
+	.stabn 68,0,17,.L26-LshowSMInsn
 
-.L24:
+.L26:
 
 # STRING ("LD %s") / 
 
@@ -5508,9 +5529,9 @@ L342:
 
 # LINE (18) / 
 
-	.stabn 68,0,18,.L25-LshowSMInsn
+	.stabn 68,0,18,.L27-LshowSMInsn
 
-.L25:
+.L27:
 
 # STRING ("ST %s") / 
 
@@ -5635,9 +5656,9 @@ L350:
 
 # LINE (19) / 
 
-	.stabn 68,0,19,.L26-LshowSMInsn
+	.stabn 68,0,19,.L28-LshowSMInsn
 
-.L26:
+.L28:
 
 # STRING ("CONST %d") / 
 
@@ -5671,9 +5692,9 @@ L349:
 
 L301:
 
-# FAIL ((13, 8), true) / 
+# FAIL ((13, 7), true) / 
 
-	pushl	$17
+	pushl	$15
 	pushl	$27
 	pushl	$string_0
 	pushl	%ebx
