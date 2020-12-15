@@ -1,3 +1,4 @@
+
 -- Expression evaluator
 
 import List;
@@ -63,8 +64,42 @@ fun evalList (c, exprs) {
   esac
 }
 
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+fun eval (c@[state, world], expr) {
+case expr of
+	Const (n) -> [c, n]
+	| Var (x) -> [c, state (x)]
+        | Binop (op, l, r) -> case evalList (c, {l, r}) of
+				[n_c, {value1, value2}] -> [n_c, evalOp (op, value1, value2)] 
+			      esac
+	| Assn (to, from) -> case evalList (c, {to, from}) of
+				[n_c@[n_state, n_world], {Ref (place), value}] -> [[n_state <- [place, value], n_world], value]
+			     esac
+	| Seq (expr1, expr2) -> case eval (c, expr1) of
+					[n_c, value] -> eval (n_c, expr2)
+				esac
+	| Skip -> [c, None]
+	| Read (to) -> case readWorld (world) of
+				[value, n_world] -> [[state <- [to, value], n_world], None]
+		       esac
+	| Write (expression) -> case eval (c, expression) of
+					[n_c@[n_state, n_world], value] -> [[n_state, writeWorld (value, n_world)], None]
+				esac
+	| If (condition, expr1, expr2) -> case eval (c, condition) of
+						[n_c, 0] -> eval (n_c, expr2)
+						| [n_c, _ ] -> eval (n_c, expr1)
+					  esac
+	| While (condition, expr1) -> case eval (c, condition) of
+						[n_c, 0] -> [n_c, None]
+						| [n_c, _ ] -> case eval (n_c, expr1)  of
+									[latest_c, value] -> eval (latest_c, expr)
+								 esac
+					   esac
+	| Repeat (expr1, condition) -> eval (c, Seq (expr1, While (Binop ("==", condition, Const (0)), expr1))) 
+	| Ref (x) -> [c, Ref (x)]
+	| Ignore (expression) -> case eval (c, expression) of
+					[n_c, value] -> [n_c, None]
+				 esac 
+esac
 }
 
 
