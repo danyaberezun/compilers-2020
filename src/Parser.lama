@@ -39,7 +39,7 @@ local stmt = memo $ eta syntax (
   
   ifParser = memo $ eta syntax(-kFi {Skip} |
                                -kElse seqq -kFi     |
-                               -kElif cond=exp kThen s1=seqq s2=ifTailParser {If (cond, s1, s2)}
+                               -kElif cond=exp kThen s1=seqq s2=ifParser {If (cond, s1, s2)}
                                 ),
 
   seqq = memo $ eta syntax (stmt | s1=stmt s[";"] s2=seqq {Seq(s1, s2)});
