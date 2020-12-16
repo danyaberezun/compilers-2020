@@ -1,11 +1,8 @@
 -- Statement evaluator.
 
--- Statement evaluator.
-
 import State;
 import Expr;
 import World;
-import List;
 
 -- Evaluates a statement "stmt" in a configuration "c".
 -- A configuration is a pair of a state "s" and a world "w".
@@ -18,24 +15,37 @@ import List;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
---        if     (expr, stmt, stmt) |
+--        If     (expr, stmt, stmt) |
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
 
 fun eval (c, stmt) {
-  	case c of [st, [in, out]] ->
-        case stmt of
-              Skip -> c
-            | Read(x) -> case in of y : i -> [st <- [x, y], [i, out]] esac
-            | Write(expr) -> [st, [in, evalExpr(st, expr) : out]]
-            | Assn(x, expr) -> [st <- [x, evalExpr(st, expr)], [in, out]]
-            | Seq(s1, s2) -> eval(eval(c, s1), s2)
-            | If (expr, s1, s2) -> if (evalExpr(c[0], expr)) then eval (c, s1) else eval (c, s2) fi
-            | Repeat (s, expr) -> local c1 = eval (c, s);
-                                 if (evalExpr(c1[0], expr)) then eval (c1, Skip) else eval (c1, Repeat(s, expr)) fi
-            | While (expr, s) -> if (evalExpr(c[0], expr)) then eval (c, Seq(s, stmt)) else eval (c, Skip) fi
-        esac
+  case c of [st, world@[input, output]] ->
+    case stmt of
+         Skip -> c
+       | Read (var) -> case input of
+            v : rest -> [st <- [var, v], [rest, output]]
+          esac
+       | Write (expr) -> [st, [input, evalExpr(st, expr) : output]]
+       | Assn (var, expr) -> [(st <- [var, evalExpr(st, expr)]), [input, output]]
+       | If (expr, s1, s2) ->
+       case evalExpr(st, expr) of
+         0 -> eval(c, s2)
+         | _ -> eval(c, s1)
+       esac
+       | While (expr, s) -> case evalExpr(st, expr) of
+         0 -> [st, world]
+         | _ -> eval(eval(c, s), stmt)
+       esac
+       | Repeat (s, expr) -> case eval(c, s) of [myst, myw] ->
+         case evalExpr(myst, expr) of
+           0 -> eval([myst, myw], Repeat(stmt, expr))
+           | _ -> [myst, myw]
+         esac
+       esac
+       | Seq (s1, s2) -> eval(eval(c, s1), s2)
     esac
+  esac
 }
 
 -- Evaluates a program with a given input and returns an output
