@@ -59,8 +59,36 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, c@[s, st, world@[input, output]], insns) {
+  -- printf("world – %s\n", world.string);
+  -- printf("stack – %s\n", s.string);
+  -- printf("insns – %s\n\n", insns.string);
+  case insns of {} -> c
+    | inst : irest -> case inst of
+        READ         -> case readWorld(world) of [x, newWorld] -> eval(env, [x: s, st, newWorld], irest) esac
+      | WRITE        -> case s of x : rest -> eval(env, [rest, st, writeWorld(x, world)], irest) esac
+      | BINOP (str)  -> case s of rhs : lhs : rest -> eval (env, [evalOp (str, lhs, rhs) : rest, st, world], irest) esac
+      | LD    (x)    -> eval(env, [st (x) : s, st, world], irest)
+      | LDA   (x)    -> eval(env, [Ref(x) : s, st, world], irest)
+      | ST    (x)    -> case s of v : rest -> eval (env, [rest, st <- [x, v], world], irest) esac
+      | STI          -> case s of Ref (str) : v : rest -> eval(env, [v : rest, st <- [str, v], world], irest) esac
+      | CONST (n)    -> eval (env, [n : s, st, world], irest)
+      | LABEL (s)    -> eval(env, c, irest)
+      | JMP   (l)    -> eval(env, c, fromLabel(env, l))
+      | CJMP  (cf, l) -> 
+        local program = case s of expr : other -> case cf of
+          "z" -> if expr then irest else fromLabel(env, l) fi
+          | "nz" -> if expr then fromLabel(env, l) else irest fi
+          esac
+        esac;
+        eval(env, [s.tl, st, world], program)
+      | DUP          -> case s of d : rest -> eval(env, [d : d : rest, st, world], irest) esac
+      | DROP         -> case s of 
+          _ : rest -> eval(env, [rest, st, world], irest) 
+          | _ -> eval(env, c, irest)
+        esac
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -98,9 +126,53 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
+fun compileSMEnv(env, expression) {
+  -- printf("expression=%s\n\n", expression.string);
+  case expression of
+    Assn   (expr1, expr2)         -> case compileSMList(env, {expr1, expr2}) of [env, sm1 : sm2 : _] -> [env, sm2 +++ sm1 +++ singleton(STI)] esac
+    | Seq    (expr1, expr2)       -> case compileSMList(env, {expr1, expr2}) of [env, sm1 : sm2 : _] -> [env, sm1 +++ sm2] esac
+    | Skip                        -> [env, {}]
+    | Read   (str)                -> [env, {READ, ST(str)}]
+    | Write  (expr)               -> case compileSMEnv(env, expr) of [env, sm] -> [env, sm +++ singleton(WRITE)] esac
+    | If     (expr, expr1, expr2) -> case genLabels(env, 2) of [lel, lex, env] -> 
+        case compileSMList(env, {expr, expr1, expr2}) of
+          [env, sme : sme1 : sme2 : _] -> [env, sme +++ singleton(CJMP("z", lel)) +++ sme1 +++ {JMP(lex), LABEL(lel)} +++ sme2 +++ singleton(LABEL(lex))]
+        esac
+      esac
+    | While  (expr, exprb)        -> case genLabels(env, 2) of [le, ls, env] ->
+        case compileSMList(env, {expr, exprb}) of
+          [env, sme : smb : _] -> [env, {JMP(le), LABEL(ls)} +++ smb +++ singleton(LABEL(le)) +++ sme +++ singleton(CJMP("nz", ls))]
+        esac
+      esac
+    | Repeat (exprb, expr)        -> case genLabel(env) of [ls, env] ->
+        case compileSMList(env, {exprb, expr}) of
+          [env, smb : sme : _] -> [env, singleton(LABEL(ls)) +++ smb +++ sme +++ singleton(CJMP("z", ls))]
+        esac
+      esac
+    | Var    (str)                -> [env, singleton(LD(str))]
+    | Ref    (str)                -> [env, singleton(LDA(str))]
+    | Const  (v)                  -> [env, singleton(CONST(v))]
+    | Binop  (str, expr1, expr2)  -> case compileSMList(env, {expr1, expr2}) of [env, lsm : rsm : _] -> [env, lsm +++ rsm +++ singleton(BINOP(str))] esac
+    | Ignore (expr)               -> case compileSMEnv(env, expr) of [env, sm] -> [env, sm +++ singleton(DROP)] esac
+  esac
+}
+
+fun compileSMList (env, exprs) {
+  -- printf("env=%s\nexprs=%s\n\n", env.string, exprs.string);
+  case foldl (fun ([env, sm], expr) {
+                case compileSMEnv (env, expr) of
+                  [env, nsm] -> [env, nsm : sm]
+                esac
+              },
+              [env, {}],
+              exprs) of
+    [env, sm] -> [env, reverse (sm)]
+  esac
+}
+
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  compileSMEnv(initCompEnv(), stmt)[1]
 }
