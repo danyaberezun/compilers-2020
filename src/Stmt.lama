@@ -30,7 +30,7 @@ fun eval (c, stmt) {
       | If (expr, s1, s2) -> if (evalExpr (c[0], expr)) then eval (c, s1) else eval (c, s2) fi
       | Repeat (s, expr) -> local c_new = eval (c, s);
                            if (evalExpr (c_new[0], expr)) then eval (c_new, Skip)
-						   else eval (c_new, Repeat(s, expr)) fi
+						               else eval (c_new, Repeat(s, expr)) fi
       | While (expr, s) -> if (evalExpr (c[0], expr)) then eval (c, Seq(s, stmt)) else eval (c, Skip) fi
     esac
   esac        
