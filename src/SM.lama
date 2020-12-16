@@ -61,7 +61,7 @@ fun eval (env, c, insns) {
     | LD (x) : e -> eval(env, [d(x) : s, d, w], e)
     | ST (x) : e -> case s of a : ss -> eval(env, [s, (d <- [x, a]), w], e) esac
     | CONST(c) : e -> eval(env, [c : s, d, w], e)
-    | BINOP(op) : e -> case s of r : l : ss -> eval(env, [calcBinOp(op, l, r) : ss, d, w], e) esac
+    | BINOP(op) : e -> case s of r : l : ss -> eval(env, [binopOp(op, l, r) : ss, d, w], e) esac
     | READ : e -> case in of elem : i -> eval(env, [elem: s, d, [i, out]], e) esac
     | WRITE : e -> case s of elem : ss -> eval(env, [ss, d, [in, elem : out]], e) esac
     | LABEL(s) : e -> eval(env, c, e)
