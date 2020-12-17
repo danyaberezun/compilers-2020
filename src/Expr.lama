@@ -95,8 +95,47 @@ fun evalList (c, exprs) {
 }
 
 (* Assignment *)
+public fun asFunc(binop, x, y) {
+  case binop of
+        "+"  -> x +  y | "-"  -> x -  y | "*"  -> x *  y | "/"  -> x /  y | "%"  -> x %  y | "==" -> x == y
+      | "!=" -> x != y | "<"  -> x <  y | "<=" -> x <= y | ">"  -> x >  y | ">=" -> x >= y | "&&" -> x && y
+      | "!!" -> x !! y
+  esac
+}
+
+fun define(s, def) {
+  case def of
+      Local (ns)    -> addNames(s, ns)
+    | Fun (n, a, b) -> addFunction(s, n, a, b)
+  esac
+}
+
+fun addNameA (s, [k, v]) {
+  addName(s, k, v)
+}
+
 fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+  case expr of
+      Assn (e1, e2)     -> case evalList(c, {e1, e2}) of [c@[s, w], {Ref (x), v}] -> [[s <- [x, v], w], v] esac
+  |    Seq (e1, e2)     -> case eval(c, e1) of [c, _] -> eval(c, e2) esac
+  |   Skip              -> [c, Bot]
+  |   Read (x)          -> case readWorld(w) of [z, w] -> [[s <- [x, z], w], Bot] esac
+  |  Write (e)          -> case eval(c, e) of [c@[s, w], v] -> [[s, writeWorld(v, w)], Bot] esac
+  |     If (ec, et, ee) -> case eval(c, ec) of [c, 0] -> eval(c, ee) | [c, i] -> eval(c, et) esac
+  |  While (ec, ee)     -> case eval(c, ec) of [c, 0] -> [c, Bot] | [c, i] -> eval(eval(c, ee)[0], While (ec, ee)) esac
+  | Repeat (ee, ec)     -> eval(c, Seq(ee, While(Binop("==", ec, Const (0)), ee)))
+  |    Var (x)          -> [c, s.lookup(x)]
+  |    Ref (x)          -> [c, Ref (x)]
+  |  Const (i)          -> [c, i]
+  |  Binop (x, e1, e2)  -> case evalList(c, {e1, e2}) of [c, {v1, v2}] -> [c, x.asFunc(v1, v2)] esac
+  | Ignore (e)          -> [eval(c, e)[0], Bot]
+  |  Scope (ds, e)      -> case eval([foldl (define, enterScope(s), ds), w], e) of [[s, w], res] -> [[leaveScope(s), w], res] esac
+  | Call(f, exprs)      -> case s.lookup(f) of Fun (ns, b) -> case evalList(c, exprs) of [[s, w], vs] -> 
+                                case eval([foldl(addNameA, enterFunction(s), zip(ns, vs)), w], b) of
+                                  [[s2, w], res] -> [[leaveFunction(s, getGlobal(s2)), w], res]
+                                esac 
+                           esac esac
+  esac
 }
 (* End *)
 
