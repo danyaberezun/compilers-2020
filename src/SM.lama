@@ -118,9 +118,52 @@ fun eval (env, w, insns) {
 
   -- Core interpreter: takes a configuration and a program, returns a configuration
   (* Assignment *)
+
   fun eval (c@[st, cst, s, w], insns) {
-    failure ("SM interpreter is not implemented\n")
+    fun isSat(val, cond) {
+      case cond of 
+        "z"  -> val == 0
+      | "nz" -> val != 0
+      esac
+    }
+    fun processArgs(s, args) {
+      foldl (fun (i, arg) {
+        assign (s, Arg(i), arg);
+        i + 1
+      }, 0, args);
+      s
+    }
+
+
+    case insns of
+        {} -> c
+      | JMP   (l)	   : insns -> eval(c, fromLabel(env, l))
+      | CJMP  (c, l) : insns -> case st of a : st ->
+                                  eval([st, cst, s, w], if a.isSat(c) then fromLabel(env, l) else insns fi) 
+                                esac
+      | CALL (f, a)  : insns -> eval([st, [s, insns] : cst, s, w], fromLabel(env, f))
+      | END 			   : insns -> case cst of
+                                  {} -> c
+                                | [s, insns] : cst -> eval([st, cst, s, w], insns)
+                                esac
+      | ins : insns ->  c := case ins of
+                                BINOP  (op) 	   -> case st of a : b : st -> [op.asFunc(b, a) : st, cst, s, w] esac 
+                              | CONST  (n)  	   -> [n : st, cst, s, w]
+                              | LD     (x)   	   -> [lookup(s, x) : st, cst, s, w]
+                              | LDA    (x)  	   -> [Ref(x) : st, cst, s, w]
+                              | ST     (x)   	   -> case st of z : st -> assign(s, x, z); [st, cst, s, w] esac
+                              | STI			         -> case st of v : Ref(x) : st -> assign(s, x, v); [v : st, cst, s, w] esac
+                              | DROP 			       -> [st.snd, cst, s, w]
+                              | READ        	   -> case readWorld(w) of [x, w] -> [x : st, cst, s, w] esac
+                              | WRITE       	   -> case st of z : st -> [st, cst, s, writeWorld(z, w)] esac
+                              | GLOBAL (x)	     -> assign(s, Glb(x), 0); [st, cst, s, w]
+                              | BEGIN  (f, a, l) -> case take(st, a) of [st, args] -> [st, cst, processArgs(makeState(a, l), args), w] esac
+                              | LABEL  (_)       -> c 
+                            esac;
+                        eval (c, insns)
+    esac
   }
+
   (* End *)
   
   eval ([{}, {}, makeState (0, 0), w], insns) [3].getOutput
@@ -348,7 +391,102 @@ fun addVars (env, names) {
 --    environment (use env.beginFun) and register arguments
 --    (use env.addArg).
 
+fun processDefines(env, defs) {
+  case defs of 
+    {} -> [env, {}, {}]
+  | def : defs -> 
+      case def of 
+        Local (vs) -> if isGlobal(env) 
+                      then case processDefines(addVars(env, vs), defs) of
+                                [env, f, d] -> [env, f, foldr (fun (l, x) { GLOBAL(x) : l }, d, vs)]
+                           esac
+                      else processDefines(addVars(env, vs), defs)
+                      fi
+      | Fun   (f, as, body) -> 
+          case genFunLabel (env, f) of [lF, env] ->  
+              case processDefines(addFun(env, f, lF, size(as)), defs) of
+                [env, f, d] -> [env, [lF, as, body] : f, d]
+              esac
+          esac
+      esac
+  esac
+}
+
+infixl >>= after : (m, k) { 
+  case m of [env, code] -> case k (env) of [env, code2] -> [env, code +++ code2] esac esac
+}  
+
+fun run_  (e)       { [e, {}] }
+fun exp_  (e)       { fun (env) { compileStep(env, e, "") } } 
+fun expL_ (e, l)    { fun (env) { compileStep(env, e, l) } } 
+fun cmd_  (command) { fun (env) { [env, command:{}] } } 
+fun call_ (f)       { fun (env) {
+                        case lookupFun (env, f) of 
+                          Fun (f, n) -> [env, CALL (f, n) : {}] 
+                        esac 
+                      }
+                    }
+fun exps_ (exprs)   { fun (env) { foldl (fun (m, expr) { m >>= exp_(expr) }, run_ (env), exprs) } }
+fun bgnSc_ (defs)   { fun (env) { case processDefines(beginScope(env), defs) of [env, fs, code] -> [rememberAll(env, fs), code] esac } }
+fun endSc_                (env) { [endScope(env), {}] }  
+fun rememberAll (env, fs) { foldl (fun (env, [f, as, b]) { rememberFun(env, f, as, b) }, env, fs) } 
+
+fun compileStep (env, expr, lEnd) {
+	case expr of
+	  Var    (x) 		       -> run_ (env) >>= cmd_ (LD  (lookupVar (env, x)))
+	| Ref    (x) 		       -> run_ (env) >>= cmd_ (LDA (lookupVar (env, x)))
+	| Const  (n)		       -> run_ (env) >>= cmd_ (CONST (n))
+	| Read   (x)     	     -> run_ (env) >>= cmd_ (READ) >>= cmd_ (ST(lookupVar(env, x)))
+	| Skip 			           -> run_ (env)
+	| Ignore (e)		       -> run_ (env) >>= expL_ (e, lEnd) >>= cmd_ (DROP)
+	| Binop  (op, e1, e2)  -> run_ (env) >>= exp_ (e1) >>= exp_ (e2) >>= cmd_ (BINOP (op))
+	| Assn   (x, e)	       -> run_ (env) >>= exp_ (x) >>= exp_ (e) >>= cmd_ (STI)
+	| Write  (e)	         -> run_ (env) >>= exp_ (e) >>= cmd_ (WRITE) 
+	| Seq    (s1, s2)      -> run_ (env) >>= exp_ (s1) >>= expL_ (s2, lEnd)
+	| While  (e, s)	       -> case genLabels(env, 2) of [le, ls, env] ->  
+                                   run_ (env) 
+                               >>= cmd_ (JMP (le))
+                               >>= cmd_ (LABEL (ls))
+                               >>= exp_ (s)
+                               >>= cmd_ (LABEL (le))
+                               >>= exp_ (e) 
+                               >>= cmd_ (CJMP ("nz", ls))
+                            esac
+	| Repeat (s, e)        -> case genLabels(env, 1) of [l, env] ->
+                                   run_ (env)
+                               >>= cmd_ (LABEL (l))
+                               >>= exp_ (s)
+                               >>= exp_ (e)
+                               >>= cmd_ (CJMP ("z", l))
+                            esac
+  | If     (c, th, el)   -> case env.genLabels(2) of [le, lfi, env] ->
+                                   local finally = cmd_ (LABEL (lfi));
+                                   case lEnd of  "" -> lEnd := lfi; finally := run_ | _  -> skip esac;
+                                   run_ (env)
+                               >>= exp_ (c)
+                               >>= cmd_ (CJMP ("z", le) )
+                               >>= exp_ (th)
+                               >>= cmd_ (JMP (lEnd)) 
+                               >>= cmd_ (LABEL (le)) 
+                               >>= exp_ (el)
+                               >>= cmd_ (LABEL (lfi)) 
+                               >>= finally
+                            esac
+	| Call   (f, exprs)    -> run_ (env) >>= exps_ (exprs) >>= call_ (f)
+	| Fun    (f, as, b, e) -> case exp_ (b) (addArgs(beginFun(env, e), as)) of 
+                              [env, bc] -> [env, LABEL (f) : BEGIN (f, size(as), getLocals(env)) : bc +++ (END:{})] 
+                            esac 
+  | Scope  (defs, e)     -> run_ (env) >>= bgnSc_ (defs) >>= exp_ (e) >>= endSc_
+	esac
+}
+
+
 public fun compileSM (expr) {
-  failure ("compileSM not implemented\n")
+  fun cycle (env) {
+    case getFuns(env) of  [{},_] -> [{},{}] | [fs, env] -> run_ (env) >>= exps_(fs) >>= cycle esac
+  }
+	case run_(initCompEnv()) >>= exp_(expr) of 
+    [env, code] -> [env, LABEL("main") : BEGIN ("main", 0, getLocals(env)) : code +++ (END : {})] >>= cycle
+  esac [1]
 }
 (* End *)
