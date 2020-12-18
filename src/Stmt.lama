@@ -21,10 +21,10 @@ fun eval (c, stmt) {
   case c of [st, [i, o]] ->
     case stmt of
         Skip         -> c
-      | Read (x)     -> case i of z : it -> [st <- [x, z], [it, o]] esac
-      | Write (expr) -> [st, [i, evalExpr (st, expr)  : o]]
+	  | Write (expr) -> [st, [i, evalExpr (st, expr)  : o]]
       | Assn (x, e)  -> [(st <- [x, evalExpr (st, e)]), [i, o]]
       | Seq (s1, s2) -> eval (eval (c, s1), s2)
+      | Read (x)     -> case i of z : it -> [st <- [x, z], [it, o]] esac
       esac
     esac 
 }
