@@ -100,14 +100,146 @@ fun evalList (c, exprs) {
 }
 
 (* Assignment *)
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+fun addDefs (state, defs) {
+  fun addDef (state, d) {
+    case d of
+      Local(args) -> addNames(state, args)
+		| Fun(name, args, body) -> addFunction(state, name, args, body)
+    esac
+  }
+  foldl (addDef, state, defs)
 }
+
+public fun isBuiltin(fname) {
+  case fname of
+    "stringval" -> true
+  | "length" -> true
+  | "read" -> true
+  | "write" -> true
+  | _ -> false
+	esac
+}
+
+fun eval (c@[s, w@[inp, outp]], expr) {
+  case expr of
+    Assn (z0, v) ->
+		  case eval(c, v) of [c, val] ->
+			  case eval(c, z0) of
+				  [[s, w], Ref (z)]     -> [[s <- [z, val], w], val]
+				| [c, ElemRef (arr, i)] -> arr[i] := val; [c, val]
+				esac
+			esac
+	| Scope (defs, expr) ->
+      case addDefs(enterScope(s), defs) of s ->
+        case eval([s, w], expr) of [[s, w], val] ->
+          [[leaveScope(s), w], val]
+        esac
+      esac
+	| Call(fname, args) ->
+			case evalList(c, args) of [[s, w], evArgs] ->
+				if isBuiltin(fname) then
+   			  case evalBuiltin(fname, evArgs, w) of [val, w] ->
+   				  [[s, w], val]
+   				esac
+			  else
+				  case lookupFun(s, fname) of f@Fun(fArgs, body) ->
+		    	  local funState = foldl(
+		    		  fun (res, [k, v]) { addName(res, k, v) },
+		    		  enterFunction(s),
+		    		  reverse(zip(fArgs, evArgs))
+		    	  );
+		    	  case eval([funState, w], body) of [[ns, nw], val] ->
+		    		  [[leaveFunction(s, getGlobal(ns)), nw], val]
+		    	  esac
+				  esac
+				fi
+			esac
+  | Seq (head, tail) ->
+    case evalList(c, {head, tail}) of [c, {val, val2}] ->
+      [c, val2]
+    esac
+  | Skip -> [c, Void]
+  | Read (x) -> case readWorld(w) of [a, nw] -> [[s <- [x,a], nw], Void] esac
+  | If (cond, ifb, elseb) ->
+    case eval(c, cond) of [nc, isCond] ->
+      eval(nc, if isCond then ifb else elseb fi)
+    esac
+  | w@While (cond, body) ->
+    case eval(c, cond) of [c, isCond] ->
+      case isCond of
+        true -> eval(eval(c, body)[0], w)
+      | false -> [c, Void]
+      esac
+    esac
+  | r@Repeat (body, cond) ->
+	  case eval(c, body) of [c, _] ->
+      case eval(c, cond) of [c, isCond] ->
+				case isCond of
+          true -> [c, Void]
+        | false -> eval(c, r)
+        esac
+			esac
+    esac
+  | Var (x) -> [c, lookup(s, x)]
+  | Ref (z) -> [c, Ref (z)]
+  | Const (const) -> [c, const]
+  | Binop (op, a, b) ->
+    case evalList(c, {a, b}) of [c, {aa, bb}] ->
+      [c, evalOp(op, aa, bb)]
+    esac
+  | Ignore (expr) -> case eval(c, expr) of [c, val] -> [c, Void] esac
+	| String (str) -> [c, str]
+	| Builtin (fname, args) ->
+	    case evalList(c, args) of [[s, w], evArgs] ->
+   			case evalBuiltin(fname, evArgs, w) of [val, nw] ->
+   				[[s, nw], val]
+   			esac
+			esac
+	| Elem (x, i) ->
+	  case evalList(c, {x, i}) of [c, {xx, ii}] ->
+		  [c, xx[ii]]
+		esac
+	| ElemRef (x, i) ->
+	  case evalList(c, {x, i}) of [c, {xx, ii}] ->
+		  [c, ElemRef(xx, ii)]
+		esac
+	| Array (exprs) ->
+	  case evalList(c, exprs) of [c, evaluated] ->
+		  [c, listArray(evaluated)]
+		esac
+  | wat -> failure("Can't parse command: %s\n", wat.string)
+  esac    
+}
+public fun calculate(op, x, y) {
+  case op of
+    "*"  -> x * y
+  | "+"  -> x + y
+  | "-"  -> x - y
+  | "/"  -> x / y
+  | "%"  -> x % y
+  | "<"  -> x < y
+  | "<=" -> x <= y
+  | "==" -> x == y
+  | "!=" -> x != y
+  | ">"  -> x > y
+  | ">=" -> x >= y
+  | "!!" -> x !! y
+  | "&&" -> x && y
+  esac
+}
+
 (* End *)
 
 -- Evaluates a program with a given input and returns an output
+-- public fun evalExpr (input, expr) {
+--   case eval ([emptyState ().enterScope.addName ("read", Fun ({}, External)).addName ("write", Fun (singleton ("a"), External)) , createWorld (input)], expr) of
+--     [c, _] -> c.snd.getOutput
+--   esac
+-- }
+
+-- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
-  case eval ([emptyState ().enterScope.addName ("read", Fun ({}, External)).addName ("write", Fun (singleton ("a"), External)) , createWorld (input)], expr) of
+  case eval ([enterScope(emptyState ()), createWorld (input)], expr) of
     [c, _] -> c.snd.getOutput
   esac
 }
