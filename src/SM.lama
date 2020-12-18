@@ -100,5 +100,5 @@ public fun compileSM (stmt) {
     | _ -> failure("Statement %s not found. \n", stmt)
   esac
   }
-  compileEnv (initCompEnv (), stmt)[1]
+  compileEnv (initCompEnv(), stmt)[1]
 }
