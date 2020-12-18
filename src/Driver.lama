@@ -27,6 +27,7 @@ fun parseArgs (args) {
     esac
   }
   
+
   fun setMode (m) {
     case deref (mode) of
       Comp -> mode ::= m
@@ -51,11 +52,13 @@ fun parseArgs (args) {
                | "-s"  -> setMode (SM)
                | "-ds" -> setDump (SM)
                | fn    -> setInFile (fn)
+
                esac;
                rec (t)
             esac
          }
       })(args);
+
 
   [fun () {deref (mode)},
    fun () {case deref(infile) of #unboxed -> failure ("input file name not set\n") | fn -> fn esac},
@@ -77,6 +80,7 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
   Succ (program) ->
     case args.getMode of
       Comp -> compileX86 (args, peepSM (args, compileSM (program)))
+
     | mode ->
        local input =
           reverse (fix (fun (f) {
@@ -91,6 +95,7 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
              case mode of
                Int -> evalStmt (input, program)
              | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
+
              esac)
     esac
 | x@Fail (err, line, col) ->   

@@ -75,6 +75,7 @@ public kRead    = s (rRead),
                                                         then Fail ("lowercase identifier expected", s.getLine, s.getCol)
                                                         else a
                                                         fi
+
                                      | a             -> a
                                      esac)
                                 }

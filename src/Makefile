@@ -1,3 +1,4 @@
+
 SHELL := /bin/bash
 
 FILES=$(wildcard *.lama)
