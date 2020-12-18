@@ -30,4 +30,3 @@ clean:
 	$(RM) *.s *.i *~ $(LOGS) $(TESTS) *.run
 	make -C expressions clean
 	make -C deep-expressions clean
-
