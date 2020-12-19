@@ -123,6 +123,7 @@ fun compileExpr (expr) {
       Const (n)     ->  singleton(CONST(n))
     | Var (x)       ->  singleton(LD(x))
     | Binop(op, l, r) ->  compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op)) 
+    | _             -> failure("Expression %s not found. \n", expr)
     esac
 }
 
@@ -132,15 +133,15 @@ fun compileExpr (expr) {
 public fun compileSM (stmt) {
   fun compileEnv(env, stmt) {
   case stmt of
-      Assn(x, e)    -> compileExpr(e) +++ singleton(ST(x))
-    | Write(x)      -> compileExpr(x) +++ singleton(WRITE)
-    | Read(x)       -> singleton(READ) +++ singleton(ST(x))
+      Assn(x, e)    -> [env, compileExpr(expr) +++ singleton(ST(x))]
+    | Write(expr) -> [env, compileExpr(expr) +++ singleton(WRITE)]
+    | Read(x)       -> [env, {READ, ST(x)}]
     | Seq(s1,s2)    -> case compileEnv(env, s1) of
                             [env, s1] -> case compileEnv(env, s2) of
                                           [env, s2]-> [env, s1 +++ s2] 
                                          esac 
                        esac
-    | Skip          -> {}
+    | Skip          -> [env, {}]
     | While(expr, s) -> case genLabels(env, 2) of [label1, label2, env1] ->
                                   case compileEnv(env1, s) of [env2, insts] ->
                                       [env2, {JMP(label2), LABEL(label1)} +++ insts +++ singleton(LABEL(label2)) +++ compileExpr(expr) +++ singleton(CJMP("nz", label1))]
