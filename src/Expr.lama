@@ -63,8 +63,42 @@ fun evalList (c, exprs) {
   esac
 }
 
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+fun eval (c@[sta, wor], expr) {
+case expr of
+	Const (n) -> [c, n]
+	| Var (x) -> [c, sta (x)]
+        | Binop (op, l, r) -> case evalList (c, {l, r}) of
+				[new_c, {value1, value2}] -> [new_c, evalOp (op, value1, value2)] 
+			      esac
+	| Assn (to, from) -> case evalList (c, {to, from}) of
+				[new_c@[new_sta, new_wor], {Ref (place), value}] -> [[new_sta <- [place, value], new_wor], value]
+			     esac
+	| Seq (expr1, expr2) -> case eval (c, expr1) of
+					[new_c, value] -> eval (new_c, expr2)
+				esac
+	| Skip -> [c, None]
+	| Read (to) -> case readWor (wor) of
+				[value, new_wor] -> [[sta <- [to, value], new_wor], None]
+		       esac
+	| Write (expression) -> case eval (c, expression) of
+					[new_c@[new_sta, new_wor], value] -> [[new_sta, writeWor (value, new_wor)], None]
+				esac
+	| If (condition, expr1, expr2) -> case eval (c, condition) of
+						[new_c, 0] -> eval (new_c, expr2)
+						| [new_c, _ ] -> eval (new_c, expr1)
+					  esac
+	| While (condition, expression) -> case eval (c, condition) of
+						[new_c, 0] -> [new_c, None]
+						| [new_c, _ ] -> case eval (new_c, expression)  of
+									[latest_c, value] -> eval (latest_c, expr)
+								 esac
+					   esac
+	| Repeat (expression, condition) -> eval (c, Seq (expression, While (Binop ("==", condition, Const (0)), expression))) 
+	| Ref (x) -> [c, Ref (x)]
+	| Ignore (expression) -> case eval (c, expression) of
+					[new_c, value] -> [new_c, None]
+				 esac 
+esac
 }
 
 
