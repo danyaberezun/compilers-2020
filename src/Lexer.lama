@@ -28,20 +28,21 @@ local keywords =
 -- Regular expression definitions
 public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\\)\\)*", "whitespace"),
       rDecimal     = createRegexp ("-?[0-9]+", "decimal constant"),
-      rLident      = createRegexp ("[a-z][a-z_A-Z0-9]*", "lowercase identifier"),
+      
+	  rSkip        = createRegexp ("skip\\b", """skip"""),
+      rIf          = createRegexp ("if\\b", """if"""),
+      rWhile       = createRegexp ("while\\b", """while"""),
+	  rLident      = createRegexp ("[a-z][a-z_A-Z0-9]*", "lowercase identifier"),
       rRead        = createRegexp ("read\\b", """read"""),
       rWrite       = createRegexp ("write\\b", """write"""),
       rOd          = createRegexp ("od\\b", """od"""),
       rRepeat      = createRegexp ("repeat\\b", """repeat"""),
-	  rSkip        = createRegexp ("skip\\b", """skip"""),
-      rIf          = createRegexp ("if\\b", """if"""),
-      rWhile       = createRegexp ("while\\b", """while"""),
-      rDo          = createRegexp ("do\\b", """do"""),
+      rUntil       = createRegexp ("until\\b", """until"""),
+	  rDo          = createRegexp ("do\\b", """do"""),
       rThen        = createRegexp ("then\\b", """then"""),
       rElse        = createRegexp ("else\\b", """else"""),
       rElif        = createRegexp ("elif\\b", """elif"""),
       rFi          = createRegexp ("fi\\b", """fi"""),
-      rUntil       = createRegexp ("until\\b", """until"""),
       rFor         = createRegexp ("for\\b", """for""");
       
 local whiteSpace = token (rWhiteSpace);
