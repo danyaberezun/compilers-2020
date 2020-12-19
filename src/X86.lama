@@ -302,23 +302,23 @@ fun compile (env, code) {
               [s, env] -> [env, code <+> move (env.loc(x), s)]
             esac
         |BINOP (op) ->
-            case env.pop2 of
-              [x, y, env] -> 
-                  case env.allocate of
-                    [s, env] ->   
-                            case op of
+                        case env.pop2 of
+                          [x, y, env] -> 
+                        case env.allocate of
+                           [s, env] ->   
+                        case op of
                                "+" -> [env, code <+ Mov (y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s)]
                                | "-" -> [env, code <+ Mov (y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s) ]
                                | "*" -> if stackOpnd(y)
-                                        then [env, code <+ Mov (y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s) ]
-                                        else [env, code <+ Binop(op, x, y) <+ Mov(y, s)]
+                                          then [env, code <+ Mov (y, edx) <+ Binop(op, x, edx) <+ Mov(edx, s) ]
+                                          else [env, code <+ Binop(op, x, y) <+ Mov(y, s)]
                                         fi
                                | "/" -> [env, code <+ Mov (y, eax) <+Cltd <+ IDiv(x) <+ Mov(eax, s) ]
                                | "&&" -> if stackOpnd(y)
-                                         then [env, code <+ Mov (y, edx) <+ Binop("*", x, edx) <+ Binop("cmp", L(0), edx)
-                                         <+ Mov(L(0), edx) <+ Set(suffix("!="), "%dl") <+ Mov(edx, s)]
+                                          then [env, code <+ Mov (y, edx) <+ Binop("*", x, edx) <+ Binop("cmp", L(0), edx)
+                                          <+ Mov(L(0), edx) <+ Set(suffix("!="), "%dl") <+ Mov(edx, s)]
                                          else [env, code <+ Binop("*", x, y) <+ Binop("cmp", L(0), y)
-                                         <+ Mov(L(0), edx) <+ Set(suffix("!="), "%dl") <+ Mov(edx, s)]
+                                          <+ Mov(L(0), edx) <+ Set(suffix("!="), "%dl") <+ Mov(edx, s)]
                                          fi
                                | "!!" -> [env, code <+ Mov (y, edx) <+ Binop("cmp", L(0), edx) <+ Mov(L(0), edx)
                                          <+ Set(suffix("!="), "%dl") <+ Mov(x, eax) <+ Binop("cmp", L(0), eax)
