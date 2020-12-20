@@ -383,43 +383,36 @@ fun compile (env, code) {
             case env.addGlobal(x).allocate of
               [s, env] -> [env, code <+ Lea (env.loc(x), eax) <+ Mov (eax, s)]
             esac
-        | DROP ->
-            case env.pop of
-              [_, env] -> [env, code]
-            esac
+        | DROP -> [env.pop[1], code]
 		| STI -> case env.pop2 of
  					[head, addr, env] -> case env.allocate of
  											[s, env] -> [env, code <+> move (head, I (0, addr)) <+> move (head, s)]
  					     				 esac
  				esac
-        | BINOP (op) ->
-            case env.pop2 of
-                [y, x, env] -> case op of
-                    "+"  -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop("+", y, edx) <+ Mov(edx, env.allocate[0])]
-                |   "-"  -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop("-", y, edx) <+ Mov(edx, env.allocate[0])]
-                |   "*"  -> if stackOpnd (x)
- 							then [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("*", y, edx) <+ Mov (edx, env.allocate[0])]
- 							else [env.allocate[1], code <+ Binop (op, y, x) <+ Mov (x, env.allocate[1])]
+		| BINOP (op) -> case env.pop2 of 
+ 			[second, first, env] -> case env.allocate of
+ 					[s, env] -> case op of
+ 						"+" -> [env, code <+ Mov (first, edx) <+ Binop (op, second, edx) <+ Mov (edx, s)]
+ 						| "-" -> [env, code <+ Mov (first, edx) <+ Binop (op, second, edx) <+ Mov (edx, s)]
+ 						| "*" -> if stackOpnd (first)
+ 							then [env, code <+ Mov (first, edx) <+ Binop (op, second, edx) <+ Mov (edx, s)]
+ 							else [env, code <+ Binop (op, second, first) <+ Mov (first, s)]
  							fi
-				| "&&" -> if stackOpnd (x)
- 							then [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("*", y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), edx) <+ 
- 							Set (suffix ("!="), "%dl") <+ Mov (edx, env.allocate[0])]
-                            else [env.allocate[1], code <+ Binop ("*", y, x) <+ Binop ("cmp", L (0), x) <+ Mov (L (0), edx) <+ 
- 							Set (suffix ("!="), "%dl") <+ Mov (edx, env.allocate[0])]
-                            fi
-				| "!!" -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), edx) <+ Set (suffix ("!="), "%dl") <+ 
- 							Mov (y, eax) <+ Binop ("cmp", L (0), eax) <+ Mov (L (0), eax) <+ Set (suffix ("!="), "%al") <+ 
- 							Binop ("!!", eax, edx) <+ Mov (edx, env.allocate[0])]  
-                |   "/"  -> [env.allocate[1], code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (eax, env.allocate[0])]
-                |   "%"  -> [env.allocate[1], code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (edx, env.allocate[0])]
-                |   "<"    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                |   "<="    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                |   "=="    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                |   "!="    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                |   ">="    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                |   ">"    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
-                esac
-            esac
+ 						| "/" -> [env, code <+ Mov (first, eax) <+ Cltd <+ IDiv (second) <+ Mov (eax, s)]
+ 						| "%" -> [env, code <+ Mov (first, eax) <+ Cltd <+ IDiv (second) <+ Mov (edx, s)]
+ 						| "&&" -> if stackOpnd (first)
+ 							then [env, code <+ Mov (first, edx) <+ Binop ("*", second, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), edx) <+ 
+ 							Set (suffix ("!="), "%dl") <+ Mov (edx, s)]
+                                                         else [env, code <+ Binop ("*", second, first) <+ Binop ("cmp", L (0), first) <+ Mov (L (0), edx) <+ 
+ 							Set (suffix ("!="), "%dl") <+ Mov (edx, s)]
+                                                          fi
+ 						| "!!" -> [env, code <+ Mov (first, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), edx) <+ Set (suffix ("!="), "%dl") <+ 
+ 							Mov (second, eax) <+ Binop ("cmp", L (0), eax) <+ Mov (L (0), eax) <+ Set (suffix ("!="), "%al") <+ 
+ 							Binop ("!!", eax, edx) <+ Mov (edx, s)]  
+ 						| _ -> [env, code <+ Mov (second, edx) <+ Binop ("cmp", edx, first) <+ Mov (L (0), edx) <+ Set (suffix (op), "%dl") <+ Mov (edx, s)]
+ 						   esac
+ 					esac
+ 			esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
