@@ -15,14 +15,29 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
+
+fun eval (c@[st, [i, o]], stmt) {
+  case stmt of
+    Skip -> c |
+    Assn(str, expr) -> [st <- [str, evalExpr(st, expr)], [i, o]] |
+    Read(x) ->
+      local tmp;
+      tmp := readWorld([i,o]);
+      [st <- [x, tmp[0]], tmp[1]] |
+    Write(expr) -> [st, writeWorld(evalExpr(st, expr), [i,o])] |
+    Seq(stmt1, stmt2) -> eval(eval(c, stmt1), stmt2) |
+    If(expr, s1, s2) -> if (evalExpr(c[0], expr)) then eval(c, s1) else eval(c, s2) fi |
+    While(expr, s) -> if (evalExpr(c[0], expr)) then eval(c, Seq(s, stmt)) else eval(c, Skip) fi |
+    Repeat(s, expr) ->
+    	local c1 = eval(c, s);
+    	if (evalExpr(c1[0], expr)) then eval(c1, Skip) else eval(c1, Repeat(s, expr)) fi
+  esac
+
 --        if     (expr, stmt, stmt) |
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
 
-fun eval (c, stmt) {
-  failure ("Stmt eval not implemented\n")
 }
-
 -- Evaluates a program with a given input and returns an output
 public fun evalStmt (input, stmt) {
   eval ([emptyState, createWorld (input)], stmt).snd.getOutput

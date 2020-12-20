@@ -1,13 +1,16 @@
 -- Stack machine.
 
+
 import Array;
 import List;
 import Fun;
 import Collection;
+
 import World;
 import State;
 import Expr;
 import Buffer;
+
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -29,6 +32,9 @@ public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
 
+
+-- Stack machine interpreter. Takes an SM-configuration and a program,
+-- returns a final configuration
 -- Evaluation environment: keeps a mapping between labels and (sub)programs
 fun initEvalEnv (insns) {
   local map =
@@ -41,7 +47,7 @@ fun initEvalEnv (insns) {
             esac
           }
         }) $ [emptyMap (compare), insns];
-  
+
   [fun (l) {
      case findMap (map, l) of Some (insns) -> insns esac
   }]
@@ -54,8 +60,30 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, c@[s, st, w@[i,o]], insns) {
+  case insns of
+       {} -> c |
+       READ: p -> case i of x : it -> eval(env, [x : s, st, [it, o]], p) esac |
+       WRITE: p -> case s of x : ss -> eval(env, [ss, st, [i, x : o]], p) esac |
+       BINOP (b): p -> case s of x : y: ss -> eval(env, [evalOp(b, y, x): ss, st, w], p) esac |
+       LD (x): p -> eval(env, [st(x) : s, st, w], p) |
+       ST (x): p -> case s of y : ss -> eval(env, [s, (st <- [x,y]), w], p) esac |
+       CONST (n): p -> eval(env, [n : s, st, w], p) |
+
+       LABEL (s) : p -> eval(env, c, p) |
+       JMP (l) : p -> eval(env, c, fromLabel(env, l)) |
+       CJMP (cond, l) : p -> case s of cmp : ss -> case cond of
+       						"z" -> case cmp of
+       							0 -> eval (env, c, fromLabel(env, l)) |
+       							_ -> eval (env, c, p)
+       						esac |
+       						"nz" -> case cmp of
+       							0 -> eval (env, c, p) |
+       							_ -> eval (env, c, fromLabel(env, l))
+       						esac
+       	esac
+  	esac
+    esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -97,12 +125,46 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of
+     Var(x) -> singleton(LD(x)) |
+     Const(n) -> singleton(CONST(n)) |
+     Binop (op, expr1, expr2) -> compileExpr(expr1) +++ compileExpr(expr2) +++ singleton(BINOP(op))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+	fun compileEnv (env, stmt) {
+	  case stmt of
+	     Assn(x, expr) -> [env, compileExpr(expr) +++ singleton(ST(x))] |
+	     Read(x) -> [env, {READ, ST(x)}] |
+	     Write(expr) -> [env, compileExpr(expr) +++ singleton(WRITE)] |
+	     Skip -> [env, {}] |
+	     Seq(s1,s2) -> case compileEnv(env, s1) of
+	     			[env1, stmt1] -> case compileEnv (env1, s2) of
+	     				[env2, stmt2] -> [env2, stmt1 +++ stmt2]
+	     				esac
+	     			esac |
+	     While(expr, s) -> case genLabels(env,2) of
+	     			[l1, l2, env1] -> case compileEnv(env1, s) of
+	     				[env2, insns] -> [env2, {JMP (l2), LABEL (l1)} +++ insns +++ singleton (LABEL (l2)) +++ compileExpr(expr) +++ singleton(CJMP ("nz", l1))]
+	     				esac
+	     			esac |
+	     Repeat(s, expr) -> case genLabels(env, 1) of
+	     				[l, env1] -> case compileEnv(env1, s) of
+	     					[env2, insns] -> [env2, singleton(LABEL (l)) +++ insns +++ compileExpr(expr) +++ singleton(CJMP("z", l))]
+	     					esac
+	     			esac |
+	     If(expr, s1, s2) -> case genLabels(env, 2) of
+	     				[le, lf, env1] -> case compileEnv (env1, s1) of
+	     					[env2, stmt1] -> case compileEnv(env2, s2) of
+	     						[env3, stmt2] -> [env3, compileExpr(expr) +++ singleton(CJMP ("z", le)) +++ stmt1 +++ singleton (JMP(lf)) +++ singleton(LABEL (le)) +++ stmt2 +++ singleton(LABEL (lf))]
+	     					esac
+	     				esac
+	     			esac
+	  esac
+	  }
+	  compileEnv(initCompEnv(), stmt)[1]
 }

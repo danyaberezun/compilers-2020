@@ -290,17 +290,51 @@ fun compile (env, code) {
           READ ->
             case env.allocate of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
+            esac
         | WRITE ->
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+
+        | CONST(n) ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (L(n), s)]
+            esac
+        | LD(x) ->
+            case env.addGlobal(x).allocate of
+              [s, env] -> [env, code <+> move (env.loc(x), s)]
+            esac
+        | ST(x) ->
+            case env.addGlobal(x).pop of
+              [s, env] -> [env, code <+> move (s, env.loc(x))]
+            esac
+        | BINOP (op) ->
+            case env.pop2 of
+            	[y, x, env] -> case env.allocate of
+              	  [s, env] -> case op of
+
+			 "/"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, s)]
+			| "%"  -> [env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, s)]
+
+			| "+"  -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
+			| "-"  -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
+			| "*"  -> [env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s)]
+			| "&&" -> [env, code <+  Mov (x, edx) <+ Binop ("*", y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+
+                	| "!!" -> [env, code <+  Mov (x, edx) <+ Binop ("!!", y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, s)]
+			| _ 	-> [env, code <+ Mov(y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+	      		esac
+             	esac
+            esac
+	| LABEL(l) -> [env, code <+ Label(l)]
+	| JMP(l) -> [env, code <+ Jmp (l)]
+	| CJMP(c, l) -> case env.pop of [x, env] -> [env, code <+ Mov (x, edx) <+ Binop ("cmp", L(0), edx) <+ CJmp (c, l)] esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
   }
 
-  compile (env, code) 
+  compile (env, code)
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
@@ -313,9 +347,9 @@ public fun compileX86 (args, code) {
                          #unboxed -> "../runtime/"
                        | path     -> path
                        esac ++ "/runtime.o";
-       
+
        fwrite (asmFile,
-               map (insnString, 
+               map (insnString,
                     getBuffer $
                       singletonBuffer (Meta ("\t.global\tmain\n")) <+>
                       dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
@@ -324,9 +358,10 @@ public fun compileX86 (args, code) {
                         prologue (getStackSize (env)) <+>
                         code <+>
                         epilogue ()
-                    )
+                      )
+
                    ).stringcat);
-                    
+
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }
