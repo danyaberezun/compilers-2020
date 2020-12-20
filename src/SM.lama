@@ -1,8 +1,10 @@
 -- Stack machine.
+
 import List;
 import World;
 import State;
 import Expr;
+
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
@@ -24,6 +26,7 @@ fun eval (c@[st, state, w], insns) {
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
+
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
@@ -41,6 +44,7 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
   failure ("compileSM not implemented\n")
+}
     case stmt of
 		  Assn(x, e) -> compileExpr(e) +++ singleton(ST(x))
 		| Write(x) -> compileExpr(x) +++ singleton(WRITE)

@@ -1,3 +1,5 @@
+-- Expression evaluator
+
 import List;
 import State;
 
@@ -29,6 +31,7 @@ public fun evalOp (op, l, r) {
 --        Binop (string, expr, expr)
 public fun evalExpr (st, expr) {
   failure ("evalExpr not implemented\n")
+}
   case expr of
   		  Var (x)	-> st(x)
 		| Const (n)	-> n
