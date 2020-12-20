@@ -65,11 +65,13 @@ fun eval (env, c, insns) {
         case insns of
             {} -> c  
         |   LD (x) : e -> eval(env, [d(x) : s, d, w], e)
-        |   ST (x) : e -> case s of a : ss -> eval(env, [s, (d <- [x, a]), w], e) esac
+        |   ST (x) : e -> case s of a : ss -> eval(env, [ss, (d <- [x, a]), w], e) esac
         |   CONST(c) : e -> eval(env, [c : s, d, w], e)
         |   BINOP(op) : e -> case s of r : l : ss -> eval(env, [evalOp(op, l, r) : ss, d, w], e) esac
-        |   READ : e -> case in of elem : i -> eval(env, [elem: s, d, [i, out]], e) esac
-        |   WRITE : e -> case s of elem : ss -> eval(env, [ss, d, [in, elem : out]], e) esac
+        |   READ : e -> eval (env, [fst (readWorld (w)) : s, d, snd (readWorld (w))], e)
+        |   WRITE : e -> case s of
+                            first : stack -> eval (env, [stack, d, writeWorld (first, w)], e)
+                         esac
         |   LABEL(s) : e -> eval(env, c, e)
         |   JMP(l)      : e -> eval(env, c, fromLabel(env, l))
         |   CJMP(cond, l)  : e -> case s of cmp : ss -> case cond of
@@ -134,32 +136,32 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-	fun compileEnv(env, stmt) {
- 		case stmt of 
- 			Read (x) -> [env, (READ:{}) +++ (ST (x):{})]
- 		| 	Ref (x) -> [env, (LDA (x):{})]
- 		| 	Ignore (x) -> case compileEnv (env, x) of
- 							[env1, res] -> [env1, res +++ (DROP:{})]
- 						  esac
- 		| 	Var (x) -> [env, (LD (x) : {})]
- 		| 	Const (n) -> [env, (CONST (n) : {})]
- 		| 	Binop (op, l, r) -> case compileEnv (env, l) of
- 									[env1, lres] -> case compileEnv (env1, r) of
- 										[env2, rres] -> [env2, lres +++ rres +++ (BINOP (op) : {})]
- 													esac
- 				      			esac
- 		| Write (e) -> case compileEnv (env, e) of
- 							[env1, res] -> [env1, res +++ (WRITE:{})]
+   fun compileEnv(env, stmt) {
+ 	case stmt of 
+ 		Read (x) -> [env, (READ:{}) +++ (ST (x):{})]
+ 		| Ref (x) -> [env, (LDA (x):{})]
+ 		| Ignore (x) -> case compileEnv (env, x) of
+ 					[env1, res] -> [env1, res +++ (DROP:{})]
  						esac
+ 		| Var (x) -> [env, (LD (x) : {})]
+ 		| Const (n) -> [env, (CONST (n) : {})]
+ 		| Binop (op, l, r) -> case compileEnv (env, l) of
+ 					[env1, lres] -> case compileEnv (env1, r) of
+ 								[env2, rres] -> [env2, lres +++ rres +++ (BINOP (op) : {})]
+ 									esac
+ 				      		  esac
+ 		| Write (e) -> case compileEnv (env, e) of
+ 					[env1, res] -> [env1, res +++ (WRITE:{})]
+ 					   esac
  		| Seq (s1, s2) -> case compileEnv (env, s1) of
- 								[env1, stmt1] -> case compileEnv (env1, s2) of
- 									[env2, stmt2] -> [env2, stmt1 +++ stmt2]
- 												 esac
+ 					[env1, stmt1] -> case compileEnv (env1, s2) of
+ 								[env2, stmt2] -> [env2, stmt1 +++ stmt2]
+ 									 esac
  						  esac
  		| Assn (x, e) -> case compileEnv (env, x) of
- 							[env1, var] -> case compileEnv (env1, e) of
+ 					[env1, var] -> case compileEnv (env1, e) of
  								[env2, res] -> [env2, var +++ res +++ (STI :{})]
- 										   esac
+ 								   esac
  						 esac
  		| Skip -> [env, {}]
  		| If (e, s1, s2) -> case genLabels(env, 2) of 
@@ -186,7 +188,6 @@ public fun compileSM (stmt) {
  						     esac
  				   esac
  	esac
- 	}
-
+ 	} 
     compileEnv(initCompEnv (), stmt)[1]
 }
