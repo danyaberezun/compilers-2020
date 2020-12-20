@@ -53,9 +53,9 @@ fun binop (op) {
 }
 
 local stmtElse = memo $ eta syntax (
-    kElif e=exp kThen s1=stmt s2=stmtElse { fun (a) { If (e(Val), s1(a), s2(a)) }}
-|   kElse s=stmt kFi {s}
-|   loc=pos kFi { fun (a) { assertVoid(a, Skip, loc) }}
+	kFi {fun (attr) {assertVoid (attr, Skip, loc)}} |
+ 	kElse statement=exp kFi {fun (attr) {statement(attr)}} |
+ 	kElif condition=exp kThen statement1=exp statement2=stmtElse {fun (a) {If (condition(Val), statement1(a), statement2(a))}}
 );
 
 local primary  = memo $ eta syntax (
@@ -74,10 +74,10 @@ local primary  = memo $ eta syntax (
                                     loc=pos kSkip { fun (a) { assertVoid(a, Skip, loc) } } |
                                     loc=pos kRead s["("] x=lident s[")"] { fun (a) { assertVoid(a, Read (x), loc) }} |
                                     loc=pos kWrite s["("] e=exp s[")"] { fun (a) { assertVoid(a, Write (e(Val)), loc) }} |
-                                    kIf e=exp kThen s1=stmt s2=stmtElse { fun (a) { If (e(Val), s1(a), s2(a)) }} |
-                                    loc=pos kWhile loc1=pos e=exp kDo s=stmt kOd { fun (a) { assertVoid(a, While (e(Val), s(Void)), loc) }} |
-                                    loc=pos kRepeat s=stmt kUntil e=basic { fun (a) { assertVoid(a, Repeat (s(Void), e(Val)), loc) }} |
-                                    loc=pos kFor s1=stmt s[","] e=exp s[","] s2=stmt kDo s3=stmt kOd { fun (a) {
+                                    kIf e=exp kThen s1=exp s2=stmtElse { fun (a) { If (e(Val), s1(a), s2(a)) }} |
+                                    loc=pos kWhile loc1=pos e=exp kDo s=exp kOd { fun (a) { assertVoid(a, While (e(Val), s(Void)), loc) }} |
+                                    loc=pos kRepeat s=exp kUntil e=basic { fun (a) { assertVoid(a, Repeat (s(Void), e(Val)), loc) }} |
+                                    loc=pos kFor s1=exp s[","] e=exp s[","] s2=exp kDo s3=exp kOd { fun (a) {
                                         local result = Seq (s1(Void), While (e(Val), Seq (s3(Void), s2(Void))));
                                         assertVoid(a, result, loc)
                                     }}),
@@ -92,8 +92,7 @@ local primary  = memo $ eta syntax (
                                     [Left , map (binop, {"*", "/", "%"})]
                                    },
                                    primary)),
-      exp      = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}}),
-      stmt     = exp;
+      exp      = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
 
 -- Public top-level parser
 public parse = syntax (s=exp {s (Void)});

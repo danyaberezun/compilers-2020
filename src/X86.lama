@@ -374,10 +374,10 @@ fun compile (env, code) {
 		| ST (x) -> case env.addGlobal (x).pop of
  	      				[s, env] -> [env, code <+> move (s, env.loc (x))]
  	    			esac
-        | LABEL(label) -> [env.retrieveStack(label), code <+ Label (label)]
-        | JMP(label) -> [env.setStack(label), code <+ Jmp (label)]
+        | LABEL(label) -> [if env.isBarrier then env.retrieveStack (label) else env fi, code <+ Label (label)]
+        | JMP(label) -> [env.setStack(label).setBarrier, code <+ Jmp (label)]
         | CJMP(cond, label) -> case env.pop of 
-                                [s, env] -> [env.setStack(label), code <+ Mov(L(0), eax) <+ Binop("cmp", s, eax) <+ CJmp(cond, label)]
+                                [s, env] -> [env.setStack(label), code <+ Mov(s, eax) <+ Binop("cmp", L(0), eax) <+ CJmp(cond, label)]
                                esac
         | LDA (x) ->
             case env.addGlobal(x).allocate of
@@ -404,9 +404,9 @@ fun compile (env, code) {
 				| "&&" -> if stackOpnd (x)
  							then [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("*", y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), edx) <+ 
  							Set (suffix ("!="), "%dl") <+ Mov (edx, env.allocate[0])]
-                                                         else [env.allocate[1], code <+ Binop ("*", y, x) <+ Binop ("cmp", L (0), x) <+ Mov (L (0), edx) <+ 
+                            else [env.allocate[1], code <+ Binop ("*", y, x) <+ Binop ("cmp", L (0), x) <+ Mov (L (0), edx) <+ 
  							Set (suffix ("!="), "%dl") <+ Mov (edx, env.allocate[0])]
-                                                          fi
+                            fi
 				| "!!" -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), edx) <+ Set (suffix ("!="), "%dl") <+ 
  							Mov (y, eax) <+ Binop ("cmp", L (0), eax) <+ Mov (L (0), eax) <+ Set (suffix ("!="), "%al") <+ 
  							Binop ("!!", eax, edx) <+ Mov (edx, env.allocate[0])]  
