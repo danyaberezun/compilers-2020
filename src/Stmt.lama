@@ -29,9 +29,9 @@ fun eval (condition, statement) {
 										0 -> eval(condition, s2)
 										| _ -> eval(condition, s1)
 								   esac
-			| While (elem, s1) -> case evalExpr(state, elem) of
-										0 -> condition
-										| _ -> eval(eval(condition, s1), While(elem, s1))
+			| While (expr, s) -> case evalExpr(state, expr) of
+										  0 -> condition
+										| _ -> eval(eval(condition, s), While(expr, s))
 								  esac
 			| Repeat (s1, elem) -> case eval(condition, s1) of
 										condition@[state, _] -> case evalExpr(state, elem) of
@@ -48,3 +48,4 @@ fun eval (condition, statement) {
 public fun evalStmt (input, stmt) {
 	eval ([emptyState, createWorld (input)], stmt).snd.getOutput
 }
+

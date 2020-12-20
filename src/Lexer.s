@@ -1,6 +1,6 @@
-	.file "/home/toliman/LamaProject/compilers-2020/src/Lexer.lama"
+	.file "/compilers-2020/src/Lexer.lama"
 
-	.stabs "/home/toliman/LamaProject/compilers-2020/src/Lexer.lama",100,0,0,.Ltext
+	.stabs "/compilers-2020/src/Lexer.lama",100,0,0,.Ltext
 
 	.globl	Ls
 
@@ -8,55 +8,177 @@
 
 	.globl	global_end
 
+	.globl	global_kDo
+
+	.globl	global_kElif
+
+	.globl	global_kElse
+
+	.globl	global_kFi
+
+	.globl	global_kFor
+
+	.globl	global_kIf
+
+	.globl	global_kOd
+
 	.globl	global_kRead
 
+	.globl	global_kRepeat
+
 	.globl	global_kSkip
+
+	.globl	global_kThen
+
+	.globl	global_kUntil
+
+	.globl	global_kWhile
 
 	.globl	global_kWrite
 
 	.globl	global_lident
 
+	.globl	global_rDecimal
+
+	.globl	global_rDo
+
+	.globl	global_rElif
+
+	.globl	global_rElse
+
+	.globl	global_rFi
+
+	.globl	global_rFor
+
+	.globl	global_rIf
+
+	.globl	global_rLident
+
+	.globl	global_rOd
+
+	.globl	global_rRead
+
+	.globl	global_rRepeat
+
+	.globl	global_rSkip
+
+	.globl	global_rThen
+
+	.globl	global_rUntil
+
+	.globl	global_rWhile
+
+	.globl	global_rWhiteSpace
+
+	.globl	global_rWrite
+
 	.globl	initLexer
 
 	.data
 
-string_5:	.string	"-?[0-9]+"
+string_16:	.string	"-?[0-9]+"
 
-string_7:	.string	"[a-z][a-z_A-Z0-9]*"
+string_18:	.string	"[a-z][a-z_A-Z0-9]*"
 
-string_10:	.string	"\"read\""
+string_39:	.string	"\"do\""
 
-string_14:	.string	"\"skip\""
+string_33:	.string	"\"elif\""
 
-string_12:	.string	"\"write\""
+string_31:	.string	"\"else\""
 
-string_3:	.string	"\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\\)\\)*"
+string_35:	.string	"\"fi\""
 
-string_6:	.string	"decimal constant"
+string_47:	.string	"\"for\""
 
-string_8:	.string	"lowercase identifier"
+string_27:	.string	"\"if\""
 
-string_15:	.string	"lowercase identifier expected"
+string_41:	.string	"\"od\""
+
+string_21:	.string	"\"read\""
+
+string_43:	.string	"\"repeat\""
+
+string_25:	.string	"\"skip\""
+
+string_29:	.string	"\"then\""
+
+string_45:	.string	"\"until\""
+
+string_37:	.string	"\"while\""
+
+string_23:	.string	"\"write\""
+
+string_14:	.string	"\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\\)\\)*"
+
+string_17:	.string	"decimal constant"
+
+string_9:	.string	"do"
+
+string_38:	.string	"do\\b"
+
+string_6:	.string	"elif"
+
+string_32:	.string	"elif\\b"
+
+string_5:	.string	"else"
+
+string_30:	.string	"else\\b"
+
+string_7:	.string	"fi"
+
+string_34:	.string	"fi\\b"
+
+string_11:	.string	"for"
+
+string_46:	.string	"for\\b"
+
+string_3:	.string	"if"
+
+string_26:	.string	"if\\b"
+
+string_19:	.string	"lowercase identifier"
+
+string_48:	.string	"lowercase identifier expected"
+
+string_10:	.string	"od"
+
+string_40:	.string	"od\\b"
 
 string_0:	.string	"read"
 
-string_9:	.string	"read\\b"
+string_20:	.string	"read\\b"
+
+string_12:	.string	"repeat"
+
+string_42:	.string	"repeat\\b"
 
 string_2:	.string	"skip"
 
-string_13:	.string	"skip\\b"
+string_24:	.string	"skip\\b"
 
-string_4:	.string	"whitespace"
+string_4:	.string	"then"
+
+string_28:	.string	"then\\b"
+
+string_13:	.string	"until"
+
+string_44:	.string	"until\\b"
+
+string_8:	.string	"while"
+
+string_36:	.string	"while\\b"
+
+string_15:	.string	"whitespace"
 
 string_1:	.string	"write"
 
-string_11:	.string	"write\\b"
+string_22:	.string	"write\\b"
 
 _init:	.int 0
 
 	.section custom_data,"aw",@progbits
 
-filler:	.fill	4, 4, 1
+filler:	.fill	14, 4, 1
 
 	.stabs "decimal:S1",40,0,0,global_decimal
 
@@ -66,13 +188,57 @@ global_decimal:	.int	1
 
 global_end:	.int	1
 
+	.stabs "kDo:S1",40,0,0,global_kDo
+
+global_kDo:	.int	1
+
+	.stabs "kElif:S1",40,0,0,global_kElif
+
+global_kElif:	.int	1
+
+	.stabs "kElse:S1",40,0,0,global_kElse
+
+global_kElse:	.int	1
+
+	.stabs "kFi:S1",40,0,0,global_kFi
+
+global_kFi:	.int	1
+
+	.stabs "kFor:S1",40,0,0,global_kFor
+
+global_kFor:	.int	1
+
+	.stabs "kIf:S1",40,0,0,global_kIf
+
+global_kIf:	.int	1
+
+	.stabs "kOd:S1",40,0,0,global_kOd
+
+global_kOd:	.int	1
+
 	.stabs "kRead:S1",40,0,0,global_kRead
 
 global_kRead:	.int	1
 
+	.stabs "kRepeat:S1",40,0,0,global_kRepeat
+
+global_kRepeat:	.int	1
+
 	.stabs "kSkip:S1",40,0,0,global_kSkip
 
 global_kSkip:	.int	1
+
+	.stabs "kThen:S1",40,0,0,global_kThen
+
+global_kThen:	.int	1
+
+	.stabs "kUntil:S1",40,0,0,global_kUntil
+
+global_kUntil:	.int	1
+
+	.stabs "kWhile:S1",40,0,0,global_kWhile
+
+global_kWhile:	.int	1
 
 	.stabs "kWrite:S1",40,0,0,global_kWrite
 
@@ -90,17 +256,61 @@ global_lident:	.int	1
 
 global_rDecimal:	.int	1
 
+	.stabs "rDo:S1",40,0,0,global_rDo
+
+global_rDo:	.int	1
+
+	.stabs "rElif:S1",40,0,0,global_rElif
+
+global_rElif:	.int	1
+
+	.stabs "rElse:S1",40,0,0,global_rElse
+
+global_rElse:	.int	1
+
+	.stabs "rFi:S1",40,0,0,global_rFi
+
+global_rFi:	.int	1
+
+	.stabs "rFor:S1",40,0,0,global_rFor
+
+global_rFor:	.int	1
+
+	.stabs "rIf:S1",40,0,0,global_rIf
+
+global_rIf:	.int	1
+
 	.stabs "rLident:S1",40,0,0,global_rLident
 
 global_rLident:	.int	1
+
+	.stabs "rOd:S1",40,0,0,global_rOd
+
+global_rOd:	.int	1
 
 	.stabs "rRead:S1",40,0,0,global_rRead
 
 global_rRead:	.int	1
 
+	.stabs "rRepeat:S1",40,0,0,global_rRepeat
+
+global_rRepeat:	.int	1
+
 	.stabs "rSkip:S1",40,0,0,global_rSkip
 
 global_rSkip:	.int	1
+
+	.stabs "rThen:S1",40,0,0,global_rThen
+
+global_rThen:	.int	1
+
+	.stabs "rUntil:S1",40,0,0,global_rUntil
+
+global_rUntil:	.int	1
+
+	.stabs "rWhile:S1",40,0,0,global_rWhile
+
+global_rWhile:	.int	1
 
 	.stabs "rWhiteSpace:S1",40,0,0,global_rWhiteSpace
 
@@ -122,6 +332,40 @@ global_whiteSpace:	.int	1
 
 # PUBLIC ("initLexer") / 
 
+# PUBLIC ("global_rWhiteSpace") / 
+
+# PUBLIC ("global_rDecimal") / 
+
+# PUBLIC ("global_rLident") / 
+
+# PUBLIC ("global_rRead") / 
+
+# PUBLIC ("global_rWrite") / 
+
+# PUBLIC ("global_rSkip") / 
+
+# PUBLIC ("global_rIf") / 
+
+# PUBLIC ("global_rThen") / 
+
+# PUBLIC ("global_rElse") / 
+
+# PUBLIC ("global_rElif") / 
+
+# PUBLIC ("global_rFi") / 
+
+# PUBLIC ("global_rWhile") / 
+
+# PUBLIC ("global_rDo") / 
+
+# PUBLIC ("global_rOd") / 
+
+# PUBLIC ("global_rRepeat") / 
+
+# PUBLIC ("global_rUntil") / 
+
+# PUBLIC ("global_rFor") / 
+
 # PUBLIC ("Ls") / 
 
 # PUBLIC ("global_kRead") / 
@@ -129,6 +373,28 @@ global_whiteSpace:	.int	1
 # PUBLIC ("global_kWrite") / 
 
 # PUBLIC ("global_kSkip") / 
+
+# PUBLIC ("global_kIf") / 
+
+# PUBLIC ("global_kThen") / 
+
+# PUBLIC ("global_kElse") / 
+
+# PUBLIC ("global_kElif") / 
+
+# PUBLIC ("global_kFi") / 
+
+# PUBLIC ("global_kWhile") / 
+
+# PUBLIC ("global_kDo") / 
+
+# PUBLIC ("global_kOd") / 
+
+# PUBLIC ("global_kRepeat") / 
+
+# PUBLIC ("global_kUntil") / 
+
+# PUBLIC ("global_kFor") / 
 
 # PUBLIC ("global_decimal") / 
 
@@ -143,6 +409,8 @@ global_whiteSpace:	.int	1
 # EXTERN ("Lunzip") / 
 
 # EXTERN ("Lzip") / 
+
+# EXTERN ("LdeepFlatten") / 
 
 # EXTERN ("Lflatten") / 
 
@@ -179,6 +447,8 @@ global_whiteSpace:	.int	1
 # EXTERN ("LlookupMemo") / 
 
 # EXTERN ("LemptyMemo") / 
+
+# EXTERN ("LemptyCustomMemo") / 
 
 # EXTERN ("LfoldSet") / 
 
@@ -422,8 +692,6 @@ initLexer:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	movl	_init,	%eax
 	test	%eax,	%eax
 	jz	_continue
@@ -432,7 +700,9 @@ _continue:
 
 	movl	$1,	_init
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -451,50 +721,58 @@ _continue:
 
 L1:
 
-# LINE (10) / 
+# LINE (11) / 
 
-	.stabn 68,0,10,0
+	.stabn 68,0,11,0
 
-	.stabn 68,0,10,.L0-initLexer
+	.stabn 68,0,11,.L0-initLexer
 
 .L0:
 
-# LDA (Global ("keywords")) / 
-
-	leal	global_keywords,	%ebx
 # CLOSURE ("LaddSet", []) / 
 
-	pushl	%ebx
 	pushl	$LaddSet
+	pushl	$1
+	call	Bclosure
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# LINE (12) / 
+
+	.stabn 68,0,12,.L1-initLexer
+
+.L1:
+
+# CLOSURE ("Lcompare", []) / 
+
+	pushl	%ebx
+	pushl	$Lcompare
 	pushl	$1
 	call	Bclosure
 	addl	$8,	%esp
 	movl	%eax,	%ecx
 	popl	%ebx
-# CLOSURE ("Lcompare", []) / 
-
-	pushl	%ebx
-	pushl	%ecx
-	pushl	$Lcompare
-	pushl	$1
-	call	Bclosure
-	addl	$8,	%esp
-	movl	%eax,	%esi
-	popl	%ecx
-	popl	%ebx
 # CALL ("LemptySet", 1, false) / 
 
 	pushl	%ebx
 	pushl	%ecx
-	pushl	%esi
 	call	LemptySet
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# STRING ("read") / 
+
+	movl	$string_0,	%esi
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	call	Bstring
 	addl	$4,	%esp
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%esi
-# STRING ("read") / 
+# STRING ("write") / 
 
-	movl	$string_0,	%edi
+	movl	$string_1,	%edi
 	pushl	%ebx
 	pushl	%ecx
 	pushl	%esi
@@ -505,9 +783,9 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%edi
-# STRING ("write") / 
+# STRING ("skip") / 
 
-	movl	$string_1,	-4(%ebp)
+	movl	$string_2,	-4(%ebp)
 	pushl	%ebx
 	pushl	%ecx
 	pushl	%esi
@@ -520,9 +798,9 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	-4(%ebp)
-# STRING ("skip") / 
+# STRING ("if") / 
 
-	movl	$string_2,	-8(%ebp)
+	movl	$string_3,	-8(%ebp)
 	pushl	%ebx
 	pushl	%ecx
 	pushl	%esi
@@ -535,9 +813,339 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	-8(%ebp)
+# STRING ("then") / 
+
+	movl	$string_4,	-12(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-12(%ebp)
+	call	Bstring
+	addl	$4,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-12(%ebp)
+# STRING ("else") / 
+
+	movl	$string_5,	-16(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-16(%ebp)
+	call	Bstring
+	addl	$4,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-16(%ebp)
+# STRING ("elif") / 
+
+	movl	$string_6,	-20(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-20(%ebp)
+	call	Bstring
+	addl	$4,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-20(%ebp)
+# STRING ("fi") / 
+
+	movl	$string_7,	-24(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-24(%ebp)
+	call	Bstring
+	addl	$4,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-24(%ebp)
+# STRING ("while") / 
+
+	movl	$string_8,	-28(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-28(%ebp)
+	call	Bstring
+	addl	$4,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-28(%ebp)
+# STRING ("do") / 
+
+	movl	$string_9,	-32(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-32(%ebp)
+	call	Bstring
+	addl	$4,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-32(%ebp)
+# STRING ("od") / 
+
+	movl	$string_10,	-36(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-36(%ebp)
+	call	Bstring
+	addl	$4,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-36(%ebp)
+# STRING ("for") / 
+
+	movl	$string_11,	-40(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-40(%ebp)
+	call	Bstring
+	addl	$4,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-40(%ebp)
+# STRING ("repeat") / 
+
+	movl	$string_12,	-44(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-44(%ebp)
+	call	Bstring
+	addl	$4,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-44(%ebp)
+# STRING ("until") / 
+
+	movl	$string_13,	-48(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-48(%ebp)
+	call	Bstring
+	addl	$4,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-48(%ebp)
 # CONST (0) / 
 
-	movl	$1,	-12(%ebp)
+	movl	$1,	-52(%ebp)
+# SEXP ("cons", 2) / 
+
+	movl	$1697575,	-56(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-56(%ebp)
+	pushl	-52(%ebp)
+	pushl	-48(%ebp)
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-48(%ebp)
+# SEXP ("cons", 2) / 
+
+	movl	$1697575,	-52(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-52(%ebp)
+	pushl	-48(%ebp)
+	pushl	-44(%ebp)
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-44(%ebp)
+# SEXP ("cons", 2) / 
+
+	movl	$1697575,	-48(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-48(%ebp)
+	pushl	-44(%ebp)
+	pushl	-40(%ebp)
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-40(%ebp)
+# SEXP ("cons", 2) / 
+
+	movl	$1697575,	-44(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-44(%ebp)
+	pushl	-40(%ebp)
+	pushl	-36(%ebp)
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-36(%ebp)
+# SEXP ("cons", 2) / 
+
+	movl	$1697575,	-40(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-40(%ebp)
+	pushl	-36(%ebp)
+	pushl	-32(%ebp)
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-32(%ebp)
+# SEXP ("cons", 2) / 
+
+	movl	$1697575,	-36(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-36(%ebp)
+	pushl	-32(%ebp)
+	pushl	-28(%ebp)
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-28(%ebp)
+# SEXP ("cons", 2) / 
+
+	movl	$1697575,	-32(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-32(%ebp)
+	pushl	-28(%ebp)
+	pushl	-24(%ebp)
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-24(%ebp)
+# SEXP ("cons", 2) / 
+
+	movl	$1697575,	-28(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-28(%ebp)
+	pushl	-24(%ebp)
+	pushl	-20(%ebp)
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-20(%ebp)
+# SEXP ("cons", 2) / 
+
+	movl	$1697575,	-24(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-24(%ebp)
+	pushl	-20(%ebp)
+	pushl	-16(%ebp)
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-16(%ebp)
+# SEXP ("cons", 2) / 
+
+	movl	$1697575,	-20(%ebp)
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	pushl	%edi
+	pushl	-20(%ebp)
+	pushl	-16(%ebp)
+	pushl	-12(%ebp)
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
+	popl	%edi
+	popl	%esi
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	-12(%ebp)
 # SEXP ("cons", 2) / 
 
 	movl	$1697575,	-16(%ebp)
@@ -590,539 +1198,962 @@ L1:
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%edi
-# CALL ("Lfoldl", 3, false) / 
+# SEXP ("cons", 2) / 
 
+	movl	$1697575,	-4(%ebp)
 	pushl	%ebx
+	pushl	%ecx
+	pushl	-4(%ebp)
 	pushl	%edi
 	pushl	%esi
-	pushl	%ecx
-	call	Lfoldl
-	addl	$12,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
-	movl	%eax,	%ebx
-# DROP / 
-
-# LINE (13) / 
-
-	.stabn 68,0,13,.L1-initLexer
-
-.L1:
-
-# LDA (Global ("rWhiteSpace")) / 
-
-	leal	global_rWhiteSpace,	%ebx
-# STRING ("\\\\(\\\\([ \\n\\r\\t]*\\\\)\\\\|\\\\(--[^\\n]*[ \\n\\r\\t]*\\\\)\\\\)*") / 
-
-	movl	$string_3,	%ecx
-	pushl	%ebx
-	pushl	%ecx
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STRING ("whitespace") / 
-
-	movl	$string_4,	%esi
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%esi
-	call	Bstring
-	addl	$4,	%esp
+	pushl	$7
+	call	Bsexp
+	addl	$16,	%esp
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%esi
-# CALL ("LcreateRegexp", 2, false) / 
+# CALL ("Lfoldl", 3, false) / 
 
-	pushl	%ebx
 	pushl	%esi
 	pushl	%ecx
-	call	LcreateRegexp
-	addl	$8,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
+	pushl	%ebx
+	call	Lfoldl
+	addl	$12,	%esp
 	movl	%eax,	%ebx
-# DROP / 
+# LINE (10) / 
 
-# LINE (14) / 
-
-	.stabn 68,0,14,.L2-initLexer
+	.stabn 68,0,10,.L2-initLexer
 
 .L2:
 
-# LDA (Global ("rDecimal")) / 
+# ST (Global ("keywords")) / 
 
-	leal	global_rDecimal,	%ebx
-# STRING ("-?[0-9]+") / 
-
-	movl	$string_5,	%ecx
-	pushl	%ebx
-	pushl	%ecx
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STRING ("decimal constant") / 
-
-	movl	$string_6,	%esi
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%esi
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ecx
-	popl	%ebx
-	movl	%eax,	%esi
-# CALL ("LcreateRegexp", 2, false) / 
-
-	pushl	%ebx
-	pushl	%esi
-	pushl	%ecx
-	call	LcreateRegexp
-	addl	$8,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
-	movl	%eax,	%ebx
+	movl	%ebx,	global_keywords
 # DROP / 
 
-# LINE (15) / 
+# STRING ("\\\\(\\\\([ \\n\\r\\t]*\\\\)\\\\|\\\\(--[^\\n]*[ \\n\\r\\t]*\\\\)\\\\)*") / 
 
-	.stabn 68,0,15,.L3-initLexer
+	movl	$string_14,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("whitespace") / 
+
+	movl	$string_15,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# LINE (29) / 
+
+	.stabn 68,0,29,.L3-initLexer
 
 .L3:
 
-# LDA (Global ("rLident")) / 
+# ST (Global ("rWhiteSpace")) / 
 
-	leal	global_rLident,	%ebx
-# STRING ("[a-z][a-z_A-Z0-9]*") / 
-
-	movl	$string_7,	%ecx
-	pushl	%ebx
-	pushl	%ecx
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STRING ("lowercase identifier") / 
-
-	movl	$string_8,	%esi
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%esi
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ecx
-	popl	%ebx
-	movl	%eax,	%esi
-# CALL ("LcreateRegexp", 2, false) / 
-
-	pushl	%ebx
-	pushl	%esi
-	pushl	%ecx
-	call	LcreateRegexp
-	addl	$8,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
-	movl	%eax,	%ebx
-# DROP / 
-
-# LINE (16) / 
-
-	.stabn 68,0,16,.L4-initLexer
-
-.L4:
-
-# LDA (Global ("rRead")) / 
-
-	leal	global_rRead,	%ebx
-# STRING ("read\\\\b") / 
-
-	movl	$string_9,	%ecx
-	pushl	%ebx
-	pushl	%ecx
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STRING ("\"read\"") / 
-
-	movl	$string_10,	%esi
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%esi
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ecx
-	popl	%ebx
-	movl	%eax,	%esi
-# CALL ("LcreateRegexp", 2, false) / 
-
-	pushl	%ebx
-	pushl	%esi
-	pushl	%ecx
-	call	LcreateRegexp
-	addl	$8,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
-	movl	%eax,	%ebx
-# DROP / 
-
-# LINE (17) / 
-
-	.stabn 68,0,17,.L5-initLexer
-
-.L5:
-
-# LDA (Global ("rWrite")) / 
-
-	leal	global_rWrite,	%ebx
-# STRING ("write\\\\b") / 
-
-	movl	$string_11,	%ecx
-	pushl	%ebx
-	pushl	%ecx
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STRING ("\"write\"") / 
-
-	movl	$string_12,	%esi
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%esi
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ecx
-	popl	%ebx
-	movl	%eax,	%esi
-# CALL ("LcreateRegexp", 2, false) / 
-
-	pushl	%ebx
-	pushl	%esi
-	pushl	%ecx
-	call	LcreateRegexp
-	addl	$8,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
-	movl	%eax,	%ebx
-# DROP / 
-
-# LINE (18) / 
-
-	.stabn 68,0,18,.L6-initLexer
-
-.L6:
-
-# LDA (Global ("rSkip")) / 
-
-	leal	global_rSkip,	%ebx
-# STRING ("skip\\\\b") / 
-
-	movl	$string_13,	%ecx
-	pushl	%ebx
-	pushl	%ecx
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STRING ("\"skip\"") / 
-
-	movl	$string_14,	%esi
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%esi
-	call	Bstring
-	addl	$4,	%esp
-	popl	%ecx
-	popl	%ebx
-	movl	%eax,	%esi
-# CALL ("LcreateRegexp", 2, false) / 
-
-	pushl	%ebx
-	pushl	%esi
-	pushl	%ecx
-	call	LcreateRegexp
-	addl	$8,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
-	movl	%eax,	%ebx
-# DROP / 
-
-# LINE (20) / 
-
-	.stabn 68,0,20,.L7-initLexer
-
-.L7:
-
-# LDA (Global ("whiteSpace")) / 
-
-	leal	global_whiteSpace,	%ebx
-# LD (Global ("rWhiteSpace")) / 
-
-	movl	global_rWhiteSpace,	%ecx
-# CALL ("Ltoken", 1, false) / 
-
-	pushl	%ebx
-	pushl	%ecx
-	call	Ltoken
-	addl	$4,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
-	movl	%eax,	%ebx
-# DROP / 
-
-# LINE (27) / 
-
-	.stabn 68,0,27,.L8-initLexer
-
-.L8:
-
-# LDA (Global ("kRead")) / 
-
-	leal	global_kRead,	%ebx
-# LD (Global ("rRead")) / 
-
-	movl	global_rRead,	%ecx
-# CALL ("Ls", 1, false) / 
-
-	pushl	%ebx
-	pushl	%ecx
-	call	Ls
-	addl	$4,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
-	movl	%eax,	%ebx
-# DROP / 
-
-# LINE (28) / 
-
-	.stabn 68,0,28,.L9-initLexer
-
-.L9:
-
-# LDA (Global ("kWrite")) / 
-
-	leal	global_kWrite,	%ebx
-# LD (Global ("rWrite")) / 
-
-	movl	global_rWrite,	%ecx
-# CALL ("Ls", 1, false) / 
-
-	pushl	%ebx
-	pushl	%ecx
-	call	Ls
-	addl	$4,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
-	movl	%eax,	%ebx
-# DROP / 
-
-# LINE (29) / 
-
-	.stabn 68,0,29,.L10-initLexer
-
-.L10:
-
-# LDA (Global ("kSkip")) / 
-
-	leal	global_kSkip,	%ebx
-# LD (Global ("rSkip")) / 
-
-	movl	global_rSkip,	%ecx
-# CALL ("Ls", 1, false) / 
-
-	pushl	%ebx
-	pushl	%ecx
-	call	Ls
-	addl	$4,	%esp
-	popl	%ebx
-	movl	%eax,	%ecx
-# STI / 
-
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
-	movl	%eax,	%ebx
+	movl	%ebx,	global_rWhiteSpace
 # DROP / 
 
 # LINE (30) / 
 
-	.stabn 68,0,30,.L11-initLexer
+	.stabn 68,0,30,.L4-initLexer
 
-.L11:
+.L4:
 
-# LDA (Global ("decimal")) / 
+# STRING ("-?[0-9]+") / 
 
-	leal	global_decimal,	%ebx
-# LD (Global ("rDecimal")) / 
+	movl	$string_16,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("decimal constant") / 
 
-	movl	global_rDecimal,	%ecx
-# CALL ("Ls", 1, false) / 
-
+	movl	$string_17,	%ecx
 	pushl	%ebx
 	pushl	%ecx
-	call	Ls
+	call	Bstring
 	addl	$4,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# STI / 
+# CALL ("LcreateRegexp", 2, false) / 
 
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
 	movl	%eax,	%ebx
+# ST (Global ("rDecimal")) / 
+
+	movl	%ebx,	global_rDecimal
 # DROP / 
 
 # LINE (31) / 
 
-	.stabn 68,0,31,.L12-initLexer
+	.stabn 68,0,31,.L5-initLexer
 
-.L12:
+.L5:
 
-# LDA (Global ("end")) / 
+# STRING ("[a-z][a-z_A-Z0-9]*") / 
 
-	leal	global_end,	%ebx
-# CLOSURE ("Lmemo", []) / 
-
+	movl	$string_18,	%ebx
 	pushl	%ebx
-	pushl	$Lmemo
-	pushl	$1
-	call	Bclosure
-	addl	$8,	%esp
-	movl	%eax,	%ecx
-	popl	%ebx
-# LD (Global ("whiteSpace")) / 
-
-	movl	global_whiteSpace,	%esi
-# CLOSURE ("Leof", []) / 
-
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%esi
-	pushl	$Leof
-	pushl	$1
-	call	Bclosure
-	addl	$8,	%esp
-	movl	%eax,	%edi
-	popl	%esi
-	popl	%ecx
-	popl	%ebx
-# CALL ("Llift", 1, false) / 
-
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%esi
-	pushl	%edi
-	call	Llift
+	call	Bstring
 	addl	$4,	%esp
-	popl	%esi
-	popl	%ecx
-	popl	%ebx
-	movl	%eax,	%edi
-# CALL ("Li__Infix_12462", 2, false) / 
+	movl	%eax,	%ebx
+# STRING ("lowercase identifier") / 
 
+	movl	$string_19,	%ecx
 	pushl	%ebx
 	pushl	%ecx
-	pushl	%edi
-	pushl	%esi
-	call	Li__Infix_12462
-	addl	$8,	%esp
-	popl	%ecx
-	popl	%ebx
-	movl	%eax,	%esi
-# CALL ("Li__Infix_36", 2, false) / 
-
-	pushl	%ebx
-	pushl	%esi
-	pushl	%ecx
-	call	Li__Infix_36
-	addl	$8,	%esp
+	call	Bstring
+	addl	$4,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# STI / 
+# CALL ("LcreateRegexp", 2, false) / 
 
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
 	movl	%eax,	%ebx
+# ST (Global ("rLident")) / 
+
+	movl	%ebx,	global_rLident
 # DROP / 
 
 # LINE (32) / 
 
-	.stabn 68,0,32,.L13-initLexer
+	.stabn 68,0,32,.L6-initLexer
+
+.L6:
+
+# STRING ("read\\\\b") / 
+
+	movl	$string_20,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"read\"") / 
+
+	movl	$string_21,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rRead")) / 
+
+	movl	%ebx,	global_rRead
+# DROP / 
+
+# LINE (33) / 
+
+	.stabn 68,0,33,.L7-initLexer
+
+.L7:
+
+# STRING ("write\\\\b") / 
+
+	movl	$string_22,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"write\"") / 
+
+	movl	$string_23,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rWrite")) / 
+
+	movl	%ebx,	global_rWrite
+# DROP / 
+
+# LINE (34) / 
+
+	.stabn 68,0,34,.L8-initLexer
+
+.L8:
+
+# STRING ("skip\\\\b") / 
+
+	movl	$string_24,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"skip\"") / 
+
+	movl	$string_25,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rSkip")) / 
+
+	movl	%ebx,	global_rSkip
+# DROP / 
+
+# LINE (35) / 
+
+	.stabn 68,0,35,.L9-initLexer
+
+.L9:
+
+# STRING ("if\\\\b") / 
+
+	movl	$string_26,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"if\"") / 
+
+	movl	$string_27,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rIf")) / 
+
+	movl	%ebx,	global_rIf
+# DROP / 
+
+# LINE (36) / 
+
+	.stabn 68,0,36,.L10-initLexer
+
+.L10:
+
+# STRING ("then\\\\b") / 
+
+	movl	$string_28,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"then\"") / 
+
+	movl	$string_29,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rThen")) / 
+
+	movl	%ebx,	global_rThen
+# DROP / 
+
+# LINE (37) / 
+
+	.stabn 68,0,37,.L11-initLexer
+
+.L11:
+
+# STRING ("else\\\\b") / 
+
+	movl	$string_30,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"else\"") / 
+
+	movl	$string_31,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rElse")) / 
+
+	movl	%ebx,	global_rElse
+# DROP / 
+
+# LINE (38) / 
+
+	.stabn 68,0,38,.L12-initLexer
+
+.L12:
+
+# STRING ("elif\\\\b") / 
+
+	movl	$string_32,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"elif\"") / 
+
+	movl	$string_33,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rElif")) / 
+
+	movl	%ebx,	global_rElif
+# DROP / 
+
+# LINE (39) / 
+
+	.stabn 68,0,39,.L13-initLexer
 
 .L13:
 
-# LDA (Global ("lident")) / 
+# STRING ("fi\\\\b") / 
 
-	leal	global_lident,	%ebx
-# CLOSURE ("Lmemo", []) / 
+	movl	$string_34,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"fi\"") / 
+
+	movl	$string_35,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rFi")) / 
+
+	movl	%ebx,	global_rFi
+# DROP / 
+
+# LINE (40) / 
+
+	.stabn 68,0,40,.L14-initLexer
+
+.L14:
+
+# STRING ("while\\\\b") / 
+
+	movl	$string_36,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"while\"") / 
+
+	movl	$string_37,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rWhile")) / 
+
+	movl	%ebx,	global_rWhile
+# DROP / 
+
+# LINE (41) / 
+
+	.stabn 68,0,41,.L15-initLexer
+
+.L15:
+
+# STRING ("do\\\\b") / 
+
+	movl	$string_38,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"do\"") / 
+
+	movl	$string_39,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rDo")) / 
+
+	movl	%ebx,	global_rDo
+# DROP / 
+
+# LINE (42) / 
+
+	.stabn 68,0,42,.L16-initLexer
+
+.L16:
+
+# STRING ("od\\\\b") / 
+
+	movl	$string_40,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"od\"") / 
+
+	movl	$string_41,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rOd")) / 
+
+	movl	%ebx,	global_rOd
+# DROP / 
+
+# LINE (43) / 
+
+	.stabn 68,0,43,.L17-initLexer
+
+.L17:
+
+# STRING ("repeat\\\\b") / 
+
+	movl	$string_42,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"repeat\"") / 
+
+	movl	$string_43,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rRepeat")) / 
+
+	movl	%ebx,	global_rRepeat
+# DROP / 
+
+# LINE (44) / 
+
+	.stabn 68,0,44,.L18-initLexer
+
+.L18:
+
+# STRING ("until\\\\b") / 
+
+	movl	$string_44,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"until\"") / 
+
+	movl	$string_45,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rUntil")) / 
+
+	movl	%ebx,	global_rUntil
+# DROP / 
+
+# LINE (45) / 
+
+	.stabn 68,0,45,.L19-initLexer
+
+.L19:
+
+# STRING ("for\\\\b") / 
+
+	movl	$string_46,	%ebx
+	pushl	%ebx
+	call	Bstring
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# STRING ("\"for\"") / 
+
+	movl	$string_47,	%ecx
+	pushl	%ebx
+	pushl	%ecx
+	call	Bstring
+	addl	$4,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("LcreateRegexp", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	LcreateRegexp
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("rFor")) / 
+
+	movl	%ebx,	global_rFor
+# DROP / 
+
+# LD (Global ("rWhiteSpace")) / 
+
+	movl	global_rWhiteSpace,	%ebx
+# CALL ("Ltoken", 1, false) / 
 
 	pushl	%ebx
+	call	Ltoken
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# LINE (47) / 
+
+	.stabn 68,0,47,.L20-initLexer
+
+.L20:
+
+# ST (Global ("whiteSpace")) / 
+
+	movl	%ebx,	global_whiteSpace
+# DROP / 
+
+# LD (Global ("rRead")) / 
+
+	movl	global_rRead,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# LINE (54) / 
+
+	.stabn 68,0,54,.L21-initLexer
+
+.L21:
+
+# ST (Global ("kRead")) / 
+
+	movl	%ebx,	global_kRead
+# DROP / 
+
+# LINE (55) / 
+
+	.stabn 68,0,55,.L22-initLexer
+
+.L22:
+
+# LD (Global ("rWrite")) / 
+
+	movl	global_rWrite,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kWrite")) / 
+
+	movl	%ebx,	global_kWrite
+# DROP / 
+
+# LINE (56) / 
+
+	.stabn 68,0,56,.L23-initLexer
+
+.L23:
+
+# LD (Global ("rSkip")) / 
+
+	movl	global_rSkip,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kSkip")) / 
+
+	movl	%ebx,	global_kSkip
+# DROP / 
+
+# LINE (57) / 
+
+	.stabn 68,0,57,.L24-initLexer
+
+.L24:
+
+# LD (Global ("rIf")) / 
+
+	movl	global_rIf,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kIf")) / 
+
+	movl	%ebx,	global_kIf
+# DROP / 
+
+# LINE (58) / 
+
+	.stabn 68,0,58,.L25-initLexer
+
+.L25:
+
+# LD (Global ("rThen")) / 
+
+	movl	global_rThen,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kThen")) / 
+
+	movl	%ebx,	global_kThen
+# DROP / 
+
+# LINE (59) / 
+
+	.stabn 68,0,59,.L26-initLexer
+
+.L26:
+
+# LD (Global ("rElse")) / 
+
+	movl	global_rElse,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kElse")) / 
+
+	movl	%ebx,	global_kElse
+# DROP / 
+
+# LINE (60) / 
+
+	.stabn 68,0,60,.L27-initLexer
+
+.L27:
+
+# LD (Global ("rElif")) / 
+
+	movl	global_rElif,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kElif")) / 
+
+	movl	%ebx,	global_kElif
+# DROP / 
+
+# LINE (61) / 
+
+	.stabn 68,0,61,.L28-initLexer
+
+.L28:
+
+# LD (Global ("rFi")) / 
+
+	movl	global_rFi,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kFi")) / 
+
+	movl	%ebx,	global_kFi
+# DROP / 
+
+# LINE (62) / 
+
+	.stabn 68,0,62,.L29-initLexer
+
+.L29:
+
+# LD (Global ("rWhile")) / 
+
+	movl	global_rWhile,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kWhile")) / 
+
+	movl	%ebx,	global_kWhile
+# DROP / 
+
+# LINE (63) / 
+
+	.stabn 68,0,63,.L30-initLexer
+
+.L30:
+
+# LD (Global ("rDo")) / 
+
+	movl	global_rDo,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kDo")) / 
+
+	movl	%ebx,	global_kDo
+# DROP / 
+
+# LINE (64) / 
+
+	.stabn 68,0,64,.L31-initLexer
+
+.L31:
+
+# LD (Global ("rOd")) / 
+
+	movl	global_rOd,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kOd")) / 
+
+	movl	%ebx,	global_kOd
+# DROP / 
+
+# LINE (65) / 
+
+	.stabn 68,0,65,.L32-initLexer
+
+.L32:
+
+# LD (Global ("rRepeat")) / 
+
+	movl	global_rRepeat,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kRepeat")) / 
+
+	movl	%ebx,	global_kRepeat
+# DROP / 
+
+# LINE (66) / 
+
+	.stabn 68,0,66,.L33-initLexer
+
+.L33:
+
+# LD (Global ("rUntil")) / 
+
+	movl	global_rUntil,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kUntil")) / 
+
+	movl	%ebx,	global_kUntil
+# DROP / 
+
+# LINE (67) / 
+
+	.stabn 68,0,67,.L34-initLexer
+
+.L34:
+
+# LD (Global ("rFor")) / 
+
+	movl	global_rFor,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("kFor")) / 
+
+	movl	%ebx,	global_kFor
+# DROP / 
+
+# LINE (68) / 
+
+	.stabn 68,0,68,.L35-initLexer
+
+.L35:
+
+# LD (Global ("rDecimal")) / 
+
+	movl	global_rDecimal,	%ebx
+# CALL ("Ls", 1, false) / 
+
+	pushl	%ebx
+	call	Ls
+	addl	$4,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("decimal")) / 
+
+	movl	%ebx,	global_decimal
+# DROP / 
+
+# LINE (69) / 
+
+	.stabn 68,0,69,.L36-initLexer
+
+.L36:
+
+# CLOSURE ("Lmemo", []) / 
+
 	pushl	$Lmemo
 	pushl	$1
 	call	Bclosure
 	addl	$8,	%esp
-	movl	%eax,	%ecx
-	popl	%ebx
-# LINE (33) / 
-
-	.stabn 68,0,33,.L14-initLexer
-
-.L14:
-
+	movl	%eax,	%ebx
 # LD (Global ("whiteSpace")) / 
 
-	movl	global_whiteSpace,	%esi
-# CLOSURE ("Llambda_0", []) / 
+	movl	global_whiteSpace,	%ecx
+# CLOSURE ("Leof", []) / 
 
 	pushl	%ebx
 	pushl	%ecx
-	pushl	%esi
-	pushl	$Llambda_0
+	pushl	$Leof
 	pushl	$1
 	call	Bclosure
 	addl	$8,	%esp
-	movl	%eax,	%edi
-	popl	%esi
+	movl	%eax,	%esi
 	popl	%ecx
 	popl	%ebx
 # CALL ("Llift", 1, false) / 
@@ -1130,38 +2161,94 @@ L1:
 	pushl	%ebx
 	pushl	%ecx
 	pushl	%esi
-	pushl	%edi
 	call	Llift
 	addl	$4,	%esp
-	popl	%esi
-	popl	%ecx
-	popl	%ebx
-	movl	%eax,	%edi
-# CALL ("Li__Infix_12462", 2, false) / 
-
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%edi
-	pushl	%esi
-	call	Li__Infix_12462
-	addl	$8,	%esp
 	popl	%ecx
 	popl	%ebx
 	movl	%eax,	%esi
-# CALL ("Li__Infix_36", 2, false) / 
+# CALL ("Li__Infix_12462", 2, false) / 
 
 	pushl	%ebx
 	pushl	%esi
 	pushl	%ecx
-	call	Li__Infix_36
+	call	Li__Infix_12462
 	addl	$8,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx
-# STI / 
+# CALL ("Li__Infix_36", 2, false) / 
 
-	movl	%ecx,	%eax
-	movl	%eax,	(%ebx)
+	pushl	%ecx
+	pushl	%ebx
+	call	Li__Infix_36
+	addl	$8,	%esp
 	movl	%eax,	%ebx
+# ST (Global ("end")) / 
+
+	movl	%ebx,	global_end
+# DROP / 
+
+# LINE (70) / 
+
+	.stabn 68,0,70,.L37-initLexer
+
+.L37:
+
+# CLOSURE ("Lmemo", []) / 
+
+	pushl	$Lmemo
+	pushl	$1
+	call	Bclosure
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# LD (Global ("whiteSpace")) / 
+
+	movl	global_whiteSpace,	%ecx
+# LINE (71) / 
+
+	.stabn 68,0,71,.L38-initLexer
+
+.L38:
+
+# CLOSURE ("Llambda_0", []) / 
+
+	pushl	%ebx
+	pushl	%ecx
+	pushl	$Llambda_0
+	pushl	$1
+	call	Bclosure
+	addl	$8,	%esp
+	movl	%eax,	%esi
+	popl	%ecx
+	popl	%ebx
+# CALL ("Llift", 1, false) / 
+
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%esi
+	call	Llift
+	addl	$4,	%esp
+	popl	%ecx
+	popl	%ebx
+	movl	%eax,	%esi
+# CALL ("Li__Infix_12462", 2, false) / 
+
+	pushl	%ebx
+	pushl	%esi
+	pushl	%ecx
+	call	Li__Infix_12462
+	addl	$8,	%esp
+	popl	%ebx
+	movl	%eax,	%ecx
+# CALL ("Li__Infix_36", 2, false) / 
+
+	pushl	%ecx
+	pushl	%ebx
+	call	Li__Infix_36
+	addl	$8,	%esp
+	movl	%eax,	%ebx
+# ST (Global ("lident")) / 
+
+	movl	%ebx,	global_lident
 # DROP / 
 
 # CONST (0) / 
@@ -1185,9 +2272,9 @@ LinitLexer_epilogue:
 	ret
 	.cfi_endproc
 
-	.set	LinitLexer_SIZE,	16
+	.set	LinitLexer_SIZE,	56
 
-	.set	LSinitLexer_SIZE,	4
+	.set	LSinitLexer_SIZE,	14
 
 	.size initLexer, .-initLexer
 
@@ -1195,7 +2282,7 @@ LinitLexer_epilogue:
 
 Llambda_0:
 
-# BEGIN ("Llambda_0", 1, 0, [], ["k"], [{ blab="L97"; elab="L98"; names=[]; subs=[{ blab="L100"; elab="L101"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("Llambda_0", 1, 0, [], ["k"], [{ blab="L204"; elab="L205"; names=[]; subs=[{ blab="L207"; elab="L208"; names=[]; subs=[]; }]; }]) / 
 
 	.type lambda_0, @function
 
@@ -1205,10 +2292,10 @@ Llambda_0:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -1218,21 +2305,21 @@ Llambda_0:
 	movl	$filler,	%esi
 	movl	$LSLlambda_0_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L97") / 
+# SLABEL ("L204") / 
 
-L97:
+L204:
 
-# SLABEL ("L100") / 
+# SLABEL ("L207") / 
 
-L100:
+L207:
 
-# LINE (34) / 
+# LINE (72) / 
 
-	.stabn 68,0,34,0
+	.stabn 68,0,72,0
 
-	.stabn 68,0,34,.L15-Llambda_0
+	.stabn 68,0,72,.L39-Llambda_0
 
-.L15:
+.L39:
 
 # CLOSURE ("Llambda_1_3", [Arg (0)]) / 
 
@@ -1242,13 +2329,17 @@ L100:
 	call	Bclosure
 	addl	$12,	%esp
 	movl	%eax,	%ebx
-# SLABEL ("L101") / 
+# SLABEL ("L208") / 
 
-L101:
+L208:
 
-# SLABEL ("L98") / 
+# LABEL ("L206") / 
 
-L98:
+L206:
+
+# SLABEL ("L205") / 
+
+L205:
 
 # END / 
 
@@ -1274,7 +2365,7 @@ LLlambda_0_epilogue:
 
 Llambda_1_3:
 
-# BEGIN ("Llambda_1_3", 1, 2, [Arg (0)], ["s"], [{ blab="L102"; elab="L103"; names=[]; subs=[{ blab="L105"; elab="L106"; names=[]; subs=[{ blab="L133"; elab="L134"; names=[("a", 0)]; subs=[{ blab="L135"; elab="L136"; names=[]; subs=[]; }]; }; { blab="L116"; elab="L117"; names=[("a", 1); ("v", 0)]; subs=[{ blab="L118"; elab="L119"; names=[]; subs=[{ blab="L131"; elab="L132"; names=[]; subs=[]; }; { blab="L124"; elab="L125"; names=[]; subs=[]; }]; }]; }]; }]; }]) / 
+# BEGIN ("Llambda_1_3", 1, 2, [Arg (0)], ["s"], [{ blab="L209"; elab="L210"; names=[]; subs=[{ blab="L212"; elab="L213"; names=[]; subs=[{ blab="L240"; elab="L241"; names=[("a", 0)]; subs=[{ blab="L242"; elab="L243"; names=[]; subs=[]; }]; }; { blab="L223"; elab="L224"; names=[("a", 1); ("v", 0)]; subs=[{ blab="L225"; elab="L226"; names=[]; subs=[{ blab="L238"; elab="L239"; names=[]; subs=[]; }; { blab="L231"; elab="L232"; names=[]; subs=[]; }]; }]; }]; }]; }]) / 
 
 	.type lambda_1_3, @function
 
@@ -1284,27 +2375,25 @@ Llambda_1_3:
 
 	.stabs "a:1",128,0,0,-4
 
-	.stabn 192,0,0,L133-Llambda_1_3
+	.stabn 192,0,0,L240-Llambda_1_3
 
-	.stabn 224,0,0,L134-Llambda_1_3
+	.stabn 224,0,0,L241-Llambda_1_3
 
 	.stabs "a:1",128,0,0,-8
 
 	.stabs "v:1",128,0,0,-4
 
-	.stabn 192,0,0,L116-Llambda_1_3
+	.stabn 192,0,0,L223-Llambda_1_3
 
-	.stabn 224,0,0,L117-Llambda_1_3
+	.stabn 224,0,0,L224-Llambda_1_3
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%edx
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	12
+
+	.cfi_offset 5, -12
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -1314,17 +2403,25 @@ Llambda_1_3:
 	movl	$filler,	%esi
 	movl	$LSLlambda_1_3_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L102") / 
+# SLABEL ("L209") / 
 
-L102:
+L209:
 
-# SLABEL ("L105") / 
+# SLABEL ("L212") / 
 
-L105:
+L212:
 
 # LD (Access (0)) / 
 
 	movl	4(%edx),	%ebx
+# LINE (73) / 
+
+	.stabn 68,0,73,0
+
+	.stabn 68,0,73,.L40-Llambda_1_3
+
+.L40:
+
 # LD (Arg (0)) / 
 
 	movl	12(%ebp),	%ecx
@@ -1345,9 +2442,9 @@ L105:
 # DUP / 
 
 	movl	%ecx,	%esi
-# SLABEL ("L116") / 
+# SLABEL ("L223") / 
 
-L116:
+L223:
 
 # DUP / 
 
@@ -1370,23 +2467,23 @@ L116:
 	popl	%ebx
 	popl	%edx
 	movl	%eax,	%edi
-# CJMP ("nz", "L114") / 
+# CJMP ("nz", "L221") / 
 
 	sarl	%edi
 	cmpl	$0,	%edi
-	jnz	L114
-# LABEL ("L115") / 
+	jnz	L221
+# LABEL ("L222") / 
 
-L115:
+L222:
 
 # DROP / 
 
-# JMP ("L113") / 
+# JMP ("L220") / 
 
-	jmp	L113
-# LABEL ("L114") / 
+	jmp	L220
+# LABEL ("L221") / 
 
-L114:
+L221:
 
 # DUP / 
 
@@ -1470,17 +2567,15 @@ L114:
 
 # DROP / 
 
-# SLABEL ("L118") / 
+# SLABEL ("L225") / 
 
-L118:
+L225:
 
-# LINE (36) / 
+# LINE (74) / 
 
-	.stabn 68,0,36,0
+	.stabn 68,0,74,.L41-Llambda_1_3
 
-	.stabn 68,0,36,.L16-Llambda_1_3
-
-.L16:
+.L41:
 
 # LD (Global ("keywords")) / 
 
@@ -1499,18 +2594,18 @@ L118:
 	popl	%ebx
 	popl	%edx
 	movl	%eax,	%ecx
-# CJMP ("z", "L121") / 
+# CJMP ("z", "L228") / 
 
 	sarl	%ecx
 	cmpl	$0,	%ecx
-	jz	L121
-# SLABEL ("L124") / 
+	jz	L228
+# SLABEL ("L231") / 
 
-L124:
+L231:
 
 # STRING ("lowercase identifier expected") / 
 
-	movl	$string_15,	%ecx
+	movl	$string_48,	%ecx
 	pushl	%edx
 	pushl	%ebx
 	pushl	%ecx
@@ -1519,6 +2614,12 @@ L124:
 	popl	%ebx
 	popl	%edx
 	movl	%eax,	%ecx
+# LINE (75) / 
+
+	.stabn 68,0,75,.L42-Llambda_1_3
+
+.L42:
+
 # LD (Arg (0)) / 
 
 	movl	12(%ebp),	%esi
@@ -1566,49 +2667,54 @@ L124:
 	popl	%ebx
 	popl	%edx
 	movl	%eax,	%ecx
-# SLABEL ("L125") / 
+# SLABEL ("L232") / 
 
-L125:
+L232:
 
-# JMP ("L107") / 
+# JMP ("L214") / 
 
-	jmp	L107
-# LABEL ("L121") / 
+	jmp	L214
+# LABEL ("L228") / 
 
-L121:
+L228:
 
-# SLABEL ("L131") / 
+# SLABEL ("L238") / 
 
-L131:
+L238:
+
+# LINE (76) / 
+
+	.stabn 68,0,76,.L43-Llambda_1_3
+
+.L43:
 
 # LD (Local (1)) / 
 
 	movl	-8(%ebp),	%ecx
-# SLABEL ("L132") / 
+# SLABEL ("L239") / 
 
-L132:
+L239:
 
-# JMP ("L107") / 
+# JMP ("L214") / 
 
-	jmp	L107
-# SLABEL ("L119") / 
+	jmp	L214
+# SLABEL ("L226") / 
 
-L119:
+L226:
 
-# JMP ("L107") / 
+# JMP ("L214") / 
 
-	jmp	L107
-# SLABEL ("L117") / 
+# SLABEL ("L224") / 
 
-L117:
+L224:
 
-# SLABEL ("L133") / 
+# SLABEL ("L240") / 
 
-L133:
+L240:
 
-# LABEL ("L113") / 
+# LABEL ("L220") / 
 
-L113:
+L220:
 
 # DUP / 
 
@@ -1625,33 +2731,33 @@ L113:
 
 # DROP / 
 
-# SLABEL ("L135") / 
+# SLABEL ("L242") / 
 
-L135:
+L242:
 
-# LINE (37) / 
+# LINE (78) / 
 
-	.stabn 68,0,37,.L17-Llambda_1_3
+	.stabn 68,0,78,.L44-Llambda_1_3
 
-.L17:
+.L44:
 
 # LD (Local (0)) / 
 
 	movl	-4(%ebp),	%ecx
-# SLABEL ("L136") / 
+# SLABEL ("L243") / 
 
-L136:
+L243:
 
-# SLABEL ("L134") / 
+# SLABEL ("L241") / 
 
-L134:
+L241:
 
-# JMP ("L107") / 
+# JMP ("L214") / 
 
-	jmp	L107
-# LABEL ("L107") / 
+	jmp	L214
+# LABEL ("L214") / 
 
-L107:
+L214:
 
 # CALLC (1, true) / 
 
@@ -1662,13 +2768,17 @@ L107:
 	popl	%ebp
 	popl	%ebx
 	jmp	*%eax
-# SLABEL ("L106") / 
+# SLABEL ("L213") / 
 
-L106:
+L213:
 
-# SLABEL ("L103") / 
+# LABEL ("L211") / 
 
-L103:
+L211:
+
+# SLABEL ("L210") / 
+
+L210:
 
 # END / 
 
@@ -1695,7 +2805,7 @@ LLlambda_1_3_epilogue:
 
 Ls:
 
-# BEGIN ("Ls", 1, 0, [], ["t"], [{ blab="L137"; elab="L138"; names=[]; subs=[{ blab="L140"; elab="L141"; names=[]; subs=[]; }]; }]) / 
+# BEGIN ("Ls", 1, 0, [], ["t"], [{ blab="L244"; elab="L245"; names=[]; subs=[{ blab="L247"; elab="L248"; names=[]; subs=[]; }]; }]) / 
 
 	.type s, @function
 
@@ -1705,10 +2815,10 @@ Ls:
 
 	.cfi_startproc
 
-	.cfi_adjust_cfa_offset	4
-
 	pushl	%ebp
-	.cfi_adjust_cfa_offset	4
+	.cfi_def_cfa_offset	8
+
+	.cfi_offset 5, -8
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -1718,21 +2828,21 @@ Ls:
 	movl	$filler,	%esi
 	movl	$LSLs_SIZE,	%ecx
 	rep movsl	
-# SLABEL ("L137") / 
+# SLABEL ("L244") / 
 
-L137:
+L244:
 
-# SLABEL ("L140") / 
+# SLABEL ("L247") / 
 
-L140:
+L247:
 
-# LINE (24) / 
+# LINE (51) / 
 
-	.stabn 68,0,24,0
+	.stabn 68,0,51,0
 
-	.stabn 68,0,24,.L18-Ls
+	.stabn 68,0,51,.L45-Ls
 
-.L18:
+.L45:
 
 # CLOSURE ("Lmemo", []) / 
 
@@ -1783,13 +2893,17 @@ L140:
 	call	Li__Infix_36
 	addl	$8,	%esp
 	movl	%eax,	%ebx
-# SLABEL ("L141") / 
+# SLABEL ("L248") / 
 
-L141:
+L248:
 
-# SLABEL ("L138") / 
+# LABEL ("L246") / 
 
-L138:
+L246:
+
+# SLABEL ("L245") / 
+
+L245:
 
 # END / 
 

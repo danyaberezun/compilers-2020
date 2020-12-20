@@ -5,7 +5,7 @@ import Lexer;
 import List;
 import Fun;
 import Matcher;
-import Stmt;
+-- import Stmt;
 
 fun inbr (l, p, r) {
   syntax (-l p -r)
@@ -51,15 +51,14 @@ local primary_stmt = memo $ eta syntax (
 		kFor s1=stmt s[","] e=exp s[","] s2=stmt kDo s3=stmt kOd {Seq(s1, While(e, Seq(s3, s2)))} |
 		kRepeat s1=stmt kUntil e=exp {Repeat(s1, e)} |
 		kIf condition=exp kThen s1=stmt s2=else_stmt {If(condition, s1, s2)}),
-
 	else_stmt = memo $ eta syntax (
 			kFi {Skip} |
 			kElse s=stmt kFi {s} |
 			kElif e=exp kThen s1=stmt s2=else_stmt {If(e, s1, s2)}),
-
 	stmt = memo $ eta syntax (
 			primary_stmt |
 			elem1=primary_stmt s[";"] elem2=stmt {Seq(elem1, elem2)}
 		);
 
 public parse = stmt;
+

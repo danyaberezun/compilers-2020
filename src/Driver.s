@@ -64,6 +64,28 @@ global_args:	.int	1
 
 # EXTERN ("global_decimal") / 
 
+# EXTERN ("global_kFor") / 
+
+# EXTERN ("global_kUntil") / 
+
+# EXTERN ("global_kRepeat") / 
+
+# EXTERN ("global_kOd") / 
+
+# EXTERN ("global_kDo") / 
+
+# EXTERN ("global_kWhile") / 
+
+# EXTERN ("global_kFi") / 
+
+# EXTERN ("global_kElif") / 
+
+# EXTERN ("global_kElse") / 
+
+# EXTERN ("global_kThen") / 
+
+# EXTERN ("global_kIf") / 
+
 # EXTERN ("global_kSkip") / 
 
 # EXTERN ("global_kWrite") / 
@@ -71,6 +93,40 @@ global_args:	.int	1
 # EXTERN ("global_kRead") / 
 
 # EXTERN ("Ls") / 
+
+# EXTERN ("global_rFor") / 
+
+# EXTERN ("global_rUntil") / 
+
+# EXTERN ("global_rRepeat") / 
+
+# EXTERN ("global_rOd") / 
+
+# EXTERN ("global_rDo") / 
+
+# EXTERN ("global_rWhile") / 
+
+# EXTERN ("global_rFi") / 
+
+# EXTERN ("global_rElif") / 
+
+# EXTERN ("global_rElse") / 
+
+# EXTERN ("global_rThen") / 
+
+# EXTERN ("global_rIf") / 
+
+# EXTERN ("global_rSkip") / 
+
+# EXTERN ("global_rWrite") / 
+
+# EXTERN ("global_rRead") / 
+
+# EXTERN ("global_rLident") / 
+
+# EXTERN ("global_rDecimal") / 
+
+# EXTERN ("global_rWhiteSpace") / 
 
 # EXTERN ("LinitMatcher") / 
 
