@@ -8,8 +8,6 @@ import Expr;
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
 fun eval (c@[st, state, w], insns) {
 	case insns of
 		  READ : p -> local world = readWorld(w); eval([world[0] : st, state, world[1]], p)
@@ -31,7 +29,6 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
    case expr of
    		  Const(n) -> singleton(CONST(n))
         | Var(elem) -> singleton(LD(elem))
@@ -43,8 +40,6 @@ fun compileExpr (expr) {
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
-}
     case stmt of
 		  Assn(x, e) -> compileExpr(e) +++ singleton(ST(x))
 		| Write(x) -> compileExpr(x) +++ singleton(WRITE)
