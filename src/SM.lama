@@ -75,7 +75,7 @@ fun eval (env, c, insns) {
         |   CJMP(cond, l)  : e -> case s of cmp : ss -> case cond of
                                                             "z" -> case cmp of
                                                                        0 -> eval(env, c, fromLabel (env, l))
-                                                                   | _ -> eval(env, c, e)
+                                                                   | _ -> eval(env, [ss, d, w], e)
                                                                    esac
                                                          |  "nz" -> case cmp of
                                                                         0 -> eval(env, c, e)
