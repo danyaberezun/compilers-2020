@@ -371,10 +371,9 @@ fun compile (env, code) {
             case env.addGlobal(x).allocate of
               [s, env] -> [env, code <+> move (env.loc(x), s)]
             esac
-        | ST(x) ->
-            case env.addGlobal(x) of env ->
-              [env, code <+> move(env.peek, env.loc(x))]
-            esac
+		| ST (x) -> case env.addGlobal (x).pop of
+ 	      				[s, env] -> [env, code <+> move (s, env.loc (x))]
+ 	    			esac
         | LABEL(label) -> [env.retrieveStack(label), code <+ Label (label)]
         | JMP(label) -> [env.setStack(label), code <+ Jmp (label)]
         | CJMP(cond, label) -> case env.pop of 
@@ -382,17 +381,17 @@ fun compile (env, code) {
                                esac
         | LDA (x) ->
             case env.addGlobal(x).allocate of
-              [s, env] -> [env, code <+ Lea (env.loc(x), s)]
+              [s, env] -> [env, code <+ Lea (env.loc(x), eax) <+ Mov (eax, s)]
             esac
         | DROP ->
             case env.pop of
               [_, env] -> [env, code]
             esac
-        | STI ->
-            case env.pop of [s, env] ->
-              local x = env.peek;
-              [env, code <+> move(s, I (0, x)) <+ Mov (s, x)]
-            esac
+		| STI -> case env.pop2 of
+ 					[head, addr, env] -> case env.allocate of
+ 											[s, env] -> [env, code <+> move (head, I (0, addr)) <+> move (head, s)]
+ 					     				 esac
+ 				esac
         | BINOP (op) ->
             case env.pop2 of
                 [y, x, env] -> case op of
