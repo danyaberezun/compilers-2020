@@ -16,35 +16,17 @@ import List;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
---        if     (expr, stmt, stmt) |
---        While  (expr, stmt)       |
---        Repeat (stmt, expr)
 
 fun eval (c, stmt) {
   case c of [st, [i, o]] ->
     case stmt of
-        Skip              -> c
-      | Read (x)          -> case i of z : it -> [st <- [x, z], [it, o]] esac
-      | Write (expr)      -> [st, [i, evalExpr (st, expr)  : o]]
-      | Assn (x, e)       -> [(st <- [x, evalExpr (st, e)]), [i, o]]
-      | Seq (s1, s2)      -> eval (eval (c, s1), s2)
-      | If (expr, s1, s2) -> case evalExpr (st, expr) of
-                               0 -> eval (c, s2)
-                             | _ -> eval (c, s1)
-                             esac 
-      | While (expr, s)   -> case evalExpr (st, expr) of
-                               0 -> c
-                             | _ -> eval (eval (c, s), While (expr, s))
-                             esac
-      | Repeat (s, expr)  -> case eval (c, s) of
-                               c@[st, _] ->  case evalExpr (st, expr) of
-                                                0 -> eval (c, Repeat (s, expr))
-                                              | _ -> c
-                                             esac
-                             esac
-      
+        Skip         -> c
+	  | Write (expr) -> [st, [i, evalExpr (st, expr)  : o]]
+      | Assn (x, e)  -> [(st <- [x, evalExpr (st, e)]), [i, o]]
+      | Seq (s1, s2) -> eval (eval (c, s1), s2)
+      | Read (x)     -> case i of z : it -> [st <- [x, z], [it, o]] esac
+      esac
     esac 
-  esac
 }
 
 -- Evaluates a program with a given input and returns an output
