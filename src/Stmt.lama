@@ -25,6 +25,20 @@ fun eval (condition, statement) {
 			| Write(elem) -> [state, [in, evalExpr(state, elem) : out]]
 			| Assn(elem, e) -> [(state <- [elem, evalExpr(state, e)]), [in, out]]
 			| Seq(s1, s2) -> eval(eval(condition, s1), s2)
+			| If (elem, s1, s2) -> case evalExpr(state, elem) of
+										0 -> eval(condition, s2)
+										| _ -> eval(condition, s1)
+								   esac
+			| While (elem, s1) -> case evalExpr(state, elem) of
+										0 -> condition
+										| _ -> eval(eval(condition, s1), While(elem, s1))
+								  esac
+			| Repeat (s1, elem) -> case eval(condition, s1) of
+										condition@[state, _] -> case evalExpr(state, elem) of
+																	0 -> eval(condition, Repeat(s1, elem))
+																	| _ -> condition
+																esac
+								   esac
 		esac
 	esac
 }
