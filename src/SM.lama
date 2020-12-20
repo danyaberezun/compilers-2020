@@ -7,8 +7,6 @@ import Expr;
 import Buffer;
 import Fun;
 
--- Stack code printer. Takes a list of SM instructions, return its
--- string representation.
 public fun showSMInsn (i) {
   case i of
     READ      -> sprintf ("READ")
@@ -24,27 +22,40 @@ public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
 
--- Stack machine interpreter. Takes an SM-configuration and a program,
--- returns a final configuration
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+  case c of
+    [stack, st, w@[i, o]] -> case insns of
+        {} -> c
+      | BINOP (b) : other -> case stack of x : y : nstack -> eval ([evalBinop (b, y, x) : nstack, st, w], other) esac
+      | CONST (n) : other -> eval ([n : stack, st, w], other)
+      | READ      : other -> case i of x : ni -> eval ([x : stack, st, [ni, o]], other) esac
+      | WRITE     : other -> case stack of x : nstack -> eval ([nstack, st, [i, x : o]], other) esac
+      | LD    (x) : other -> eval ([st (x) : stack, st, w], other)
+      | ST    (x) : other -> case stack of y : nstack -> eval ([nstack, (st <- [x, y]), w], other) esac
+    esac
+  esac
 }
 
--- Runs a stack machine for a given input and a given program, returns an output
+
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list (of, possibly, lists)
--- of stack machine instructions
+
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of 
+    Var   (x)         -> singleton (LD (x))
+  | Const (n)         -> singleton (CONST (n))
+  | Binop (b, e1, e2) -> compileExpr (e1) +++ compileExpr (e2) +++ singleton (BINOP (b))
+  esac
 }
 
--- Compiles a statement into a stack machine code.
--- Takes a statement, returns a list of stack machine
--- instructions.
+
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
-}
+  case stmt of
+    Assn (x, expr) -> compileExpr (expr) +++ singleton (ST (x))
+  | Read (x)       -> {READ, ST (x)}
+  | Write (expr)   -> compileExpr (expr) +++ singleton (WRITE)
+  | Seq (s1, s2)   -> compileSM (s1) +++ compileSM (s2)
+  esac
+} 
