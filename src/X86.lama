@@ -397,9 +397,19 @@ fun compile (env, code) {
                 [y, x, env] -> case op of
                     "+"  -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop("+", y, edx) <+ Mov(edx, env.allocate[0])]
                 |   "-"  -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop("-", y, edx) <+ Mov(edx, env.allocate[0])]
-                |   "*"  -> [env.allocate[1], code <+ Mov (x, eax) <+ Binop("*", y, eax) <+ Mov (eax, env.allocate[0])]
-                |   "&&" -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("*", y, edx) <+ Binop ("cmp", L(0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, env.allocate[0])]
-                |   "!!" -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("!!", y, edx) <+ Binop ("cmp", L(0), edx) <+ Mov (L(0), eax) <+ Set ("ne", "%al") <+ Mov (eax, env.allocate[0])]
+                |   "*"  -> if stackOpnd (x)
+ 							then [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("*", y, edx) <+ Mov (edx, env.allocate[0])]
+ 							else [env.allocate[1], code <+ Binop (op, y, x) <+ Mov (x, env.allocate[1])]
+ 							fi
+				| "&&" -> if stackOpnd (x)
+ 							then [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("*", y, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), edx) <+ 
+ 							Set (suffix ("!="), "%dl") <+ Mov (edx, env.allocate[0])]
+                                                         else [env.allocate[1], code <+ Binop ("*", y, x) <+ Binop ("cmp", L (0), x) <+ Mov (L (0), edx) <+ 
+ 							Set (suffix ("!="), "%dl") <+ Mov (edx, env.allocate[0])]
+                                                          fi
+				| "!!" -> [env.allocate[1], code <+ Mov (x, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), edx) <+ Set (suffix ("!="), "%dl") <+ 
+ 							Mov (y, eax) <+ Binop ("cmp", L (0), eax) <+ Mov (L (0), eax) <+ Set (suffix ("!="), "%al") <+ 
+ 							Binop ("!!", eax, edx) <+ Mov (edx, env.allocate[0])]  
                 |   "/"  -> [env.allocate[1], code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (eax, env.allocate[0])]
                 |   "%"  -> [env.allocate[1], code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (edx, env.allocate[0])]
                 |   "<"    -> [env.allocate[1], code <+ Mov (y, eax) <+ Binop ("cmp", eax, x) <+ Mov(L(0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, env.allocate[0])]
