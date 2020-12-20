@@ -1,0 +1,13 @@
+
+if _ then 3 else 5 fi + x
+
+
+
+
+
+
+x := 7;
+
+y := (if 1 then x else y fi := x + 3);
+
+write (y)
