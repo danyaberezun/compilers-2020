@@ -15,39 +15,29 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
---        If     (expr, stmt, stmt) |
+
+fun eval (c@[st, [i, o]], stmt) {
+  case stmt of
+    Skip -> c |
+    Assn(str, expr) -> [st <- [str, evalExpr(st, expr)], [i, o]] |
+    Read(x) ->
+      local tmp;
+      tmp := readWorld([i,o]);
+      [st <- [x, tmp[0]], tmp[1]] |
+    Write(expr) -> [st, writeWorld(evalExpr(st, expr), [i,o])] |
+    Seq(stmt1, stmt2) -> eval(eval(c, stmt1), stmt2) |
+    If(expr, s1, s2) -> if (evalExpr(c[0], expr)) then eval(c, s1) else eval(c, s2) fi |
+    While(expr, s) -> if (evalExpr(c[0], expr)) then eval(c, Seq(s, stmt)) else eval(c, Skip) fi |
+    Repeat(s, expr) ->
+    	local c1 = eval(c, s);
+    	if (evalExpr(c1[0], expr)) then eval(c1, Skip) else eval(c1, Repeat(s, expr)) fi
+  esac
+
+--        if     (expr, stmt, stmt) |
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
 
-fun eval (c, stmt) {
-  case c of [st, world@[input, output]] ->
-    case stmt of
-         Skip -> c
-       | Read (var) -> case input of
-            v : rest -> [st <- [var, v], [rest, output]]
-          esac
-       | Write (expr) -> [st, [input, evalExpr(st, expr) : output]]
-       | Assn (var, expr) -> [(st <- [var, evalExpr(st, expr)]), [input, output]]
-       | If (expr, s1, s2) ->
-       case evalExpr(st, expr) of
-         0 -> eval(c, s2)
-         | _ -> eval(c, s1)
-       esac
-       | While (expr, s) -> case evalExpr(st, expr) of
-         0 -> [st, world]
-         | _ -> eval(eval(c, s), stmt)
-       esac
-       | Repeat (s, expr) -> case eval(c, s) of [myst, myw] ->
-         case evalExpr(myst, expr) of
-           0 -> eval([myst, myw], Repeat(stmt, expr))
-           | _ -> [myst, myw]
-         esac
-       esac
-       | Seq (s1, s2) -> eval(eval(c, s1), s2)
-    esac
-  esac
 }
-
 -- Evaluates a program with a given input and returns an output
 public fun evalStmt (input, stmt) {
   eval ([emptyState, createWorld (input)], stmt).snd.getOutput
