@@ -356,35 +356,35 @@ fun compile (env, code) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
           READ ->
-            case env.allocate of
+            case allocate(env) of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
             esac             
         | WRITE ->
-            case env.pop of
+            case pop(env) of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
         | CONST (val) ->
-          case env.allocate of
+          case allocate(env) of
             [s, env] -> [env, code <+ Mov (L (val), s)]
           esac
         | LD (name) ->
-          case env.addGlobal (name).allocate of
-            [s, env] -> [env, code <+> move (env.loc(name), s)]
+          case allocate( addGlobal (env, name)) of
+            [s, env] -> [env, code <+> move (loc(env, name), s)]
           esac
         | ST (name) ->
-          case env.addGlobal (name).pop of
-            [s, env] -> [env, code <+> move (s, env.loc (name))]
+          case pop( addGlobal (env, name)) of
+            [s, env] -> [env, code <+> move (s, loc (env, name))]
           esac
         | BINOP (op) ->
-          case env.pop2 of
+          case pop2(env) of
             [x, y, env] ->
-              case env.allocate of
+              case allocate(env) of
                 [result, env] ->
                   case op.ofCategory of
-                    Arithm -> [env, code.generateBasicBinopCode (op, x, y)]
-                  | Div    -> [env, code.generateDivCode (op, x, y)]
-                  | Comp   -> [env, code.generateCompCode (op, x, y)]
-                  | Logic  -> [env, code.generateLogicCode (op, x, y)]
+                    Arithm -> [env, generateBasicBinopCode (code, op, x, y)]
+                  | Div    -> [env, generateDivCode (code, op, x, y)]
+                  | Comp   -> [env, generateCompCode (code, op, x, y)]
+                  | Logic  -> [env, generateLogicCode (code, op, x, y)]
                   esac
               esac
           esac
@@ -392,7 +392,7 @@ fun compile (env, code) {
         | JMP   (l)    -> [env, code <+ Jmp (l)]
         | CJMP  (c, l) ->
           case env.pop of
-            [x, env] -> [env, code.generateCompCode("!=", L(0), x) <+ CJmp (c.cjmpSuffixToString, l)]
+            [x, env] -> [env, generateCompCode(code, "!=", L(0), x) <+ CJmp (cjmpSuffixToString(c), l)]
           esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
