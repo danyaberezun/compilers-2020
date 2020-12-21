@@ -107,8 +107,12 @@ fun eval (c@[state, world], stmt) {
     Const (val) -> [c, val]
   | Var (name) -> [c, state (name)]
   | Ref (expr) ->
-    case eval (c, expr) of
-      [newC, name] -> [newC, Ref (name)]
+    case expr of
+      # string -> [c, Ref (expr)]
+    | _ ->
+      case eval (c, expr) of
+        [newC, name] -> [newC, Ref (name)]
+      esac
     esac
   | Ignore (expr) -> case eval (c, expr) of [newC, _] -> [newC, Null] esac
   | Binop (op, expr1, expr2) ->
@@ -153,7 +157,6 @@ fun eval (c@[state, world], stmt) {
     case evalList (c, {stmt, expr}) of
       [newC, {_, val}] -> if val then [newC, Null] else eval (newC, r) fi
     esac
-  | anyVal -> [c, anyVal]  -- for string identifiers
   esac
 }
 
