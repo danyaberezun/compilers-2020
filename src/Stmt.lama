@@ -22,5 +22,12 @@ fun eval (c, stmt) {
 
 -- Evaluates a program with a given input and returns an output
 public fun evalStmt (input, stmt) {
-  eval ([emptyState, createWorld (input)], stmt).snd.getOutput
+  fun eval (c@[state, world], stmt) {
+  case stmt of
+     Skip          -> c
+  |  Read (x)      -> case readWorld (world) of [v, world] -> [state <- [x, v], world] esac
+  | Write (e)      -> [state, writeWorld(evalExpr(state, e), world)]
+  |  Assn (x, e)   -> [state <- [x, evalExpr(state, e)], world]
+  |   Seq (e1, e2) -> eval (eval (c, e1), e2)
+  esac
 }
