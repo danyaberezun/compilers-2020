@@ -63,25 +63,25 @@ fun evalList (c, exprs) {
   esac
 }
 
-fun eval (c@[sta, wor], expr) {
+fun eval (c@[state, world], expr) {
 case expr of
 	Const (n) -> [c, n]
-	| Var (x) -> [c, sta (x)]
+	| Var (x) -> [c, state (x)]
         | Binop (op, l, r) -> case evalList (c, {l, r}) of
 				[new_c, {value1, value2}] -> [new_c, evalOp (op, value1, value2)] 
 			      esac
 	| Assn (to, from) -> case evalList (c, {to, from}) of
-				[new_c@[new_sta, new_wor], {Ref (place), value}] -> [[new_sta <- [place, value], new_wor], value]
+				[new_c@[new_state, new_world], {Ref (place), value}] -> [[new_state <- [place, value], new_world], value]
 			     esac
 	| Seq (expr1, expr2) -> case eval (c, expr1) of
 					[new_c, value] -> eval (new_c, expr2)
 				esac
 	| Skip -> [c, None]
-	| Read (to) -> case readWor (wor) of
-				[value, new_wor] -> [[sta <- [to, value], new_wor], None]
+	| Read (to) -> case readWorld (world) of
+				[value, new_world] -> [[state <- [to, value], new_world], None]
 		       esac
 	| Write (expression) -> case eval (c, expression) of
-					[new_c@[new_sta, new_wor], value] -> [[new_sta, writeWor (value, new_wor)], None]
+					[new_c@[new_state, new_world], value] -> [[new_state, writeWorld (value, new_world)], None]
 				esac
 	| If (condition, expr1, expr2) -> case eval (c, condition) of
 						[new_c, 0] -> eval (new_c, expr2)
