@@ -63,10 +63,61 @@ fun evalList (c, exprs) {
   esac
 }
 
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+-- Single call should return a modified configuration and a value
+fun eval (c@[state, world], stmt) {
+  case stmt of
+    Const (val) -> [c, val]
+  | Var (name) -> [c, state (name)]
+  | Ref (expr) ->
+    case eval (c, expr) of
+      [newC, name] -> [newC, Ref (name)]
+    esac
+  | Ignore (expr) -> case eval (c, expr) of [newC, _] -> [newC, Null] esac
+  | Binop (op, expr1, expr2) ->
+    case evalList (c, {expr1, expr2}) of
+      [newC, {l, r}] -> [newC, evalOp (op, l, r)]
+    esac
+  | Skip -> [c, Null]
+  | Assn (name, value) ->
+    case evalList (c, {name, value}) of
+      [[newState, newWorld], {Ref (x), val}] -> [[newState <- [x, val], newWorld], val]
+    esac
+  | Seq (stmt1, stmt2) ->
+    case evalList (c, {stmt1, stmt2}) of
+      [newC, {_, val}] -> [newC, val]
+    esac
+  | Read (name)        ->
+    case readWorld (world) of
+      [value, newWorld] -> [[state <- [name, value], newWorld], Null]
+    esac
+  | Write (expr)       ->
+    case eval (c, expr) of
+      [[new_state, newWorld], value] -> [[new_state, writeWorld (value, newWorld)], Null]
+    esac
+  | If (expr, stmt1, stmt2) ->
+    case eval (c, expr) of
+      [newC, val] ->
+        if val then eval (newC, stmt1)
+        else eval (newC, stmt2)
+        fi
+    esac
+  | w@While (expr, stmt) ->
+    case eval (c, expr) of
+      [newC, val] ->
+        if val then
+          case eval (newC, stmt) of
+            [newerC, _] -> eval (newerC, w)
+          esac
+        else [newC, Null]
+        fi
+    esac
+  | r@Repeat (stmt, expr) ->
+    case evalList (c, {stmt, expr}) of
+      [newC, {_, val}] -> if val then [newC, Null] else eval (newC, r) fi
+    esac
+  | anyVal -> [c, anyVal]  -- for string identifiers
+  esac
 }
-
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
