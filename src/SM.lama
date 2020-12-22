@@ -26,7 +26,7 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
+--fun eval (c, insns) {
   fun eval (conf@[st, env, wrld], insns) {
   case insns of
       {} -> conf
@@ -47,7 +47,7 @@ fun eval (c, insns) {
       eval (conf, xs)
     }
   esac
-}
+  }
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
