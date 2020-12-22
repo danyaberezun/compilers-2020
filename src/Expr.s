@@ -1,6 +1,6 @@
-	.file "/compilers-2020/src/Expr.lama"
+	.file "/home/toliman/LamaProject/compilers-2020/src/Expr.lama"
 
-	.stabs "/compilers-2020/src/Expr.lama",100,0,0,.Ltext
+	.stabs "/home/toliman/LamaProject/compilers-2020/src/Expr.lama",100,0,0,.Ltext
 
 	.globl	LevalExpr
 
@@ -67,8 +67,6 @@ filler:	.fill	4, 4, 1
 # EXTERN ("Lunzip") / 
 
 # EXTERN ("Lzip") / 
-
-# EXTERN ("LdeepFlatten") / 
 
 # EXTERN ("Lflatten") / 
 
@@ -208,6 +206,8 @@ initExpr:
 
 	.cfi_startproc
 
+	.cfi_adjust_cfa_offset	4
+
 	movl	_init,	%eax
 	test	%eax,	%eax
 	jz	_continue
@@ -216,9 +216,7 @@ _continue:
 
 	movl	$1,	_init
 	pushl	%ebp
-	.cfi_def_cfa_offset	8
-
-	.cfi_offset 5, -8
+	.cfi_adjust_cfa_offset	4
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -299,10 +297,10 @@ LevalExpr:
 
 	.cfi_startproc
 
-	pushl	%ebp
-	.cfi_def_cfa_offset	8
+	.cfi_adjust_cfa_offset	4
 
-	.cfi_offset 5, -8
+	pushl	%ebp
+	.cfi_adjust_cfa_offset	4
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -794,9 +792,9 @@ L30:
 
 L9:
 
-# FAIL ((35, 6), true) / 
+# FAIL ((35, 7), true) / 
 
-	pushl	$13
+	pushl	$15
 	pushl	$71
 	pushl	$string_0
 	pushl	%ebx
@@ -855,10 +853,10 @@ Lparse_bin_operation:
 
 	.cfi_startproc
 
-	pushl	%ebp
-	.cfi_def_cfa_offset	8
+	.cfi_adjust_cfa_offset	4
 
-	.cfi_offset 5, -8
+	pushl	%ebp
+	.cfi_adjust_cfa_offset	4
 
 	movl	%esp,	%ebp
 	.cfi_def_cfa_register	5
@@ -1843,9 +1841,9 @@ L132:
 
 L45:
 
-# FAIL ((17, 6), true) / 
+# FAIL ((17, 7), true) / 
 
-	pushl	$13
+	pushl	$15
 	pushl	$35
 	pushl	$string_0
 	pushl	%ebx
