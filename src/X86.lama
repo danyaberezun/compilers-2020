@@ -334,6 +334,13 @@ fun move (from, to) {
   fi
 }
 
+fun lea (from, to) {
+  if memOpnd (from) && memOpnd (to)
+  then singletonBuffer (Lea (from, eax)) <+ Mov (eax, to)
+  else singletonBuffer (Lea (from, to))
+  fi
+}
+
 -- Gets a suffix for Set instruction from
 -- source language comparison operator
 fun suffix (op) {
@@ -371,9 +378,26 @@ fun compile (env, code) {
           case allocate( addGlobal (env, name)) of
             [s, env] -> [env, code <+> move (loc(env, name), s)]
           esac
+        | LDA (name) ->
+          case allocate( addGlobal (env, name)) of
+            [s, env] -> [env, code <+> lea (loc(env, name), s)]
+          esac
         | ST (name) ->
           case pop( addGlobal (env, name)) of
             [s, env] -> [env, code <+> move (s, loc (env, name))]
+          esac
+        | STI ->
+          case pop2(env) of
+            [v, ref, env] ->
+              case allocate(env) of
+                [_, env] ->
+                  [env,
+                     if memOpnd (ref)
+                     then code <+ Mov (ref, eax) <+ Mov (v, edx) <+ Mov (edx, I(0, eax)) <+ Mov (edx, ref)
+                     else  code <+ Mov (v, I(0, ref)) <+ Mov (v, ref)
+                     fi
+                  ]
+              esac
           esac
         | BINOP (op) ->
           case pop2(env) of
@@ -388,12 +412,13 @@ fun compile (env, code) {
                   esac
               esac
           esac
-        | LABEL (s)    -> [env, code <+ Label (s) ]
-        | JMP   (l)    -> [env, code <+ Jmp (l)]
+        | LABEL (s)    -> [if isBarrier(env) then retrieveStack(env, s) else env fi, code <+ Label (s) ]
+        | JMP   (l)    -> [setBarrier(setStack(env, l)), code <+ Jmp (l)]
         | CJMP  (c, l) ->
           case env.pop of
-            [x, env] -> [env, generateCompCode(code, "!=", L(0), x) <+ CJmp (cjmpSuffixToString(c), l)]
+            [x, env] -> [setStack(env, l), generateCompCode(code, "!=", L(0), x) <+ CJmp (cjmpSuffixToString(c), l)]
           esac
+        | DROP -> case pop(env) of [_, env] -> [env, code] esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
