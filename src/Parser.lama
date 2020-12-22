@@ -105,19 +105,28 @@ fun distributeScope (expr, exprConstructor) {
   esac
 }
 
+fun addDefinitionLineToScope (defLine, expr, exprConstructor) {
+  case expr of
+    Scope (defs, body) ->
+      case expandScope (singleton(defLine), Skip) of
+        Scope ({d}, inits) -> Scope (d:defs, Seq(inits, exprConstructor (body)))
+      esac
+  esac
+}
+
 local primary    = memo $ eta syntax (
                                       -- decimal constant
                                       loc=pos x=decimal                                 {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
 
                                       -- identifier
-                                      x=lident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? {fun (a) {
+                                      loc=pos x=lident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? {fun (a) {
                                                                                                             case args of
                                                                                                               None -> case a of
                                                                                                                         Ref  -> Ref (x)
                                                                                                                       | Void -> Ignore (Var (x))
                                                                                                                       | _    -> Var (x)
                                                                                                                       esac
-                                                                                                            | Some (args) -> assertValue (a, Call (x, args))
+                                                                                                            | Some (args) -> assertValue (a, Call (x, args), loc)
                                                                                                             esac
                                                                                                          }} |
 (* Assignment *)
@@ -130,20 +139,74 @@ local primary    = memo $ eta syntax (
                                     -- if statement
                                     ifParser |
                                     -- while
-                                    loc=pos kWhile cond=exp kDo body=exp kOd {fun (a) {assertVoid (a, While (cond (Val), body (Void)), loc)}} |
+                                    loc=pos kWhile cond=exp kDo body=scopeExpr kOd {
+                                      fun (a) {
+                                        assertVoid (a, While (cond (Val), body (Void)), loc)
+                                      }
+                                    } |
                                     -- for
-                                    loc=pos kFor init=exp s[","] cond=basic s[","] act=basic kDo body=exp kOd {fun (a) {
-                                      assertVoid (a, Seq (init (Void), While (cond (Val), Seq (body (Void), act (Void)))),loc)
-                                    }} |
+                                    loc=pos kFor maybeDefLine=varDefLineParser? init=exp s[","] cond=basic s[","] act=basic kDo body=scopeExpr kOd {
+                                      fun (a) {
+                                        local forConstructor = fun (e) {
+                                          Seq (init (Void), While (cond (Val), Seq (e, act (Void))))
+                                        };
+                                        assertVoid (
+                                          a,
+                                          case maybeDefLine of
+                                            Some (defLine) ->
+                                              addDefinitionLineToScope (defLine, body (Void), forConstructor)
+                                          | None ->
+                                            distributeScope (body (Void), forConstructor)
+                                          esac
+                                          ,
+                                          loc
+                                        )
+                                      }
+                                    } |
                                     -- repeat
-                                    loc=pos kRepeat body=exp kUntil cond=basic {fun (a) {assertVoid (a, Repeat (body (Void), cond (Val)), loc)}} |
+                                    loc=pos kRepeat body=scopeExpr kUntil cond=basic {
+                                      fun (a) {
+                                        assertVoid (
+                                          a,
+                                          distributeScope (
+                                            body (Void),
+                                            fun (e) {
+                                              Repeat (e, cond (Val))
+                                            }
+                                          ),
+                                          loc
+                                        )
+                                      }
+                                    } |
                                     inbr[s("("), exp, s(")")]),
       ifParser = memo $ eta syntax (kIf body=ifBody {body}),
       ifBody   = memo $ eta syntax (cond=exp kThen thn=exp els=ifCont {fun (a) {If (cond (Val), thn (a), els (a))}}),
       ifCont   = memo $ eta syntax (kFi {fun (a) {Skip}} |
                                     kElif body=ifBody {body} |
                                     kElse body=exp kFi {body}),
-      scopeExpr = memo $ eta (syntax ($(failure ("scope expression parsing is not implemented\n")))),
+      scopeExpr = memo $ eta (syntax (loc=pos defs=defParser* maybeBody=exp? {
+       fun (a) {
+         case maybeBody of
+           Some (body) -> expandScope (defs, body (a))
+         | None        -> assertVoid (a, Scope({}, Skip), loc)
+         esac
+       }
+      })),
+      scopeExprInBr = memo $ eta (syntax(inbr[s("{"), scopeExpr, s("}")])),
+      defParser = memo $ eta (syntax (varDefLineParser | funDefParser)),
+      varDefLineParser = memo $ eta (syntax (kLocal defs=list[varDefParser] s[";"] { Local (defs) })),
+      varDefParser = memo $ eta (syntax (name=lident maybeInit=initParser? {
+        case maybeInit of
+          Some (init) -> [name, Some (init (Val))]
+        | None -> [name, None]
+        esac
+      })),
+      initParser = memo $ eta (syntax (-s["="] primary)),
+      funDefParser = memo $ eta (syntax (
+        kFun name=lident args=inbr[s("("), list0(lident), s(")")] body=scopeExprInBr {
+          Fun (name, args, body (Weak))
+        }
+      )),
 (* End *)
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
