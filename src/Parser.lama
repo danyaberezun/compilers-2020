@@ -121,29 +121,6 @@ local primary    = memo $ eta syntax (
                                                                                                             esac
                                                                                                          }} |
 (* Assignment *)
-                                      $(failure ("the rest of primary parsing in not implemented\n"))),
-      scopeExpr = memo $ eta (syntax ($(failure ("scope expression parsing is not implemented\n")))),
-(* End *)
-      basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
-                                                          fun (l, loc, r) {
-                                                            fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
-                                                          }])],
-                                      [Left , map (binop, singleton ("!!"))],
-                                      [Left , map (binop, singleton ("&&"))],
-                                      [Nona , map (binop, {"==", "!=", "<", ">", "<=", ">="})],
-                                      [Left , map (binop, {"+", "-"})],
-                                      [Left , map (binop, {"*", "/", "%"})]
-                                     },
-                                     primary)),
-      exp        = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
-                                    -- identifier
-                                    x=lident                                          {fun (a) {
-                                                                                         case a of
-                                                                                           Ref  -> Ref (x)
-                                                                                         | Void -> Ignore (Var (x))
-                                                                                         | _    -> Var (x)
-                                                                                         esac
-                                                                                      }} |
                                     -- read
                                     loc=pos kRead s["("] name=lident s[")"] {fun (a) {assertVoid (a, Read (name), loc)}} |
                                     -- write
@@ -166,18 +143,20 @@ local primary    = memo $ eta syntax (
       ifCont   = memo $ eta syntax (kFi {fun (a) {Skip}} |
                                     kElif body=ifBody {body} |
                                     kElse body=exp kFi {body}),
-      basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
-                                                        fun (l, loc, r) {
-                                                          fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
-                                                        }])],
-                                    [Left , map (binop, singleton ("!!"))],
-                                    [Left , map (binop, singleton ("&&"))],
-                                    [Nona , map (binop, {"==", "!=", "<", ">", "<=", ">="})],
-                                    [Left , map (binop, {"+", "-"})],
-                                    [Left , map (binop, {"*", "/", "%"})]
-                                   },
-                                   primary)),
-      exp      = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
+      scopeExpr = memo $ eta (syntax ($(failure ("scope expression parsing is not implemented\n")))),
+(* End *)
+      basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
+                                                          fun (l, loc, r) {
+                                                            fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
+                                                          }])],
+                                      [Left , map (binop, singleton ("!!"))],
+                                      [Left , map (binop, singleton ("&&"))],
+                                      [Nona , map (binop, {"==", "!=", "<", ">", "<=", ">="})],
+                                      [Left , map (binop, {"+", "-"})],
+                                      [Left , map (binop, {"*", "/", "%"})]
+                                     },
+                                     primary)),
+      exp        = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
 
 -- Public top-level parser
 public parse = syntax (s=scopeExpr {s (Void)});
