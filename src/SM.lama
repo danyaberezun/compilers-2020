@@ -24,8 +24,8 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+--fun eval (c, insns) {
+  --failure ("SM eval not implemented\n")
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c@[st, state, w], insns) {
   case insns of
@@ -36,7 +36,7 @@ fun eval (c@[st, state, w], insns) {
     | WRITE     : s -> eval([st[1], state, writeWorld(st[0], w)], s)
     | LD(x)     : s -> eval([state(x) : st, state, w], s)
     | ST(x)     : s -> eval([st[1], state <- [x, st[0]], w], s)
-  esac  
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -47,11 +47,10 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
     case expr of
       Const (n)     ->  singleton(CONST(n))
     | Var (x)       ->  singleton(LD(x))
-    | Binop(op, l, r) ->  compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op)) 
+    | Binop(op, l, r) ->  compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
     esac
 }
 
@@ -59,8 +58,6 @@ fun compileExpr (expr) {
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
-}
   case stmt of
       Assn(x, e)    -> compileExpr(e) +++ singleton(ST(x))
     | Write(x)      -> compileExpr(x) +++ singleton(WRITE)
