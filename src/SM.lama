@@ -1,21 +1,13 @@
 -- Stack machine.
 
-<<<<<<< HEAD
 import Array;
 import List;
 import Fun;
 import Collection;
-=======
-import List;
->>>>>>> A04-control-flow-int
 import World;
 import State;
 import Expr;
 import Buffer;
-<<<<<<< HEAD
-=======
-import Fun;
->>>>>>> A04-control-flow-int
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -37,7 +29,6 @@ public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
 
-<<<<<<< HEAD
 -- Evaluation environment: keeps a mapping between labels and (sub)programs
 fun initEvalEnv (insns) {
   local map =
