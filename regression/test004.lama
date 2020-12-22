@@ -1,4 +1,8 @@
 read (x);
 read (y);
 z := ((x + y) + (x - y)) + ((x - y) - (x + y));
+<<<<<<< HEAD
 write (z)
+=======
+write (z)
+>>>>>>> A04-control-flow-int
