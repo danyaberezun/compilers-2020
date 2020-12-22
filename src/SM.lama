@@ -76,8 +76,12 @@ fun evalInstruction (env, conf@[stack, state, world], instruction) {
   [case instruction of
     CONST (val)  -> [val:stack, state, world]
   | LD (name)    -> [state(name):stack, state, world]
+  | LDA (name)   -> [Ref(name):stack, state, world]
   | ST (name)    -> case stack of
                       x:stackTail -> [stackTail, state <- [name, x], world]
+                    esac
+  | STI          -> case stack of
+                      x:Ref(name):stackTail -> [x:stackTail, state <- [name, x], world]
                     esac
   | BINOP (op)   -> case stack of
                       x:y:stackTail -> [evalOp (op, y, x):stackTail, state, world]
@@ -90,10 +94,17 @@ fun evalInstruction (env, conf@[stack, state, world], instruction) {
                     esac
   | LABEL (s)    -> conf
   | JMP   (l)    -> newTail := Just (env.fromLabel(l)); conf
-  | CJMP  (c, l) -> newTail := case stack of
-                      x:stackTail -> if c.shouldJump(x) then Just (env.fromLabel(l)) else Nothing fi
-                    esac;
-                    conf
+  | CJMP  (c, l) -> case stack of
+                      x:stackTail ->
+                        newTail := if c.shouldJump(x) then Just (env.fromLabel(l)) else Nothing fi;
+                        [stackTail, state, world]
+                    esac
+  | DROP         -> case stack of
+                      x:stackTail -> [stackTail, state, world]
+                    esac
+  | DUP          -> case stack of
+                      x:stackTail -> [x:x:stackTail, state, world]
+                    esac
   esac, newTail]
 }
 
@@ -144,16 +155,6 @@ infix ++$ at +++ (lst, elem) {
   lst +++ singleton (elem)
 }
 
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list (of, possibly, lists)
--- of stack machine instructions
-fun compileExpr (expr) {
-  case expr of
-    Const (val)             -> singleton (CONST (val))
-  | Var (name)              -> singleton (LD (name))
-  | Binop (op, left, right) -> compileExpr (left) +++ compileExpr (right) ++$ BINOP (op)
-  esac
-}
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
@@ -166,7 +167,33 @@ public fun compileSM (stmt) {
 fun compileSMInner (stmt, compEnv, returnPoint) {
   local envToReturn = compEnv;
   [case stmt of
-    Assn (name, expr)   -> compileExpr (expr) ++$ ST (name)
+    Const (val)         -> singleton (CONST (val))
+  | Var (name)          -> singleton (LD (name))
+  | Ref (name)          -> singleton (LDA (name))
+  | Ignore (expr)       ->
+    case compileSMInner (expr, compEnv, returnPoint) of
+      [exprCode, newCompEnv] ->
+        envToReturn := newCompEnv;
+        exprCode ++$ DROP
+    esac
+  | Binop (op, left, right) ->
+    case compileSMInner (left, compEnv, Nothing) of
+      [leftCode, newCompEnv] ->
+        case compileSMInner (right, newCompEnv, Nothing) of
+          [rightCode, newerCompEnv] ->
+            envToReturn := newerCompEnv;
+            leftCode +++ rightCode ++$ BINOP (op)
+        esac
+    esac
+  | Assn (name, expr)   ->
+    case compileSMInner (name, compEnv, Nothing) of
+      [refCode, newCompEnv] ->
+        case compileSMInner (expr, newCompEnv, Nothing) of
+          [valCode, newerCompEnv] ->
+            envToReturn := newerCompEnv;
+            refCode +++ valCode ++$ STI
+        esac
+    esac
   | Seq  (stmt1, stmt2) ->
     case compileSMInner (stmt1, compEnv, Nothing) of
       [stmtCode1, newCompEnv] ->
@@ -178,7 +205,12 @@ fun compileSMInner (stmt, compEnv, returnPoint) {
     esac
   | Skip                -> {}
   | Read (name)         -> {READ, ST (name)}
-  | Write (expr)        -> compileExpr (expr) ++$ WRITE
+  | Write (expr)        ->
+    case compileSMInner (expr, compEnv, Nothing) of
+      [exprCode, newCompEnv] ->
+        envToReturn := newCompEnv;
+        exprCode ++$ WRITE
+    esac
   | s@If (expr, stmt1, stmt2) ->
     case returnPoint of
       Just (point) ->
@@ -204,27 +236,33 @@ fun compileSMInner (stmt, compEnv, returnPoint) {
   | While (expr, body) ->
     case compEnv.genLabels (2) of
       [beginCondition, beginStatement, newCompEnv] ->
-        case compileSMInner (body, newCompEnv, returnPoint) of
+        case compileSMInner (body, newCompEnv, Nothing) of
           [bodyCode, newerCompEnv] ->
-            envToReturn := newerCompEnv;
-            singleton (JMP (beginCondition))
-            ++$ LABEL (beginStatement)
-            +++ bodyCode
-            ++$ LABEL (beginCondition)
-            +++ compileExpr (expr)
-            ++$ CJMP (NZ, beginStatement)
+            case compileSMInner (expr, newerCompEnv, Nothing) of
+              [exprCode, newestCompEnv] ->
+                envToReturn := newestCompEnv;
+                singleton (JMP (beginCondition))
+                ++$ LABEL (beginStatement)
+                +++ bodyCode
+                ++$ LABEL (beginCondition)
+                +++ exprCode
+                ++$ CJMP (NZ, beginStatement)
+            esac
         esac
     esac
   | Repeat (body, expr) ->
     case compEnv.genLabels (1) of
       [beginStatement, newCompEnv] ->
-        case compileSMInner (body, newCompEnv, returnPoint) of
+        case compileSMInner (body, newCompEnv, Nothing) of
           [bodyCode, newerCompEnv] ->
-            envToReturn := newerCompEnv;
-            singleton (LABEL (beginStatement))
-            +++ bodyCode
-            +++ compileExpr (expr)
-            ++$ CJMP (Z, beginStatement)
+            case compileSMInner (expr, newerCompEnv, Nothing) of
+              [exprCode, newestCompEnv] ->
+                envToReturn := newestCompEnv;
+                singleton (LABEL (beginStatement))
+                +++ bodyCode
+                +++ exprCode
+                ++$ CJMP (Z, beginStatement)
+            esac
         esac
     esac
   esac, envToReturn]
@@ -232,17 +270,20 @@ fun compileSMInner (stmt, compEnv, returnPoint) {
 
 fun generateIfCode (If(expr, stmt1, stmt2), beginElse, returnPoint, env) {
     local envToReturn = env;
-    [case compileSMInner (stmt1, env, Just (returnPoint)) of
-      [stmtCode1, newCompEnv] ->
-        case compileSMInner (stmt2, newCompEnv, Just (returnPoint)) of
-          [stmtCode2, newerCompEnv] ->
-            envToReturn := newerCompEnv;
-            compileExpr(expr)
-            ++$ CJMP (Z, beginElse)
-            +++ stmtCode1
-            ++$ JMP (returnPoint)
-            ++$ LABEL (beginElse)
-            +++ stmtCode2
+    [case compileSMInner (expr, env, Nothing) of
+      [exprCode, newCompEnv] ->
+        case compileSMInner (stmt1, newCompEnv, Just (returnPoint)) of
+          [stmtCode1, newerCompEnv] ->
+            case compileSMInner (stmt2, newerCompEnv, Just (returnPoint)) of
+              [stmtCode2, newestCompEnv] ->
+                envToReturn := newestCompEnv;
+                exprCode
+                ++$ CJMP (Z, beginElse)
+                +++ stmtCode1
+                ++$ JMP (returnPoint)
+                ++$ LABEL (beginElse)
+                +++ stmtCode2
+            esac
         esac
     esac, envToReturn]
 }
