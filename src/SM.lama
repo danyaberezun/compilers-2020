@@ -37,7 +37,7 @@ fun initEvalEnv (insns) {
             case insns of
               {}               -> m
             | LABEL (lab) : tl -> rec ([addMap (m, lab, insns), tl])
-            | _ : tl           -> rec ([m, tl])  
+            | _ : tl           -> rec ([m, tl])
             esac
           }
         }) $ [emptyMap (compare), insns];
@@ -46,7 +46,7 @@ fun initEvalEnv (insns) {
      case findMap (map, l) of Some (insns) -> insns esac
   }]
 }
- 
+
 -- Accessor function
 fun fromLabel (env, lab) {
   env [0] (lab)
@@ -54,7 +54,6 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
--- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (env, c@[stack, state, world@[input, output]], insns) {
 case insns of
 	{} -> c
@@ -86,7 +85,6 @@ case insns of
 										esac
 							esac
 				esac
-				
 esac
 }
 
