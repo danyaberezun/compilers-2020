@@ -48,3 +48,4 @@ fun eval (condition, statement) {
 public fun evalStmt (input, stmt) {
 	eval ([emptyState, createWorld (input)], stmt).snd.getOutput
 }
+
