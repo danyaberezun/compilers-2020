@@ -109,7 +109,7 @@ fun makeState (scopes) {
 
     calculate(scopes)
   }
-  
+
   [lookup, assign, enterScope, leaveScope, addName, enterFunction, leaveFunction, getGlobal, getScopeSize]
 }
 

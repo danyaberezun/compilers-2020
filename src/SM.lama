@@ -145,34 +145,46 @@ fun eval (env, w, insns) {
     -- https://github.com/kry127/compilers-2020/blob/A07-scopes-functions-int-dev/src/SM.lama
     case insns of
       {}                       -> c
-    | JMP  (l) : _             -> eval (c, fromLabel (env, l))
+    | JMP  (l) : _             -> {
+                                     -- fprintf(stderr, "Jump to ""%s"" and continue with ""%s""\n", l, fromLabel (env, l).string);
+                                      eval (c, fromLabel (env, l))
+                                  }
     | CJMP (znz, l) : insns ->
         case st of
-          n : st -> if (case znz of "z" -> n == 0 | _ -> n != 0 esac)
+          n : st -> if (case znz of Z -> n == 0 | _ -> n != 0 esac)
                     then eval ([st, cst, s, w], fromLabel (env, l))
                     else eval ([st, cst, s, w], insns)
                     fi
         esac
-    | CALL (f, _) : insns      -> eval ([st, [s, insns] : cst, s, w], fromLabel (env, f))
+    | CALL (f, _) : insns      -> {
+                                    -- fprintf(stderr, "Calling function ""%s""\n", f.string);
+                                    eval ([st, [s, insns] : cst, s, w], fromLabel (env, f))
+                                  }
     | END : _                  ->
         case cst of
-          [s, insns] : cst -> eval ([st, cst, s, w], insns)
+          [s, insns] : cst -> {
+                                -- fprintf(stderr, "Return from function and back to ""%s""\n", insns.hd.string);
+                                eval ([st, cst, s, w], insns)
+                              }
         | {}               -> c
         esac
     | instruction : continuation ->
         eval (
-          {local unit = fprintf(stderr, "Interpret instruction: %s, state: %s\n", instruction.string, c.string);
+          {
+          --local unit = fprintf(stderr, "Interpret instruction: %s, state: %s\n", instruction.string, c.string);
           case instruction of
             READ            -> case readWorld (w) of [v, w]     -> [v : st, cst, s, w]                 esac
           | WRITE           -> case st            of v : st     -> [st, cst, s, writeWorld(v, w)]      esac
           | BINOP (op)      -> case st            of y : x : st -> [applyOp (op, x, y) :st, cst, s, w] esac
           | CONST (val)     -> [val                  : st, cst, s, w]
-          | LD    (name)    -> [lookup (s, name)     : st, cst, s, w]
-          | LDA   (name)    -> [Ref (name)           : st, cst, s, w]
+          | LD    (loc)     -> [lookup (s, loc)      : st, cst, s, w]
+          | LDA   (loc)     -> [Ref (loc)            : st, cst, s, w]
           | DUP             -> case st of h:hs -> [h : st, cst, s, w] esac
-          | DROP            -> case st of h:hs -> [    hs, cst, s, w] esac
-          | ST    (name)    -> case st of n : _               -> assign (s, name, n); [    st, cst, s, w] esac
-          | STI             -> case st of n : Ref (name) : st -> assign (s, name, n); [n : st, cst, s, w] esac
+          | DROP            -> case st of _:hs -> [    hs, cst, s, w]
+                                        | _    ->  failure(sprintf("Stack exausted! Rest of the program: ""%s""\n", insns.string))
+                               esac
+          | STI             -> case st of v : Ref (x) : st  -> assign (s, x, v); [v : st, cst, s, w] esac
+          | ST    (x)       -> case st of z : st            -> assign (s, x, z); [z : st, cst, s, w] esac
           | LABEL (_)       -> c
           | BEGIN (_, argc, localc)
                             -> case take (st, argc) of
@@ -188,7 +200,6 @@ fun eval (env, w, insns) {
         )
     esac
   }
-  (* End *)
 
   eval ([{}, {}, makeState (0, 0), w], insns) [3].getOutput
 }
@@ -428,7 +439,7 @@ public fun compileSM (expr) {
     | e : ex -> case genLabels(env, 1) of
               [l1, ev] -> case compileExpr (ev, e, Some(l1)) of
                 [ev1, code1] -> case compileExprList (ev1, ex, endLabel) of
-                    [ev2, code2] -> [ev2, code1 <+> singletonBuffer(LABEL(l1)) <+> code2]
+                    [ev2, code2] -> [ev2, code1 <+ LABEL(l1) <+> code2]
                   esac
             esac
         esac
@@ -439,8 +450,8 @@ public fun compileSM (expr) {
   -- reference to prev impl: https://github.com/kry127/compilers-2020/blob/20caaa88d46ee3caa895b8f3e9faeb6b4878f184/src/SM.lama#L175
   -- Returns [env, SMCode]
   fun compileExpr (env, stmt, endLabel) {
-    -- fprintf (stderr, "Statement to compile to SM: ""%s""\n", stmt.string);
-    case stmt of
+    -- local unit = fprintf (stderr, "Statement to compile to SM: ""%s""\n", stmt.string);
+    local result = case stmt of
         Assn (name, expr) -> case compileExpr(env, name, None) of
           [ev, sm] -> case compileExpr(ev, expr, None) of
             [ev2, sm2] -> [ev2, sm <+> sm2 <+ STI <+> maybeJump(endLabel)]
@@ -452,7 +463,7 @@ public fun compileSM (expr) {
           esac
         esac
       | Skip              -> [env, maybeJump(endLabel)]
-      | Read (name) -> [env, singletonBuffer(READ) <+ ST (lookupVar(env, name)) <+> maybeJump(endLabel)]
+      | Read (name) -> [env, singletonBuffer(READ) <+ ST (lookupVar(env, name)) <+ DROP <+> maybeJump(endLabel)]
       | Write (expr) -> case compileExpr(env, expr, None) of
            [ev, sm] -> [ev, sm <+ WRITE <+> maybeJump(endLabel)]
          esac
@@ -505,7 +516,7 @@ public fun compileSM (expr) {
                  esac
                esac
       | Ignore (expr)  -> case compileExpr(env, expr, None) of
-              [ev2, sm] -> [env, sm <+ DROP <+> maybeJump(endLabel)]
+              [ev2, sm] -> [ev2, sm <+ DROP <+> maybeJump(endLabel)]
             esac
       | Call (f, {})  ->
                  case lookupFun (env, f) of
@@ -550,7 +561,9 @@ public fun compileSM (expr) {
                      [ev1, sm_code] -> [endScope(ev1), globals <+> sm_code]
                    esac
                  esac
-    esac
+    esac;
+    -- local unit2 = fprintf (stderr, "Statement to compiled to SM: ""%s""\n", stmt.string);
+    result
   }
 
   local compileFuncsFixPoint = fix (fun (f) {
@@ -560,13 +573,14 @@ public fun compileSM (expr) {
                 [{}, ev] -> emptyBuffer()
               | [fs, ev] -> f(ev, fs)
               esac
-       | Fun (f, args, body, state) : fs ->
-         case genLabels(addArgs(beginFun(env, state), args), 1) of
-           [l1, ev] -> case compileExpr(ev, body, Some(l1)) of
+       | Fun (flabel, argv, body, state) : fs ->
+         case genLabels(addArgs (beginFun(env, state), argv), 1) of
+           [l1, ev] ->
+           case compileExpr(ev, body, Some(l1)) of
              [ev1, sm_body] ->
-               singletonBuffer (LABEL (f))
-               <+ BEGIN (f, args.size, getLocals (env))
-               <+> sm_body <+> LABEL(l1) <+ END <+> f(ev1, fs)
+               singletonBuffer (LABEL (flabel))
+               <+ BEGIN (flabel, argv.size, getLocals (ev1))
+               <+> sm_body <+ LABEL(l1) <+ END <+> f(ev1, fs)
            esac
          esac
        esac
@@ -579,11 +593,11 @@ public fun compileSM (expr) {
       [ev, initCode] ->
         {
            local mainFunction = singletonBuffer (LABEL ("main"))
-                 <+ BEGIN ("main", 0, getLocals(env))
+                 <+ BEGIN ("main", 0, getLocals(ev))
                  <+> initCode <+ LABEL(l1) <+ END;
            local fullSMCode = mainFunction <+> compileFuncsFixPoint(ev, {});
 
-           fprintf(stderr, "Generated code: %s\n", fullSMCode.string);
+           -- fprintf(stderr, "Generated code: %s\n", (getBuffer(fullSMCode)).string);
            fullSMCode.getBuffer
         }
     esac

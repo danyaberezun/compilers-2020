@@ -362,7 +362,7 @@ fun prologue (fLabel) {
 fun epilogue (env) {
   local metaDef = Meta (sprintf ("\t.set\t%s_SIZE,\t%d\n", env.currentFunction, env.staticSize * wordSize));
 
-  local unit = fprintf(stderr, "Generate epilogue for : %s\n", env.currentFunction.string);
+  -- local unit = fprintf(stderr, "Generate epilogue for : %s\n", env.currentFunction.string);
   if compare (env.currentFunction, "main") == 0
   then [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Binop ("^", eax, eax) <+ Ret <+ metaDef]
   else case env.pop of
@@ -492,12 +492,9 @@ fun compile (env, code) {
             esac
         | LD (name) ->
             case env.allocate of
-              [s, updenv] -> [updenv, code <+> move(updenv.loc(name), s)]
+              [s, updenv] -> [updenv, code <+> move(loc(updenv, name), s)]
             esac
-        | ST (name) ->
-            case env.pop of
-              [s, updenv] -> [updenv, code  <+> move (s, updenv.loc(name))]
-            esac
+        | ST (name) -> [env, code  <+> move (peek(env), loc(env, name))]
         | BINOP (op) ->
             case env.pop2 of
               [op1, op2, updenv] -> case updenv.allocate of
@@ -558,11 +555,14 @@ fun compile (env, code) {
          -- 1. generate proper prologue for BEGIN instruction (use "prologue" helper); use
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
-       | BEGIN (label, argc, localc) ->  [enterFunction(env, label, localc), code <+> prologue(label)]
-       | END                         ->  case epilogue(env) of
-                                           [ev, epilog] -> [ev,  code <+> epilog]
-                                         esac
+        | BEGIN (label, argc, localc) ->  [enterFunction(env, label, localc), code <+> prologue(label)]
+        | END                         ->  case epilogue(env) of
+                                            [ev, epilog] -> [ev,  code <+> epilog]
+                                          esac
 
+        | CALL (flabel, argc)  -> case call(env, flabel, argc) of
+                                    [ev, call_insns] -> [ev, code <+> call_insns]
+                                  esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
         esac
@@ -577,7 +577,7 @@ fun compile (env, code) {
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
-    local unit = fprintf(stderr, "Compile SM code: %s\n", code.string);
+  -- local unit = fprintf(stderr, "Compile SM code: %s\n", code.string);
   case compile (initEnv (), code) of
     [env, code] ->
        local asmFile = args.getBaseName ++ ".s",

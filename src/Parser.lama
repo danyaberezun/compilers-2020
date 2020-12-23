@@ -147,7 +147,7 @@ local primary    = memo $ eta syntax (
                                     ),
            ifTailParser = memo $ eta syntax(loc=pos -kFi              { fun(a) { case a of
                                                                                    Void -> Skip
-                                                                                 | Weak -> Skip
+                                                                                 | Weak -> Const (0)
                                                                                  | Ref  -> error ("'else' branch is needed for reference", loc)
                                                                                  | Val  -> error ("'else' branch is needed for value",     loc)
                                                                                   esac } } |
