@@ -33,43 +33,6 @@ public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
 
--- Stack machine interpreter. Takes an env, SM-configuration and a program,
--- returns a final configuration
-fun eval (env, c, insns) {
-	if size(insns) == 0 then c
-	else
-		local i = insns[1], s = c[0], d = c[1], w = c[2];
-		local c0;
-		case insns[0] of
-			  LD (v)        -> eval(env, [singleton(d(v)) +++ s, d, w], i)
-			| CONST (ct)    -> eval(env, [singleton(ct) +++ s, d, w], i)
-			| BINOP (op)    -> case s of y : x : rest -> eval(env, [singleton(evalBinop(op, x, y)) +++ rest, d, w], i) esac
-			| READ          -> local v = readWorld(w);
-							   eval(env, [singleton(v[0]) +++ s, d, v[1]], i)
-			| WRITE         -> eval(env, [s[1], d, writeWorld(s[0], w)], i)
-			| ST (v)        -> eval(env, [s[1], d <- [v, s[0]], w], i)
-			| LABEL (nm)    -> eval(env, c, i)
-			| JMP (lb)      -> eval(env, c, fromLabel(env, lb))
-			| CJMP (ch, lb) -> 
-							case s of cmp : r ->
-								local tmp;
-								case ch of
-									  "z"  -> tmp := (cmp == 0)
-									| "nz" -> tmp := (cmp != 0)
-								esac;
-								if (tmp)
-									then eval(env, [r, d, w], fromLabel(env, lb))
-									else eval(env, [r, d, w], i)
-								fi
-							esac
-			| LDA (v)       -> eval(env, [singleton(Ref(v)) +++ s, d, w], i)
-			| STI           -> case s of v : Ref(x) : s_n -> eval(env, [v:s_n, d <- [x, v], w], i) esac
-			| DROP          -> eval(env, [s[1], d, w], i)
-			| _             -> failure("SM-configuration %s not found.\n", insns[0].string)
-		esac
-	fi
-}
-
 fun evalBinop(op, x, y){
 	case op of
 		  "*"  ->  (x * y)
@@ -116,7 +79,38 @@ fun fromLabel (env, lab) {
 -- returns a final configuration
 (* Assignment *)
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+	if size(insns) == 0 then c
+	else
+		local i = insns[1], s = c[0], d = c[1], w = c[2];
+		local c0;
+		case insns[0] of
+			  LD (v)        -> eval(env, [singleton(d(v)) +++ s, d, w], i)
+			| CONST (ct)    -> eval(env, [singleton(ct) +++ s, d, w], i)
+			| BINOP (op)    -> case s of y : x : rest -> eval(env, [singleton(evalBinop(op, x, y)) +++ rest, d, w], i) esac
+			| READ          -> local v = readWorld(w);
+							   eval(env, [singleton(v[0]) +++ s, d, v[1]], i)
+			| WRITE         -> eval(env, [s[1], d, writeWorld(s[0], w)], i)
+			| ST (v)        -> eval(env, [s[1], d <- [v, s[0]], w], i)
+			| LABEL (nm)    -> eval(env, c, i)
+			| JMP (lb)      -> eval(env, c, fromLabel(env, lb))
+			| CJMP (ch, lb) -> 
+							case s of cmp : r ->
+								local tmp;
+								case ch of
+									  "z"  -> tmp := (cmp == 0)
+									| "nz" -> tmp := (cmp != 0)
+								esac;
+								if (tmp)
+									then eval(env, [r, d, w], fromLabel(env, lb))
+									else eval(env, [r, d, w], i)
+								fi
+							esac
+			| LDA (v)       -> eval(env, [singleton(Ref(v)) +++ s, d, w], i)
+			| STI           -> case s of v : Ref(x) : s_n -> eval(env, [v:s_n, d <- [x, v], w], i) esac
+			| DROP          -> eval(env, [s[1], d, w], i)
+			| _             -> failure("SM-configuration %s not found.\n", insns[0].string)
+		esac
+	fi
 }
 (* End *)
 

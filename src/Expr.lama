@@ -103,6 +103,7 @@ fun evalList (c, exprs) {
 
 (* Assignment *)
 fun eval (c@[s, w], expr) {
+	--failure (">>> %s\n", expr.string);
 	case expr of
 		  Assn   (var, e)       -> case evalList (c, {var, e}) of [[s_n, w_n], {Ref(x), val}] -> [[s_n <- [x, val], w_n], val] esac
 		| Seq    (e1, e2)       -> case eval (c, e1) of [c_n, n] -> eval (c_n, e2) esac
@@ -118,11 +119,27 @@ fun eval (c@[s, w], expr) {
 																												[c_nn, None]
 																												else eval (c_nn, Repeat(e, cond))
 																										   fi esac esac
-		| Var    (var)          -> [c, s(var)]
+		| Var    (var)          -> [c, lookup(s, var)]
 		| Ref    (var)          -> [c, Ref(var)]
 		| Const  (n)            -> [c, n]
 		| Binop  (op, e1, e2)   -> case evalList (c, {e1, e2}) of [c_n, {v1, v2}] -> [c_n, evalOp(op, v1, v2)] esac
 		| Ignore (e)            -> case eval (c, e) of [c_n, n] -> [c_n, None] esac
+		| Scope  (d, e)         -> case evalList ([s.enterScope, w], d) of [c_n, n] ->
+										case eval (c_n, e) of [[s_n, w_n], n] -> [[leaveScope(s_n), w_n], n]
+								   esac esac
+		| Call   (st, ex)       -> case lookup (s, st) of Fun(l, e) ->
+										case evalList (c, ex) of [[s_0, w_n], n] ->
+											local s_n = enterFunction(s_0);
+											while size(l) do
+												s_n := addName(s_n, l[0], n[0]);
+												l   := l[1];
+												n   := n[1]
+											od;
+											case eval([s_n, w_n], e) of [[s_n, w_n], res] -> [[leaveFunction(s_0, getGlobal(s_n)), w_n], res]
+											esac esac esac
+		| Local  (l)            -> [[addNames(s, l), w], None]
+		| Fun    (st, l, e)     -> [[addFunction(s, st, l, e), w], None]
+		| 0                     -> [c, {}]
 		| _                     -> failure ("No such expression as %s.\n", expr.string)
 	esac
 }
