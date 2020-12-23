@@ -15,6 +15,7 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
+
 fun eval (c, stmt) {
 	 case stmt of
 		        Assn(str, expr) -> [c[0] <- [str, evalExpr(c[0], expr)], c[1]]
