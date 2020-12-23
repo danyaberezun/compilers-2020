@@ -1,66 +1,37 @@
--- Stack machine.
+-- Statement evaluator.
 
-import List;
-import World;
 import State;
 import Expr;
-import Buffer;
-import Fun;
+import World;
+import List;
 
-public fun showSMInsn (i) {
-  case i of
-    READ      -> sprintf ("READ")
-  | WRITE     -> sprintf ("WRITE")
-  | BINOP (s) -> sprintf ("BINOP %s", s)
-  | LD    (x) -> sprintf ("LD %s", x)
-  | ST    (x) -> sprintf ("ST %s", x)
-  | CONST (n) -> sprintf ("CONST %d", n)
-  esac
-}
-
-public fun showSM (prg) {
-  map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
-}
-
--- Stack machine interpreter. Takes an SM-configuration and a program,
--- returns a final configuration
--- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-fun eval (c@[st, state, w], insns) {
-  case insns of
-      {} -> [st, state, w]
-    | BINOP(op) : s -> eval([ebinop(op, st[1][0], st[0]) : st[1][1], state, w], s)
-    | CONST(n)  : s -> eval([n : st, state, w], s)
-    | READ      : s -> local world_ = readWorld(w); eval([world_[0] : st, state, world_[1]], s)
-    | WRITE     : s -> eval([st[1], state, writeWorld(st[0], w)], s)
-    | LD(x)     : s -> eval([state(x) : st, state, w], s)
-    | ST(x)     : s -> eval([st[1], state <- [x, st[0]], w], s)
-  esac
-}
--- Runs a stack machine for a given input and a given program, returns an output
-public fun evalSM (input, insns) {
-  eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
-}
-
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list (of, possibly, lists)
--- of stack machine instructions
-fun compileExpr (expr) {
-    case expr of
-      Const (n)     ->  singleton(CONST(n))
-    | Var (x)       ->  singleton(LD(x))
-    | Binop(op, l, r) ->  compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
-    esac
-}
-
--- Compiles a statement into a stack machine code.
--- Takes a statement, returns a list of stack machine
--- instructions.
-public fun compileSM (stmt) {
+-- Evaluates a statement "stmt" in a configuration "c".
+-- A configuration is a pair of a state "s" and a world "w".
+-- Returns a final configuration (if any)
+--
+-- A statement is represented by a data structure of the following shape:
+--
+-- stmt = Assn   (string, expr)     |
+--        Seq    (stmt, stmt)       |
+--        Skip                      |
+--        Read   (string)           |
+--        Write  (expr)             |
+fun eval (c, stmt) {
   case stmt of
-      Assn(x, e)    -> compileExpr(e) +++ singleton(ST(x))
-    | Write(x)      -> compileExpr(x) +++ singleton(WRITE)
-    | Read(x)       -> singleton(READ) +++ singleton(ST(x))
-    | Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2)
-    | Skip        -> {}
-  esac
+    Skip -> c
+	  | Assn(x, e)  -> 	[c[0] <- [x, evalExpr(c[0], e)], c[1]]
+    | Seq(s1, s2) -> 	eval(eval(c, s1), s2)
+		| Read(x)	  -> 	local res = readWorld(c[1]);
+							[c[0] <- [x, res[0]], res[1]]
+    | Write(x)    -> 	[c[0], writeWorld(evalExpr(c[0], x), c[1])]
+    | If (expr, s1, s2) -> if (evalExpr(c[0], expr)) then eval (c, s1) else eval (c, s2) fi
+    | Repeat (s, expr) -> local c1 = eval (c, s);
+               if (evalExpr(c1[0], expr)) then eval (c1, Skip) else eval (c1, Repeat(s, expr)) fi
+    | While (expr, s) -> if (evalExpr(c[0], expr)) then eval (c, Seq(s, stmt)) else eval (c, Skip) fi
+	esac
+}
+
+-- Evaluates a program with a given input and returns an output
+public fun evalStmt (input, stmt) {
+  eval ([emptyState, createWorld (input)], stmt).snd.getOutput
 }
