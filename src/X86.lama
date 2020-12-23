@@ -458,7 +458,7 @@ fun compile (env, code) {
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
         (* Assignment *)
-        
+
          -- Some guidelines for generating function calls:
          --
          -- 1. generate instructions to save live registers on the X86 stack (use
@@ -474,6 +474,98 @@ fun compile (env, code) {
          -- 1. generate proper prologue for BEGIN instruction (use "prologue" helper); use
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
+
+        | GLOBAL (name) -> [addGlobal(env, name), code]
+        | CALL (fLabel, nargs) ->
+            case call(env, fLabel, nargs) of
+              [env, codeCall] -> [env, code <+> codeCall]
+            esac
+        | BEGIN (fLabel, nargs, nlocals) ->
+            env := enterFunction(env, fLabel, nlocals);
+            [env, code <+> prologue(fLabel)]
+        | END ->
+            case epilogue(env) of [env, codeEpilogue] ->
+              [env, code <+> codeEpilogue]
+            esac
+
+        | CONST (v) ->
+            case allocate(env) of
+              [s, env] -> [env, code <+ Mov (L (v), s)]
+            esac
+        | DROP ->
+            case pop(env) of
+              [_, env] -> [env, code]
+            esac
+        | LD (x) ->
+            case allocate(env) of
+              [s, env] -> [env, code <+> move(loc(env, x), s)]
+            esac
+        | LDA (x) ->
+            case allocate(env) of
+              [s, env] -> [env, code <+ Lea (loc(env, x), s)]
+            esac
+        | ST (x) ->
+            [env, code <+> move(peek(env), loc(env, x))]
+        | STI ->
+            case pop(env) of [s, env] ->
+              local x = peek(env);
+              [env, code <+> move(s, I (0, x)) <+ Mov (s, x)]
+            esac
+        | LABEL (label) -> [retrieveStack(env, label), code <+ Label (label)]
+        | JMP (label) -> [setStack(env, label), code <+ Jmp (label)]
+        | CJMP (tag, label) ->
+            case pop(env) of [s, env] ->
+              [setStack(env, label), code <+ Binop ("cmp", L (0), s) <+ CJmp (tag, label)]
+            esac
+        | BINOP (op) ->
+            fun withOperands(code, x, y, action) {  -- moves first operand to register if both operands are memory
+              if (memOpnd(x) && memOpnd(y))
+                then action(code <+ Mov (x, edx), edx, y)
+                else action(code, x, y)
+              fi
+            }
+            fun plusLikeImpl (env, x, y, result) {
+              fun impl (code, x, y) {
+                code <+ Binop (op, y, x) <+ Mov (x, result)
+              }
+              [env, withOperands(code, x, y, impl)]
+            }
+            fun cmpImpl (env, x, y, result) {
+              fun impl (code, x, y) {
+                code
+                  <+ Binop ("cmp", y, x)
+                  <+ Mov (L (0), eax) <+ Set (suffix(op), "%al")
+                  <+ Mov (eax, result)
+              }
+              [env, withOperands(code, x, y, impl)]
+            }
+            fun logicalImpl (env, x, y, result) {
+              local code1 = code
+                  <+ Binop ("cmp", L (0), y) <+ Mov (L (0), eax) <+ Set (suffix("!="), "%al")
+                  <+ Mov (eax, edx)
+                  <+ Binop ("cmp", L (0), x) <+ Mov (L (0), eax) <+ Set (suffix("!="), "%al")
+                  <+ Binop (op, edx, eax) <+ Mov (eax, result);
+              [env, code1]
+            }
+            case pop2(env) of [y, x, env] ->
+              case allocate(env) of [result, env] ->  -- вообще result будет равным x?
+                case op of
+                  "+"  -> plusLikeImpl(env, x, y, result)
+                | "-"  -> plusLikeImpl(env, x, y, result)
+                | "*"  -> plusLikeImpl(env, x, y, result)
+                | "&&"  -> logicalImpl(env, x, y, result)
+                | "!!"  -> logicalImpl(env, x, y, result)
+                | "/"  -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (eax, result)]
+                | "%"  -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (edx, result)]
+                | "<"  -> cmpImpl(env, x, y, result)
+                | "<=" -> cmpImpl(env, x, y, result)
+                | ">"  -> cmpImpl(env, x, y, result)
+                | ">=" -> cmpImpl(env, x, y, result)
+                | "==" -> cmpImpl(env, x, y, result)
+                | "!=" -> cmpImpl(env, x, y, result)
+                esac
+              esac
+            esac
                
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)

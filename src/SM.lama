@@ -116,11 +116,111 @@ fun eval (env, w, insns) {
     inner (n, {}, list)
   }
 
+  fun createLocal(stack, nargs, nlocals) {
+    case take(stack, nargs) of [stack, args] ->
+      local state = makeState(nargs, nlocals);
+      foldl(fun(i, arg) {
+        assign(state, Arg (i), arg);
+        i + 1
+      }, 0, args);
+      [stack, state]
+    esac
+  }
+
   -- Core interpreter: takes a configuration and a program, returns a configuration
   (* Assignment *)
-  fun eval (c@[st, cst, s, w], insns) {
-    failure ("SM interpreter is not implemented\n")
+  fun eval (configuration@[st, cst, s, w], commands) {
+    while 1 do {
+      case commands of
+        {} -> return configuration
+      | command:commandsTail ->
+          case eval1(env, configuration, command, commandsTail) of
+            [configuration2, commandsTail2] ->
+              commands := commandsTail2;
+              configuration := configuration2
+          esac
+      esac
+    } od
   }
+
+  fun eval1 (env, configuration@[stack, controlStack, state, world], command, commands) {
+    --printf("eval1:        %s\n", stack.string);
+    --printf("eval1:        %s\n", globalState.string);
+    --printf("eval1:        %s\n", state.string);
+    --printf("eval1:    %s\n", command.string);
+    case command of
+      BINOP (op) ->
+        case stack of value2:value1:stack2 ->
+          local value = evalBinop(op, value1, value2);
+          stack := value:stack2
+        esac
+    | CONST (value) ->
+        stack := value:stack
+    | DUP ->
+        case stack of value:stack2 ->
+          stack := value:value:stack2
+        esac
+    | DROP ->
+        case stack of value:stack2 ->
+          stack := stack2
+        esac
+    | READ ->
+        case readWorld(world) of [value, world2] ->
+          stack := value:stack;
+          world := world2
+        esac
+    | WRITE ->
+        case stack of value:stack2 ->
+          local world2 = writeWorld(value, world);
+          stack := stack2;
+          world := world2
+        esac
+    | LD (var) ->
+        stack := lookup(state, var) : stack
+    | LDA (var) ->
+        stack := Ref (var) : stack
+    | ST (var) ->
+        case stack of value:stack2 ->
+          assign(state, var, value)
+        esac
+    | STI ->
+        case stack of value : Ref (var) : stack2 ->
+          stack := value:stack2;
+          assign(state, var, value)
+        esac
+    | GLOBAL (name) -> {}
+    | LABEL (label) -> {}
+    | JMP (label) ->
+        commands := fromLabel(env, label)
+    | CJMP (code, label) ->
+        case stack of value:stack2 ->
+          local code_is_zero = compare(code, "z") == 0;
+          if (value == 0) == code_is_zero then
+            commands := fromLabel(env, label)
+          fi;
+          stack := stack2
+        esac
+    | CALL (fLabel, _) ->
+        controlStack := [state, commands] : controlStack;
+        commands := fromLabel(env, fLabel)
+    | BEGIN (fLabel, nargs, nlocals) ->
+        case createLocal(stack, nargs, nlocals) of [stack2, state2] ->
+          stack := stack2;
+          state := state2
+        esac
+    | END ->
+        case controlStack of
+          {} -> commands := {}
+        | [state2, commands2] : controlStack2 ->
+            controlStack := controlStack2;
+            state := state2;
+            commands := commands2
+        esac
+    --| CALL
+    esac;
+    return [[stack, controlStack, state, world], commands]
+  }
+
   (* End *)
   
   eval ([{}, {}, makeState (0, 0), w], insns) [3].getOutput
@@ -348,7 +448,184 @@ fun addVars (env, names) {
 --    environment (use env.beginFun) and register arguments
 --    (use env.addArg).
 
-public fun compileSM (expr) {
-  failure ("compileSM not implemented\n")
+public fun compileSM (stmt) {
+  case doCompileSM(initCompEnv(), stmt) of [env, commands] ->
+    --printf("compileSM: %s\n", commands.string);
+    commands
+  esac
 }
+
+fun doCompileSM(env, stmt) {
+  local pair, commands, functions;
+  pair := compileFunction(env, "main", {}, stmt);
+  env := pair[0];
+  commands := pair[1];
+  while (1) do
+    if (size(functions) == 0) then
+      case getFuns(env) of [functions1, env1] ->
+        functions := functions1;
+        env := env1
+      esac
+    fi;
+    if (size(functions) == 0) then return [env, commands] fi;
+    case functions of Fun (fLabel, args, body, state) : functions2 ->
+      functions := functions2;
+      env := beginFun(env, state);
+      env := addArgs(env, args);
+      case compileFunction(env, fLabel, args, body) of [env1, commands1] ->
+        env := env1;
+        commands := commands +++ commands1
+      esac
+    esac
+  od
+}
+
+fun compileFunction(env, fLabel, args, body) {
+  case compileSM1(env, body) of [env1, commands1] ->
+    local commands;
+    env := env1;
+    commands := {LABEL (fLabel), BEGIN (fLabel, size(args), getLocals(env))} +++ commands1 +++ singleton(END);
+    [env, commands]
+  esac
+}
+
+fun compileSM1 (env, stmt) {
+  local commands;
+  --printf("compileSM1:        %s\n", env.string);
+  --printf("compileSM1: %s\n", stmt.string);
+  commands := case stmt of
+    Scope (defs, expr) ->
+      env := beginScope(env);
+      case processDefs(env, defs) of [env1, commandsDefs] ->
+        env := env1;
+        case compileSM1(env, expr) of [env1, commandsExpr] ->
+          env := env1;
+          env := endScope(env);
+          commandsDefs +++ commandsExpr
+        esac
+      esac
+  | Call (name, args) ->
+      local pair = foldl(fun([env, commands], arg) {
+        case compileSM1(env, arg) of [env, commandsArg] ->
+          [env, commands +++ commandsArg]
+        esac
+      }, [env, {}], args);
+      case pair of [env1, commandsArgs] ->
+        env := env1;
+        case lookupFun(env, name) of Fun (fLabel, nargs) ->
+          commandsArgs +++ singleton(CALL (fLabel, nargs))
+        esac
+      esac
+  | Seq (stmt1, stmt2) ->
+      case compileSM1(env, stmt1) of [env1, commands1] ->
+        case compileSM1(env1, stmt2) of [env2, commands2] ->
+          env := env2;
+          commands1 +++ commands2
+        esac
+      esac
+  | Skip -> {}
+  | Var (var) -> singleton(LD (lookupVar(env, var)))
+  | Ref (var) -> singleton(LDA (lookupVar(env, var)))
+  | Const (value) -> singleton(CONST (value))
+  | Ignore (expr) ->
+      case compileSM1(env, expr) of [env1, commands] ->
+        env := env1;
+        commands +++ singleton(DROP)
+      esac
+  | Read (var) -> {READ, ST (lookupVar(env, var)), DROP}
+  | Write (expr) ->
+      case compileSM1(env, expr) of [env1, commands] ->
+        env := env1;
+        commands +++ singleton(WRITE)
+      esac
+  | Assn (var, expr) ->
+      case compileSM1(env, var) of [env1, commands1] ->
+        case compileSM1(env1, expr) of [env2, commands2] ->
+          env := env2;
+          commands1 +++ commands2 +++ singleton(STI)
+        esac
+      esac
+  | If (expr, stmt1, stmt2) ->
+      -- if expr == 0 jmp l1
+      -- stmt1
+      -- jmp l2
+      -- l1
+      -- stmt2
+      -- l2
+      case genLabels(env, 2) of [l1, l2, env2] ->
+        case compileSM1(env2, expr) of [env3, commandsExpr] ->
+          case compileSM1(env3, stmt1) of [env4, commandsStmt1] ->
+            case compileSM1(env4, stmt2) of [env5, commandsStmt2] ->
+              env := env5;
+              commandsExpr +++ singleton(CJMP("z", l1)) +++ commandsStmt1 +++ {JMP(l2), LABEL(l1)} +++ commandsStmt2 +++ singleton(LABEL(l2))
+            esac
+          esac
+        esac
+      esac
+  | While (expr, stmt) ->
+      -- jmp l2
+      -- l1
+      -- stmt
+      -- l2
+      -- if expr != 0 jmp l1
+      case genLabels(env, 2) of [l1, l2, env2] ->
+        case compileSM1(env2, expr) of [env3, commandsExpr] ->
+          case compileSM1(env3, stmt) of [env4, commandsStmt] ->
+            env := env4;
+            {JMP(l2), LABEL(l1)} +++ commandsStmt +++ singleton(LABEL(l2)) +++ commandsExpr +++ singleton(CJMP("nz", l1))
+          esac
+        esac
+      esac
+  | Repeat (stmt, expr) ->
+      -- l1
+      -- stmt
+      -- if expr == 0 jmp l1
+      case genLabel(env) of [l1, env2] ->
+        case compileSM1(env2, expr) of [env3, commandsExpr] ->
+          case compileSM1(env3, stmt) of [env4, commandsStmt] ->
+            env := env4;
+            singleton(LABEL(l1)) +++ commandsStmt +++ commandsExpr +++ singleton(CJMP("z", l1))
+          esac
+        esac
+      esac
+  | Binop (op, expr1, expr2) ->
+      case compileSM1(env, expr1) of [env2, commands1] ->
+        case compileSM1(env2, expr2) of [env3, commands2] ->
+          commands1 +++ commands2 +++ singleton(BINOP (op))
+        esac
+      esac
+  esac;
+  return [env, commands]
+}
+
+fun processDefs(env, defs) {
+  local commands;
+  env := foldl(fun (env, def) {
+    case def of
+      Local (names) -> addVars(env, names)
+    | Fun (name, args, body) ->
+        case genFunLabel(env, name) of
+          [fLabel, env] -> addFun(env, name, fLabel, size(args))
+        esac
+    esac
+  }, env, defs);
+  commands := if isGlobal(env) then
+    flatten(map(fun(def) {
+      case def of
+        Local (names) -> map(fun(name) { GLOBAL (name) }, names)
+      | Fun (name, args, body) -> {}
+      esac
+    }, defs))
+  else
+    {}
+  fi;
+  env := foldl(fun(env, def) {
+    case def of
+      Local (names) -> env
+    | Fun (name, args, body) -> rememberFun(env, genFunLabel(env, name)[0], args, body)
+    esac
+  }, env, defs);
+  [env, commands]
+}
+
 (* End *)
