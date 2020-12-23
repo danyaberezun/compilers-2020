@@ -451,7 +451,7 @@ public fun compileSM (expr) {
           esac
         esac
       | Skip              -> [env, maybeJump(endLabel)]
-      | Read (name) -> [env, singletonBuffer(READ) <+ ST (name) <+> maybeJump(endLabel)]
+      | Read (name) -> [env, singletonBuffer(READ) <+ ST (lookupVar(env, name)) <+> maybeJump(endLabel)]
       | Write (expr) -> case compileExpr(env, expr, None) of
            [ev, sm] -> [ev, sm <+ WRITE <+> maybeJump(endLabel)]
          esac
@@ -495,8 +495,8 @@ public fun compileSM (expr) {
                     esac
                   esac
                esac
-      | Var (name) -> [env, singletonBuffer(LD (name)) <+> maybeJump(endLabel)]
-      | Ref (name) -> [env, singletonBuffer(LDA (name)) <+> maybeJump(endLabel)]
+      | Var (name) -> [env, singletonBuffer(LD (lookupVar(env, name))) <+> maybeJump(endLabel)]
+      | Ref (name) -> [env, singletonBuffer(LDA (lookupVar(env, name))) <+> maybeJump(endLabel)]
       | Const (val) -> [env, singletonBuffer(CONST (val)) <+> maybeJump(endLabel)]
       | Binop (op, expr1, expr2) -> case compileExpr(env, expr1, None) of
                  [ev1, sm1] -> case compileExpr(ev1, expr2, None) of
@@ -572,7 +572,7 @@ public fun compileSM (expr) {
       }
     });
 
-  fprintf(stderr, "CompileSM: %s", expr.string);
+  -- fprintf(stderr, "CompileSM: %s\n", expr.string);
   case genLabels(initCompEnv(), 1) of
     [l1, env] -> case compileExpr(env, expr, Some(l1)) of
       [ev, initCode] -> {
@@ -581,7 +581,7 @@ public fun compileSM (expr) {
                                  <+> initCode <+ LABEL(l1) <+ END;
                            local fullSMCode = mainFunction <+> compileFuncsFixPoint(ev, {});
 
-                           fprintf(stderr, "Generated code: %s", fullSMCode.string);
+                           -- fprintf(stderr, "Generated code: %s\n", fullSMCode.string);
                            fullSMCode.getBuffer
                         }
     esac
