@@ -402,7 +402,7 @@ fun compile (env, code) {
         | LABEL(lbl)      -> if env.isBarrier then [env.retrieveStack(lbl), code <+ Label (lbl)] else  [env, code <+ Label (lbl)] fi
         | JMP  (lbl)      -> [env, code <+ Jmp   (lbl)]
         | CJMP (znz, lbl) -> case env.pop of [s, env] ->
-                                [env.setStack(lbl), code <+ Mov (s, eax) <+ Binop ("cmp", L(0), eax) <+ CJmp (znzene (znz), label)]
+                                [env.setStack(lbl), code <+ Mov (s, eax) <+ Binop ("cmp", L(0), eax) <+ CJmp (znzene (znz), lbl)]
                                esac
         | DROP            -> [env.pop[1], code]
         | LDA (x)         -> case env.addGlobal(x).allocate of
