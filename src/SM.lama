@@ -161,15 +161,16 @@ fun eval (env, w, insns) {
         esac
     | instruction : continuation ->
         eval (
+          {local unit = fprintf(stderr, "Interpret instruction: %s, state: %s\n", instruction.string, c.string);
           case instruction of
             READ            -> case readWorld (w) of [v, w]     -> [v : st, cst, s, w]                 esac
           | WRITE           -> case st            of v : st     -> [st, cst, s, writeWorld(v, w)]      esac
           | BINOP (op)      -> case st            of y : x : st -> [applyOp (op, x, y) :st, cst, s, w] esac
-          | CONST (val)     -> [val              : st, cst, s, w]
-          | LD    (name)    -> [lookup (s, name) : st, cst, s, w]
-          | LDA   (name)    -> [Ref (name)       : st, cst, s, w]
-          | DUP             -> [st.hd            : st, cst, s, w]
-          | DROP            -> [st.tl                , cst, s, w]
+          | CONST (val)     -> [val                  : st, cst, s, w]
+          | LD    (name)    -> [lookup (s, name)     : st, cst, s, w]
+          | LDA   (name)    -> [Ref (name)           : st, cst, s, w]
+          | DUP             -> case st of h:hs -> [h : st, cst, s, w] esac
+          | DROP            -> case st of h:hs -> [    hs, cst, s, w] esac
           | ST    (name)    -> case st of n : _               -> assign (s, name, n); [    st, cst, s, w] esac
           | STI             -> case st of n : Ref (name) : st -> assign (s, name, n); [n : st, cst, s, w] esac
           | LABEL (_)       -> c
@@ -182,7 +183,7 @@ fun eval (env, w, insns) {
                                esac
           | GLOBAL (x)      -> assign (s, Glb (x), 0); [st, cst, s, w]
           | x : _ -> failure (sprintf("SM interpreter doesn't know instruction %s\n", x.string))
-          esac,
+          esac},
           continuation
         )
     esac
@@ -438,7 +439,7 @@ public fun compileSM (expr) {
   -- reference to prev impl: https://github.com/kry127/compilers-2020/blob/20caaa88d46ee3caa895b8f3e9faeb6b4878f184/src/SM.lama#L175
   -- Returns [env, SMCode]
   fun compileExpr (env, stmt, endLabel) {
-    -- printf ("Statement to compile to SM: ""%s""\n", stmt.string);
+    -- fprintf (stderr, "Statement to compile to SM: ""%s""\n", stmt.string);
     case stmt of
         Assn (name, expr) -> case compileExpr(env, name, None) of
           [ev, sm] -> case compileExpr(ev, expr, None) of
@@ -575,15 +576,16 @@ public fun compileSM (expr) {
   -- fprintf(stderr, "CompileSM: %s\n", expr.string);
   case genLabels(initCompEnv(), 1) of
     [l1, env] -> case compileExpr(env, expr, Some(l1)) of
-      [ev, initCode] -> {
-                           local mainFunction = singletonBuffer (LABEL ("main"))
-                                 <+ BEGIN ("main", 0, getLocals(env))
-                                 <+> initCode <+ LABEL(l1) <+ END;
-                           local fullSMCode = mainFunction <+> compileFuncsFixPoint(ev, {});
+      [ev, initCode] ->
+        {
+           local mainFunction = singletonBuffer (LABEL ("main"))
+                 <+ BEGIN ("main", 0, getLocals(env))
+                 <+> initCode <+ LABEL(l1) <+ END;
+           local fullSMCode = mainFunction <+> compileFuncsFixPoint(ev, {});
 
-                           fprintf(stderr, "Generated code: %s\n", fullSMCode.string);
-                           fullSMCode.getBuffer
-                        }
+           fprintf(stderr, "Generated code: %s\n", fullSMCode.string);
+           fullSMCode.getBuffer
+        }
     esac
   esac
 }

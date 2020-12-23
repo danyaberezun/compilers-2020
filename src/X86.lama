@@ -481,7 +481,6 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
-        local unit = fprintf(stderr, "Process command: %s, code: %s\n", i.string, code.string);
         case i of
           READ ->
             case env.allocate of
@@ -517,7 +516,7 @@ fun compile (env, code) {
                 esac
               esac
             esac
-        | GLOBAL(name) -> [env.addGlobal(name), emptyBuffer()]
+        | GLOBAL(name) -> [env.addGlobal(name), code]
         | CONST (val) ->
             case env.allocate of
               [s, updenv] -> [updenv, code <+ Mov (L (val), s)]
@@ -570,10 +569,9 @@ fun compile (env, code) {
       }, [env, emptyBuffer ()], code)
   }
 
-  local unit = fprintf(stderr, "Compile SM code: %s\n", code.string);
-  local code = compile (env, code);
-  local unit2 = fprintf(stderr, "x86 code: %s\n", code[1].string);
-  code
+  local genCode = compile (env, code);
+  -- local unit2 = fprintf(stderr, "x86 code: %s\n", genCode[1].string);
+  genCode
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
