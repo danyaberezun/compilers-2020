@@ -21,12 +21,12 @@ import World;
 
 fun eval (c@[map, world@[input, output]], stmt) {
 case stmt of 
-	Assn (x, e) -> [map <- [x, evalExpr (map, e)], world]
+	Assn (x, e) -> [map <- [x, evalExpr (map, e)], world] -- присваивание
 	| Seq (s1, s2) -> eval (eval (c, s1), s2)
-	| Read (x) -> [map <- [x, fst (readWorld (world))], snd (readWorld (world))] 
-	| Write (e) -> [map, writeWorld (evalExpr (map, e), world)]
+	| Read (x) -> [map <- [x, fst (readWorld (world))], snd (readWorld (world))] -- fst  первый элемент 
+	| Write (e) -> [map, writeWorld (evalExpr (map, e), world)] -- world хранит 2 списка входа и фыхода
 	| Skip -> [map, world]
-	| If (e, s1, s2) -> case evalExpr (map, e) of
+	| If (e, s1, s2) -> case evalExpr (map, e) of -- if e then s1 else s2
 				0 -> eval (c, s2)
 				| _ -> eval (c, s1)
 			    esac
