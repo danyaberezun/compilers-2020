@@ -7,6 +7,14 @@ import Buffer;
 import Fun;
 import Manifest;
 
+-- conditional flags
+fun znzene (znz) {
+  case znz of
+    "z"  -> "e"
+  | "nz" -> "ne"
+  esac
+}
+
 -- Assembler language interface
 -- The registers: 
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
@@ -41,10 +49,7 @@ local wordSize = 4;
 --   Cltd                       -- see instruction set reference           
 --   Set   (string, string)     -- sets a value from flags; the first operand is the   
 --                                 suffix, which determines the value being set, the
---                                 the second --- (sub)register name
---   Jmp   (string)             -- unconditional jump to a label
---   CJmp  (string, string)     -- conditional jump to a label
---   Label (string)             -- a label
+
 --   Push  (opnd)               -- pushes the operand on the hardware stack
 --   Pop   (opnd)               -- pops from the hardware stack to the operand
 --   Call  (string)             -- calls a function by its name 
@@ -137,7 +142,6 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-  -- popped items and an undated environment
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -266,6 +270,15 @@ fun move (from, to) {
   fi
 }
 
+
+fun op_type (op) {
+  case op of 
+      "+" -> 1
+    | "-" -> 1
+    | "*" -> 1
+    | _ -> 0
+  esac
+}
 -- Gets a suffix for Set instruction from
 -- source language comparison operator
 fun suffix (op) {
@@ -295,9 +308,76 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        -- | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        --
+        --
+        --
+        -- THAT'S WHERE THE FUN BEGINS 
+        --
+        --
+        -- 
+        -- &&&                                     &&&&&&&&&&&            &&&& &&                              
+        --                &%%                      &&&&&&&&&&&&&&  &     & &  &&%&                             
+        --                %&   %                 &&&&&&&&%%%%%%%%%&&&&&&%& &&&#&#(%                            
+        --               &#%&%   &            &&&&&&&&&&&&%%%%%%%%%%%%&&%&&&&#%#&((%%                       %,#
+        --               &&###  /         &  &&&&&&&&&&&&&&&%%%%%%###%%%%%%%%##*%&((#                      &%(,
+        --              &&&    &*             &&  &&&&&&&&&&&&%%%%#&(#%%%%#(%%##%%#/&&&                   & %%&
+        --             &                    &&&&&&&&&&&&&%%%%%%&&#..*#%%%%%##(%%#%#/#                      &&&&
+        --                                  &&&&&&& &&&&&&%%%%%%%%%%#(##%#/,,%/%%&#((&&        &             & 
+        --             %                  &&&&     &   & &  &%%%%%#((*/##(**,##%%##,%&              &          
+        --                                 &&&&&&&&&&&&&&&&     &%##((((((,./.*%##/#%%                 &&      
+        --             &&&              &&&&&&&&&&&  && /      &&&%%%#####(*/(*#(#%%&&  %                 &&   
+        --         &   &&&&               &&&&&&&&&&&&%&&&&&&&&&&&%%#%%&&&&&%#/##%#&&&                        &
+        --                                &&&&&&&&&&&&&&&&&&&&&&&&%(.%%%&#&%#(%%%%&&&&&                        
+        --                &               &&&&&&&%%%%%%%%&&&&&&&&&%(.#%%%#(//##%%% &&&&  &&                &   
+        --                   &            &&&&&&&%%%%%%%%%%&&&&&&&%(.,..**/,##&##&&&&&      &&&               &
+        --                    &          &&&&&&&&%%%&&&&&&&&&&&&&%%%*.*.....##%              &&&&&&            
+        --                       &       &&&&&&&%&&&&&&&&& &&&&&&%%#/.%#*,.,%(&%&&          &&          &      
+        --                              &&&&&&&&&&&&&&&&&&%&&&&&&&%%*%%%#/*&%((&&%&                      &     
+        --                                 &&&&&&&   &&&&&&%%%%%%/,,,%&%#/#%&&&& &&&                           
+        --                               &   &&&&&&&&&%&%%%#%&&&&#/*%&%(/ &                                 &  
+        --                                &&&&  && &&&&&&#%&&#&/(*/%%%(&                                     & 
+        --                                  &&&&&%  %& %&&&%##/*,,*%#%                                        &
+        --                                    &&&&&&&% %%%,%%#(/,,/%&                                          
+        --                                     &&&&&&&&%#(((/**,,%%                                            
+        --                       &&&             &&&&%%%%##(/.*,%&                                             
+        --                        &&&&&&&          &&&&&%&%%#(#&                    &                 &&       
+        --                        &&&&&&&&&&&&&&&&%/,,,,.,*%%                        %&&   &        &   &      
+        --                           &&&&&&&&&&%%(//***,,,&&&%&             &&        %&&                      
+        --                              &&&&&%%#(((/****%&   &%%              &%       %                       
+        --   &                         & && %%%#((((%%&&       &#               &%%%%&& %                      
+        -- 
+        -- 
+        -- 
+
+
+        | CONST (elem) -> case env.allocate of [s, env] -> [env, code <+ Mov(L(elem), s)] esac  -- allocate возвращает пару все что я понял
+        | LD (elem) -> case env.allocate of [s, env] -> [env, code <+> move(env.loc(elem), s)] esac
+        | ST (elem) -> case env.addGlobal(elem).pop of [s, env] -> [env, code <+> move(s, env.loc(elem))] esac
+        | BINOP (op) ->
+          case env.pop2 of [s2, s1, env] -> -- note: pop2 returns stack -> [y:x:other]
+            case env.allocate of [s, env] -> 
+              case op of 
+                "%" -> [env, code <+ Mov(s1, eax) <+ Cltd <+ IDiv(s2) <+ Mov(edx, s)]
+              | "/" -> [env, code <+ Mov(s1, eax) <+ Cltd <+ IDiv(s2) <+ Mov(eax, s)]
+              | "!!" -> [env, code <+ Mov(s1, edx) <+ Binop("!!", s2, edx) <+ Binop("cmp", L(0), edx) <+ Mov(L(0), eax) <+ Set("ne", "%al") <+ Mov(eax, s)]
+              | "&&" -> [env, code <+ Mov(s1, edx) <+ Binop("*", s2, edx)  <+ Binop("cmp", L(0), edx) <+ Mov(L(0), eax) <+ Set("ne", "%al") <+ Mov(eax, s)]
+              | op -> 
+                case op_type(op) of
+                  0 -> [env, code <+ Mov(s2, edx) <+ Binop("cmp", edx, s1) <+ Mov(L(0), eax) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                | 1 -> [env, code <+ Mov(s1, eax) <+ Binop(op, s2, eax) <+ Mov(eax, s)]
+                esac
+              esac
+            esac
+          esac
+        | LABEL(label)-> [env, code <+ Label(label)]
+        | JMP(label)-> [env, code <+ Jmp(label)]
+        | CJMP(znz, label)->
+          case env.pop of
+            [s, environment]-> [env, code <+ Mov(s, eax) <+ Binop("cmp", L(0), eax) <+ CJmp(znzene(znz), label)]
+          esac
         esac
-      }, [env, emptyBuffer ()], code)
+      }, [env, emptyBuffer ()], code) 
   }
 
   compile (env, code) 
@@ -324,9 +404,8 @@ public fun compileX86 (args, code) {
                         prologue (getStackSize (env)) <+>
                         code <+>
                         epilogue ()
-                    )
-                   ).stringcat);
-                    
+                      )
+                   ).stringcat);                    
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }
