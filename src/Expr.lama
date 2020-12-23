@@ -85,7 +85,10 @@ fun eval (configuration@[st, world], expr) {
                                     [configuration, v] -> eval (configuration, if v then s1 else s2 fi)
                                   esac
     | While  (exp, s)          -> case eval (configuration, exp) of
-                                    [configuration, v] -> if v then eval (eval (configuration, s)[0], While (exp, s)) else [configuration, None] fi
+                                    [configuration, 0] -> [configuration, None]
+                                  | [configuration, _ ] -> case eval (configuration, s)  of
+                                                            [configuration, value] -> eval (configuration, expr)
+                                                           esac
                                   esac
     | Repeat (s, exp)          -> case eval (eval (configuration, s)[0], exp) of
                                     [configuration, v] -> if v then [configuration, None] else eval (configuration, Repeat (s, exp)) fi
