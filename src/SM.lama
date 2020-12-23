@@ -184,7 +184,7 @@ public fun compileSM (stmt) {
         [env, ins] -> [env, ins +++ (DROP : {})]
       esac
   | If (expr, s1, s2) -> 
-      case env.genLabels(env, 2) of
+      case genLabels(env, 2) of
         [ls2, lfi, env] ->
           case compileEnv(env, s1) of
             [env, ins1] ->
@@ -208,7 +208,7 @@ public fun compileSM (stmt) {
           esac
       esac 
   | While (expr, s) ->
-      case env.genLabels(env, 2) of
+      case genLabels(env, 2) of
         [l1, l2, env] ->
           case compileEnv(env, s) of
             [env, ins] -> 
@@ -220,7 +220,7 @@ public fun compileSM (stmt) {
           esac
       esac
   | Repeat (s, expr) ->
-      case env.genLabel(env) of
+      case genLabel(env) of
         [lbl, env] ->
           case compileEnv(env, s) of
             [env, ins] ->
