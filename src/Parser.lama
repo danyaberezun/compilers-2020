@@ -5,14 +5,7 @@ import Lexer;
 import List;
 import Fun;
 import Matcher;
-<<<<<<< HEAD
 
--- A parser of "something" in brackets; l, r are left and right
--- brackets as parsers, p --- a parser of "something"
-=======
--- import Stmt;
-
->>>>>>> A04-control-flow-int
 fun inbr (l, p, r) {
   syntax (-l p -r)
 }
