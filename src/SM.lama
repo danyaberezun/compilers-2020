@@ -36,7 +36,7 @@ fun eval (c@[st, state, w], insns) {
     | ST(x) : p -> eval([st[1], state <- [x, st[0]], w], p)
     | {} -> [st, state, w]
   esac
-  }
+}
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
