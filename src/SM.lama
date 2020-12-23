@@ -77,7 +77,6 @@ fun eval (env, c@[s, st, w@[i,o]], insns) {
                                                  esac
                            esac
     esac
-  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
