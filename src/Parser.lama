@@ -106,9 +106,9 @@ fun distributeScope (expr, exprConstructor) {
 }
 
 local elifParser = memo $ eta syntax (
-									kElse st = scopeExpr kFi                          {st}                                                           |
-									kFi                                               {fun (a) {assertVoid(a, Skip, loc)}}                           |
-									kElif x = exp kThen s1 = exp s2 = elifParser      {fun (a) {If (x(Val), s1(a), s2(a))}}
+									kElse st = scopeExpr kFi                                {st}                                                     |
+									kFi                                                     {fun (a) {assertVoid(a, Skip, loc)}}                     |
+									kElif x = exp kThen s1 = exp s2 = elifParser            {fun (a) {If (x(Val), s1(a), s2(a))}}
 									);
 
 local primary    = memo $ eta syntax (
@@ -142,11 +142,11 @@ local primary    = memo $ eta syntax (
 																							esac
 																							}}                                                       |
 									loc = pos kFor s1 = scopeExpr s[","] e = exp s[","] s2 = exp kDo
-												s3 = scopeExpr kOd  {fun (a) {
-																	case s1(Void) of Scope(defs, st) ->
-																		assertVoid(a, Scope(defs, Seq(st, While(e(Val), Seq(s3(Void), s2(Void))))), loc) 
-																	esac
-																	}}),
+											s3 = scopeExpr kOd  {fun (a) {
+																case s1(Void) of Scope(defs, st) ->
+																	assertVoid(a, Scope(defs, Seq(st, While(e(Val), Seq(s3(Void), s2(Void))))), loc) 
+																esac
+																}}),
 
 (* Assignment *)
 	  variable   = memo $ eta syntax (
@@ -166,8 +166,8 @@ local primary    = memo $ eta syntax (
 									d1 = simpleDef d2 = definition                          {d1 : d2}
 	  ),
       scopeExpr  = memo $ eta syntax (
-									df = definition e = exp                                 {fun (a) {expandScope(df, e(a))}}                         |
-									e = exp                                                 {fun (a) {expandScope({}, e(a))}}                         |
+									df = definition e = exp                                 {fun (a) {expandScope(df, e(a))}}                        |
+									e = exp                                                 {fun (a) {expandScope({}, e(a))}}                        |
 									df = definition                                         {fun (a) {expandScope(df, Skip)}}
       ),
 (* End *)
