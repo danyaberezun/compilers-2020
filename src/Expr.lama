@@ -92,7 +92,7 @@ fun eval (configuration@[st, world], expr) {
                                   esac
     | Ref    (x)               -> [configuration, Ref (x)]
     | Ignore (exp)             -> [eval (configuration, exp)[0], None]
-    | _                        -> failure("Statement %s not found. \n", stmt)
+    | _                        -> failure("Statement %s not found. \n", expr)
   esac
 }
 
