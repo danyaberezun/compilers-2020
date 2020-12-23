@@ -33,6 +33,25 @@ public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
 
+fun evalBinop(op, x, y){
+	case op of
+		  "*"  ->  (x * y)
+		| "/"  ->  (x / y)
+		| "%"  ->  (x % y)
+		| "+"  ->  (x + y)
+		| "-"  ->  (x - y)
+		| "==" -> (x == y)
+		| "!=" -> (x != y)
+		| "<=" -> (x <= y)
+		| "<"  ->  (x < y)
+		| ">=" -> (x >= y)
+		| ">"  ->  (x > y)
+		| "&&" -> (x && y)
+		| "!!" -> (x !! y)
+		| _    -> failure("Operation %s not found.\n", op)
+	esac
+}
+
 -- Evaluation environment: keeps a mapping between labels and (sub)programs
 fun initEvalEnv (insns) {
   local map =
@@ -60,7 +79,38 @@ fun fromLabel (env, lab) {
 -- returns a final configuration
 (* Assignment *)
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+	if size(insns) == 0 then c
+	else
+		local i = insns[1], s = c[0], d = c[1], w = c[2];
+		local c0;
+		case insns[0] of
+			  LD (v)        -> eval(env, [singleton(d(v)) +++ s, d, w], i)
+			| CONST (ct)    -> eval(env, [singleton(ct) +++ s, d, w], i)
+			| BINOP (op)    -> case s of y : x : rest -> eval(env, [singleton(evalBinop(op, x, y)) +++ rest, d, w], i) esac
+			| READ          -> local v = readWorld(w);
+							   eval(env, [singleton(v[0]) +++ s, d, v[1]], i)
+			| WRITE         -> eval(env, [s[1], d, writeWorld(s[0], w)], i)
+			| ST (v)        -> eval(env, [s[1], d <- [v, s[0]], w], i)
+			| LABEL (nm)    -> eval(env, c, i)
+			| JMP (lb)      -> eval(env, c, fromLabel(env, lb))
+			| CJMP (ch, lb) -> 
+							case s of cmp : r ->
+								local tmp;
+								case ch of
+									  "z"  -> tmp := (cmp == 0)
+									| "nz" -> tmp := (cmp != 0)
+								esac;
+								if (tmp)
+									then eval(env, [r, d, w], fromLabel(env, lb))
+									else eval(env, [r, d, w], i)
+								fi
+							esac
+			| LDA (v)       -> eval(env, [singleton(Ref(v)) +++ s, d, w], i)
+			| STI           -> case s of v : Ref(x) : s_n -> eval(env, [v:s_n, d <- [x, v], w], i) esac
+			| DROP          -> eval(env, [s[1], d, w], i)
+			| _             -> failure("SM-configuration %s not found.\n", insns[0].string)
+		esac
+	fi
 }
 (* End *)
 
@@ -99,11 +149,80 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list of stack machine
+-- Compiles a statement into a stack machine code.
+-- Takes a statement, returns a list of stack machine
 -- instructions.
 (* Assignment *)
+
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+	fun cmpSM (env, stmt) {
+		case stmt of
+			  Var (v)            -> [env, singleton(LD(v))]
+			| Const (c)          -> [env, singleton(CONST(c))]
+			| Read (v)           -> [env, {READ, ST(v)}]
+			| Write (e)          -> case cmpSM (env, e) of [env_n, i] -> [env_n, i +++ singleton(WRITE)] esac
+			| Assn (v, e)        -> case cmpSM (env, v) of [env1, i1] ->
+										case cmpSM (env1, e) of [env2, i2] ->
+											[env2, i1 +++ i2 +++ singleton(STI)]
+										esac
+									esac
+			| Skip               -> [env, {}]
+			| Seq (s1, s2)       -> case cmpSM(env, s1) of [env1, i1] ->
+										case cmpSM(env1, s2) of [env2, i2] ->
+											[env2, i1 +++ i2]
+										esac
+									esac
+			| While (e, s)       -> case genLabels(env, 2) of [lb1, lb2, env0] ->
+										case cmpSM(env0, e) of [env1, i_e] ->
+											case cmpSM(env1, s) of [env2, i] ->
+												[env2, {JMP (lb2), LABEL (lb1)} +++ i +++ singleton(LABEL (lb2)) 
+												+++ i_e +++ singleton(CJMP ("nz", lb1))]
+											esac
+										esac
+									esac
+			| Repeat (s, e)      -> case genLabels(env, 1) of [lb, env0] ->
+										case cmpSM(env0, s) of [env1, i] ->
+											case cmpSM(env1, e) of [env2, i_e] ->
+												[env2, singleton(LABEL (lb)) +++ i +++ i_e +++ singleton(CJMP ("z", lb))]
+											esac
+										esac
+									esac
+			| If (e, s1, s2)     -> case genLabels(env, 2) of [lElse, lFi, env_n] ->
+										case cmpSM(env_n, e) of [env0, i_e] ->
+											case cmpSM(env0, s1) of [env1, i1] ->
+												case cmpSM(env1, s2) of [env2, i2] ->
+													local lEnd;
+													case getEnd(i1) of
+														[i, LABEL (lb)] -> lEnd := lb; i1 := i
+														| _             -> lEnd := lFi
+													esac;
+													[env2, i_e +++ singleton(CJMP ("z", lElse)) +++ i1 
+														+++ {JMP (lEnd), LABEL (lElse)} +++ i2 +++ singleton(LABEL (lEnd))]
+												esac
+											esac
+										esac
+									esac
+			| Ignore (e)         -> case cmpSM(env, e) of [env1, i] -> [env1, i +++ singleton(DROP)] esac
+			| Ref (v)            -> [env, singleton(LDA(v))]
+			| Binop (op, e1, e2) -> case cmpSM(env, e1) of [env1, i1] ->
+										case cmpSM(env1, e2) of [env2, i2] ->
+											[env2, i1 +++ i2 +++ singleton(BINOP(op))]
+										esac
+									esac
+			| _                  -> failure("Statement %s not found.\n", stmt.string)
+		esac
+	}
+	cmpSM (initCompEnv(), stmt) [1]
+}
+
+fun getEnd (st){
+	case st of
+		  {} -> [{}]
+		| s : {} -> [{}, s]
+		| s1 : s2  -> 
+			case getEnd (s2) of 
+				[t1, t2] -> [s1 : t1, t2]
+			esac
+	esac
 }
 (* End *)

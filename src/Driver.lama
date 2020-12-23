@@ -28,7 +28,7 @@ fun parseArgs (args) {
     | AST -> astDump ::= true
     esac
   }
-  
+
   fun setMode (m) {
     case deref (mode) of
       Comp -> mode ::= m
