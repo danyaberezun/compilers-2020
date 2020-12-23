@@ -144,7 +144,7 @@ fun makeEnv (stack, stackSlots, globals, barrier, stackMap) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-  -- popped items and an undated environment
+  -- popped items and an updated environment
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals, barrier, stackMap)]
@@ -334,6 +334,13 @@ fun move (from, to) {
   fi
 }
 
+fun lea (from, to) {
+  if memOpnd (from) && memOpnd (to)
+  then singletonBuffer (Lea (from, eax)) <+ Mov (eax, to)
+  else singletonBuffer (Lea (from, to))
+  fi
+}
+
 -- Gets a suffix for Set instruction from
 -- source language comparison operator
 fun suffix (op) {
@@ -356,19 +363,121 @@ fun compile (env, code) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
           READ ->
-            case env.allocate of
+            case allocate(env) of
               [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
             esac             
         | WRITE ->
-            case env.pop of
+            case pop(env) of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
+        | CONST (val) ->
+          case allocate(env) of
+            [s, env] -> [env, code <+ Mov (L (val), s)]
+          esac
+        | LD (name) ->
+          case allocate( addGlobal (env, name)) of
+            [s, env] -> [env, code <+> move (loc(env, name), s)]
+          esac
+        | LDA (name) ->
+          case allocate( addGlobal (env, name)) of
+            [s, env] -> [env, code <+> lea (loc(env, name), s)]
+          esac
+        | ST (name) ->
+          case pop( addGlobal (env, name)) of
+            [s, env] -> [env, code <+> move (s, loc (env, name))]
+          esac
+        | STI ->
+          case pop2(env) of
+            [v, ref, env] ->
+              case allocate(env) of
+                [_, env] ->
+                  [env,
+                     if memOpnd (ref)
+                     then code <+ Mov (ref, eax) <+ Mov (v, edx) <+ Mov (edx, I(0, eax)) <+ Mov (edx, ref)
+                     else  code <+ Mov (v, I(0, ref)) <+ Mov (v, ref)
+                     fi
+                  ]
+              esac
+          esac
+        | BINOP (op) ->
+          case pop2(env) of
+            [x, y, env] ->
+              case allocate(env) of
+                [result, env] ->
+                  case op.ofCategory of
+                    Arithm -> [env, generateBasicBinopCode (code, op, x, y)]
+                  | Div    -> [env, generateDivCode (code, op, x, y)]
+                  | Comp   -> [env, generateCompCode (code, op, x, y)]
+                  | Logic  -> [env, generateLogicCode (code, op, x, y)]
+                  esac
+              esac
+          esac
+        | LABEL (s)    -> [if isBarrier(env) then retrieveStack(env, s) else env fi, code <+ Label (s) ]
+        | JMP   (l)    -> [setBarrier(setStack(env, l)), code <+ Jmp (l)]
+        | CJMP  (c, l) ->
+          case env.pop of
+            [x, env] -> [setStack(env, l), generateCompCode(code, "!=", L(0), x) <+ CJmp (cjmpSuffixToString(c), l)]
+          esac
+        | DROP -> case pop(env) of [_, env] -> [env, code] esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
   }
 
   compile (env, code) 
+}
+
+fun ofCategory(op) {
+  case op of
+    "+"  -> Arithm
+  | "-"  -> Arithm
+  | "*"  -> Arithm
+  | "/"  -> Div
+  | "%"  -> Div
+  | "<"  -> Comp
+  | "<=" -> Comp
+  | ">"  -> Comp
+  | ">=" -> Comp
+  | "==" -> Comp
+  | "!=" -> Comp
+  | "&&" -> Logic
+  | "!!" -> Logic
+  esac
+}
+
+fun generateBasicBinopCode(code, op, src, dst) {
+  if stackOpnd (src) && stackOpnd (dst)
+  then code <+ Mov (dst, eax) <+ Binop (op, src, eax) <+ Mov (eax, dst)
+  else code <+ Binop(op, src, dst)
+  fi
+}
+
+fun generateDivCode(code, op, src, dst) {
+  code <+ Mov (dst, eax) <+ Cltd <+ IDiv (src) <+
+    case op of
+      "/" -> Mov (eax, dst)
+    | "%" -> Mov (edx, dst)
+    esac
+}
+
+fun generateCompCode(code, op, src, dst) {
+  if stackOpnd (src) && stackOpnd (dst)
+  then code <+ Mov (dst, edx) <+ Binop ("cmp", src, edx)
+  else code <+ Binop ("cmp", src, dst)
+  fi <+ Mov (L (0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, dst)
+}
+
+fun generateLogicCode(code, op, src, dst) {
+  code.generateCompCode("!=", L (0), src)
+      .generateCompCode("!=", L (0), dst)
+      .generateBasicBinopCode(op, src, dst)
+}
+
+fun cjmpSuffixToString (suff) {
+  case suff of
+    Z  -> "z"
+  | NZ -> "nz"
+  esac
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
@@ -381,9 +490,9 @@ public fun compileX86 (args, code) {
                          #unboxed -> "../runtime/"
                        | path     -> path
                        esac ++ "/runtime.o";
-       
+
        fwrite (asmFile,
-               map (insnString, 
+               map (insnString,
                     getBuffer $
                       singletonBuffer (Meta ("\t.global\tmain\n")) <+>
                       dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
@@ -394,7 +503,7 @@ public fun compileX86 (args, code) {
                         epilogue ()
                       )
                    ).stringcat);
-                    
+
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }

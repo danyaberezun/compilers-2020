@@ -26,7 +26,7 @@ public fun showSMInsn (i) {
   | JMP   (l)    -> sprintf ("JMP %s", l)
   | CJMP  (c, l) -> sprintf ("CJMP %s, %s", c, l)
   | DUP          -> "DUP"
-  | DROP         -> "DROP"  
+  | DROP         -> "DROP"
   esac
 }
 
@@ -46,7 +46,7 @@ fun initEvalEnv (insns) {
             esac
           }
         }) $ [emptyMap (compare), insns];
-  
+
   [fun (l) {
      case findMap (map, l) of Some (insns) -> insns esac
   }]
@@ -60,7 +60,59 @@ fun fromLabel (env, lab) {
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+  case insns of
+    instruction:insnsTail ->
+      case evalInstruction (env, c, instruction) of
+        [newC, Nothing]        -> eval (env, newC, insnsTail)
+      | [newC, Just (newTail)] -> eval (env, newC, newTail)
+      esac
+  | {}                    -> c
+  esac
+}
+
+
+fun evalInstruction (env, conf@[stack, state, world], instruction) {
+  local newTail = Nothing;
+  [case instruction of
+    CONST (val)  -> [val:stack, state, world]
+  | LD (name)    -> [state(name):stack, state, world]
+  | LDA (name)   -> [Ref(name):stack, state, world]
+  | ST (name)    -> case stack of
+                      x:stackTail -> [stackTail, state <- [name, x], world]
+                    esac
+  | STI          -> case stack of
+                      x:Ref(name):stackTail -> [x:stackTail, state <- [name, x], world]
+                    esac
+  | BINOP (op)   -> case stack of
+                      x:y:stackTail -> [evalOp (op, y, x):stackTail, state, world]
+                    esac
+  | READ         -> case readWorld (world) of
+                     [value, newWorld] -> [value:stack, state, newWorld]
+                    esac
+  | WRITE        -> case stack of
+                     value:stackTail -> [stackTail, state, writeWorld (value, world)]
+                    esac
+  | LABEL (s)    -> conf
+  | JMP   (l)    -> newTail := Just (env.fromLabel(l)); conf
+  | CJMP  (c, l) -> case stack of
+                      x:stackTail ->
+                        newTail := if c.shouldJump(x) then Just (env.fromLabel(l)) else Nothing fi;
+                        [stackTail, state, world]
+                    esac
+  | DROP         -> case stack of
+                      x:stackTail -> [stackTail, state, world]
+                    esac
+  | DUP          -> case stack of
+                      x:stackTail -> [x:x:stackTail, state, world]
+                    esac
+  esac, newTail]
+}
+
+fun shouldJump(cjmpType, x) {
+  case cjmpType of
+    Z  -> x == 0
+  | NZ -> x != 0
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -98,9 +150,130 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list of stack machine
+-- Just an utility operator to append a single element to list
+infix ++$ at +++ (lst, elem) {
+  lst +++ singleton (elem)
+}
+
+
+-- Compiles a statement into a stack machine code.
+-- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  compileSMInner (stmt, initCompEnv(), Nothing) [0]
+}
+
+fun compileList (env, exprsWithRetPoints) {
+  case foldl (fun ([insnsList, env], [expr, retPoint]) {
+                case compileSMInner (expr, env, retPoint) of
+                  [insns, env] -> [insns : insnsList, env]
+                esac
+              },
+              [{}, env],
+              exprsWithRetPoints) of
+    [insnsList, env] -> [reverse (insnsList), env]
+  esac
+}
+
+fun compileSMInner (stmt, compEnv, returnPoint) {
+  local envToReturn = compEnv;
+  [case stmt of
+    Const (val)         -> singleton (CONST (val))
+  | Var (name)          -> singleton (LD (name))
+  | Ref (name)          -> singleton (LDA (name))
+  | Ignore (expr)       ->
+    case compileSMInner (expr, compEnv, returnPoint) of
+      [exprCode, newCompEnv] ->
+        envToReturn := newCompEnv;
+        exprCode ++$ DROP
+    esac
+  | Binop (op, left, right) ->
+    case compileList (compEnv, {[left, Nothing], [right, Nothing]}) of
+      [{leftCode, rightCode}, newCompEnv] ->
+        envToReturn := newCompEnv;
+        leftCode +++ rightCode ++$ BINOP (op)
+    esac
+  | Assn (name, expr)   ->
+    case compileList (compEnv, {[name, Nothing], [expr, Nothing]}) of
+      [{refCode, valCode}, newCompEnv] ->
+        envToReturn := newCompEnv;
+        refCode +++ valCode ++$ STI
+    esac
+  | Seq  (stmt1, stmt2) ->
+    case compileList (compEnv, {[stmt1, Nothing], [stmt2, Nothing]}) of
+      [{stmtCode1, stmtCode2}, newCompEnv] ->
+        envToReturn := newCompEnv;
+        stmtCode1 +++ stmtCode2
+    esac
+  | Skip                -> {}
+  | Read (name)         -> {READ, ST (name)}
+  | Write (expr)        ->
+    case compileSMInner (expr, compEnv, Nothing) of
+      [exprCode, newCompEnv] ->
+        envToReturn := newCompEnv;
+        exprCode ++$ WRITE
+    esac
+  | s@If (expr, stmt1, stmt2) ->
+    case returnPoint of
+      Just (point) ->
+        case compEnv.genLabels (1) of
+          [beginElse, newCompEnv] ->
+            case generateIfCode (s, beginElse, point, newCompEnv) of
+              [code, newerEnv] ->
+                envToReturn := newerEnv;
+                code
+            esac
+        esac
+    | Nothing     ->
+        case compEnv.genLabels (2) of
+          [beginElse, point, newCompEnv] ->
+            case generateIfCode (s, beginElse, point, newCompEnv) of
+              [code, newerEnv] ->
+                envToReturn := newerEnv;
+                code
+                ++$ LABEL (point)
+            esac
+        esac
+    esac
+  | While (expr, body) ->
+    case compEnv.genLabels (2) of
+      [beginCondition, beginStatement, newCompEnv] ->
+        case compileList (newCompEnv, {[expr, Nothing], [body, Nothing]}) of
+          [{exprCode, bodyCode}, newerCompEnv] ->
+            envToReturn := newerCompEnv;
+            singleton (JMP (beginCondition))
+            ++$ LABEL (beginStatement)
+            +++ bodyCode
+            ++$ LABEL (beginCondition)
+            +++ exprCode
+            ++$ CJMP (NZ, beginStatement)
+        esac
+    esac
+  | Repeat (body, expr) ->
+    case compEnv.genLabels (1) of
+      [beginStatement, newCompEnv] ->
+        case compileList (newCompEnv, {[body, Nothing], [expr, Nothing]}) of
+          [{bodyCode, exprCode}, newerCompEnv] ->
+            envToReturn := newerCompEnv;
+            singleton (LABEL (beginStatement))
+            +++ bodyCode
+            +++ exprCode
+            ++$ CJMP (Z, beginStatement)
+        esac
+    esac
+  esac, envToReturn]
+}
+
+fun generateIfCode (If(expr, stmt1, stmt2), beginElse, returnPoint, env) {
+    case compileList (env, {[expr, Nothing], [stmt1, Just (returnPoint)], [stmt2, Just (returnPoint)]}) of
+      [{exprCode, stmtCode1, stmtCode2}, newEnv] -> [
+        exprCode
+        ++$ CJMP (Z, beginElse)
+        +++ stmtCode1
+        ++$ JMP (returnPoint)
+        ++$ LABEL (beginElse)
+        +++ stmtCode2,
+        newEnv
+      ]
+    esac
 }
