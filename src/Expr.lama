@@ -37,7 +37,7 @@ public fun evalOp (op, l, r) {
 --
 -- A expression is represented by a data structure of the following shape:
 --
--- expr = Assn   (string, expr)       |
+-- expr = Assn   (expr, expr)         |
 --        Seq    (expr, expr)         |
 --        Skip                        |
 --        Read   (string)             |
@@ -86,7 +86,24 @@ fun addNames (state, names) {
 fun addFunction (state, name, args, body) {
   state.addName (name, Fun (args, body))
 }
-                                        
+
+fun addDefs (state, defList) {
+  foldl (
+    fun (state, d) {
+      case d of
+        Local (names)          -> addNames (state, names)
+      | Fun (name, args, body) -> addFunction (state, name, args, body)
+      esac
+    },
+    state,
+    defList
+  )
+}
+
+fun addNamesWithValues (state, names, values) {
+  foldl (fun (s, [name, value]) { addName (s, name, value) }, state, zip (names, values))
+}
+
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values
 fun evalList (c, exprs) {
@@ -101,9 +118,83 @@ fun evalList (c, exprs) {
   esac
 }
 
-(* Assignment *)
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+-- Single call should return a modified configuration and a value
+fun eval (c@[state, world], stmt) {
+  case stmt of
+    Const (val) -> [c, val]
+  | Var (name) -> [c, lookup (state, name)]
+  | Ref (expr) ->
+    case expr of
+      # string -> [c, Ref (expr)]
+    | _ ->
+      case eval (c, expr) of
+        [newC, name] -> [newC, Ref (name)]
+      esac
+    esac
+  | Ignore (expr) -> case eval (c, expr) of [newC, _] -> [newC, Null] esac
+  | Binop (op, expr1, expr2) ->
+    case evalList (c, {expr1, expr2}) of
+      [newC, {l, r}] -> [newC, evalOp (op, l, r)]
+    esac
+  | Skip -> [c, Null]
+  | Assn (name, value) ->
+    case evalList (c, {name, value}) of
+      [[newState, newWorld], {Ref (x), val}] -> [[newState <- [x, val], newWorld], val]
+    esac
+  | Seq (stmt1, stmt2) ->
+    case evalList (c, {stmt1, stmt2}) of
+      [newC, {_, val}] -> [newC, val]
+    esac
+  | Read (name)        ->
+    case readWorld (world) of
+      [value, newWorld] -> [[state <- [name, value], newWorld], Null]
+    esac
+  | Write (expr)       ->
+    case eval (c, expr) of
+      [[new_state, newWorld], value] -> [[new_state, writeWorld (value, newWorld)], Null]
+    esac
+  | If (expr, stmt1, stmt2) ->
+    case eval (c, expr) of
+      [newC, val] ->
+        if val then eval (newC, stmt1)
+        else eval (newC, stmt2)
+        fi
+    esac
+  | w@While (expr, stmt) ->
+    case eval (c, expr) of
+      [newC, val] ->
+        if val then
+          case eval (newC, stmt) of
+            [newerC, _] -> eval (newerC, w)
+          esac
+        else [newC, Null]
+        fi
+    esac
+  | r@Repeat (stmt, expr) ->
+    case evalList (c, {stmt, expr}) of
+      [newC, {_, val}] -> if val then [newC, Null] else eval (newC, r) fi
+    esac
+  | Scope (defList, expr) ->
+    case addDefs (enterScope (state), defList) of
+      newState ->
+        case eval ([newState, world], expr) of
+          [newC, value] ->
+            case newC of
+              [latestState, latestWorld] -> [[leaveScope (latestState), latestWorld], value]
+            esac
+        esac
+    esac
+  | Call (name, exprList) ->
+    case lookup (state, name) of
+      Fun (args, body) ->
+        case evalList (c, exprList) of
+          [[beforeFunState, newWorld], argValues] ->
+            case eval ([addNamesWithValues (enterFunction (beforeFunState), args, argValues), newWorld], body) of
+              [[afterFunState, newerWorld], value] -> [[leaveFunction (beforeFunState, getGlobal (afterFunState)), newerWorld], value]
+            esac
+        esac
+    esac
+  esac
 }
 
 -- Evaluates a program with a given input and returns an output
