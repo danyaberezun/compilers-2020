@@ -87,6 +87,19 @@ fun addFunction (state, name, args, body) {
   state.addName (name, Fun (args, body))
 }
 
+fun addDefs (state, defList) {
+  foldl (
+    fun (state, d) {
+      case d of
+        Local (names)          -> addNames (state, names)
+      | Fun (name, args, body) -> addFunction (state, name, args, body)
+      esac
+    },
+    state,
+    defList
+  )
+}
+
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values
 fun evalList (c, exprs) {
@@ -105,7 +118,7 @@ fun evalList (c, exprs) {
 fun eval (c@[state, world], stmt) {
   case stmt of
     Const (val) -> [c, val]
-  | Var (name) -> [c, state (name)]
+  | Var (name) -> [c, lookup (state, name)]
   | Ref (expr) ->
     case expr of
       # string -> [c, Ref (expr)]
@@ -157,6 +170,17 @@ fun eval (c@[state, world], stmt) {
     case evalList (c, {stmt, expr}) of
       [newC, {_, val}] -> if val then [newC, Null] else eval (newC, r) fi
     esac
+  | Scope (defList, expr) ->
+    case addDefs (enterScope (state), defList) of
+      newState ->
+        case eval ([newState, world], expr) of
+          [newC, value] ->
+            case newC of
+              [latestState, latestWorld] -> [[leaveScope (latestState), latestWorld], value]
+            esac
+        esac
+    esac
+  | Call (name, exprList) -> 0
   esac
 }
 
