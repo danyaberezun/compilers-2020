@@ -100,6 +100,10 @@ fun addDefs (state, defList) {
   )
 }
 
+fun addNamesWithValues (state, names, values) {
+  foldl (fun (s, [name, value]) { addName (s, name, value) }, state, zip (names, values))
+}
+
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values
 fun evalList (c, exprs) {
@@ -180,7 +184,16 @@ fun eval (c@[state, world], stmt) {
             esac
         esac
     esac
-  | Call (name, exprList) -> 0
+  | Call (name, exprList) ->
+    case lookup (state, name) of
+      Fun (args, body) ->
+        case evalList (c, exprList) of
+          [[beforeFunState, newWorld], argValues] ->
+            case eval ([addNamesWithValues (enterFunction (beforeFunState), args, argValues), newWorld], body) of
+              [[afterFunState, newerWorld], value] -> [[leaveFunction (beforeFunState, getGlobal (afterFunState)), newerWorld], value]
+            esac
+        esac
+    esac
   esac
 }
 
