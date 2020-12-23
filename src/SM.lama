@@ -121,6 +121,7 @@ fun compileExpr (expr) {
     Var   (x)         -> singleton (LD (x))
   | Const (n)         -> singleton (CONST (n))
   | Binop (b, e1, e2) -> compileExpr (e1) +++ compileExpr (e2) +++ singleton (BINOP (b))
+  | _                 -> failure("Expression %s not found. \n", expr)
   esac
 }
 
