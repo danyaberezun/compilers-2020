@@ -144,7 +144,7 @@ fun last (lbl) {
   case lbl of
     {}     -> [{}]
   | x : {} -> [{}, x]
-  | x : t  -> case last (l) of [a, b] -> [x : a, b] esac
+  | x : l  -> case last (l) of [a, b] -> [x : a, b] esac
   esac
 }
 
