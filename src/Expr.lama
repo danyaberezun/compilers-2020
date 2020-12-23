@@ -68,7 +68,7 @@ fun eval (configuration@[st, world], expr) {
       Var    (x)               -> [configuration, st(x)]
     | Const  (n)               -> [configuration, n]
     | Binop  (op, left, right) -> case evalList (configuration, {left, right}) of
-                                    [configuration, {v, world}] -> [configuration, evalOp (op, v, w)]
+                                    [configuration, {v, world}] -> [configuration, evalOp (op, v, world)]
                                   esac
     | Assn   (left, right)     -> case evalList (configuration, {left, right}) of
                                     [configuration@[st, world], {Ref (x), v}] -> [[st <- [x, v], world], v]
