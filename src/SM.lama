@@ -93,7 +93,7 @@ fun eval (env, configuration, insns) {
                                       else  eval (env, [ss, st, world], tail)
                                       fi
                                     esac
-      | LDA (x)           : tail -> eval (env, [Ref (x) : stack, st, w], p)
+      | LDA (x)           : tail -> eval (env, [Ref (x) : stack, st, world], tail)
       | STI               : tail -> case stack of v : Ref (x) : ss ->
                                       eval (env, [v : ss, st <- [x, v], world], tail)
                                     esac
