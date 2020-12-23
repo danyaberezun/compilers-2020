@@ -7,6 +7,14 @@ import Buffer;
 import Fun;
 import Manifest;
 
+-- conditional flags
+fun znzene (znz) {
+  case znz of
+    "z"  -> "e"
+  | "nz" -> "ne"
+  esac
+}
+
 -- Assembler language interface
 -- The registers: 
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
@@ -361,6 +369,12 @@ fun compile (env, code) {
                 esac
               esac
             esac
+          esac
+        | LABEL(label)-> [env, code <+ Label(label)]
+        | JMP(label)-> [env, code <+ Jmp(label)]
+        | CJMP(znz, label)->
+          case env.pop of
+            [s, environment]-> [env, code <+ Mov(s, eax) <+ Binop("cmp", L(0), eax) <+ CJmp(znzene(znz), label)]
           esac
         esac
       }, [env, emptyBuffer ()], code) 
