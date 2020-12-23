@@ -178,7 +178,8 @@ local primary    = memo $ eta syntax (
                                         )
                                       }
                                     } |
-                                    inbr[s("("), exp, s(")")]),
+                                    inbr[s("("), exp, s(")")] |
+                                    scopeExprInBr),
       ifParser = memo $ eta syntax (kIf body=ifBody {body}),
       ifBody   = memo $ eta syntax (cond=exp kThen thn=exp els=ifCont {fun (a) {If (cond (Val), thn (a), els (a))}}),
       ifCont   = memo $ eta syntax (kFi {fun (a) {Skip}} |
@@ -201,7 +202,7 @@ local primary    = memo $ eta syntax (
         | None -> [name, None]
         esac
       })),
-      initParser = memo $ eta (syntax (-s["="] primary)),
+      initParser = memo $ eta (syntax (-s["="] basic)),
       funDefParser = memo $ eta (syntax (
         kFun name=lident args=inbr[s("("), list0(lident), s(")")] body=scopeExprInBr {
           Fun (name, args, body (Weak))
