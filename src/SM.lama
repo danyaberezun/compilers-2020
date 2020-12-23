@@ -57,10 +57,51 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
+fun compznz (x, znz) {
+  case znz of
+    "z" -> x == 0
+  | "nz" -> x != 0
+  esac
+}
+
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, configuration, insns) {
+	case configuration of
+    [stack, st, world@[i, o]] -> case insns of
+        {} -> configuration
+      | READ      	      : tail -> case i of 
+					                                x : it     -> eval (env, [x : stack, st, [it, o]], tail) 
+				                            esac
+      | WRITE     	      : tail -> case stack of 
+					                                x : ss     -> eval (env, [ss, st, [i, x : o]], tail)
+				                            esac
+      | BINOP (str)       : tail -> case stack of 
+					                                x : y : ss -> eval (env, [evalOp (str, y, x) : ss, st, world], tail) 
+				                            esac
+      | LD    (x) 	      : tail -> eval (env, [st (x) : stack, st, world], tail)
+      | ST    (x) 	      : tail -> case stack of 
+					                                y : ss     -> eval (env, [ss, (st <- [x, y]), world], tail) 
+				                            esac
+      | CONST (n) 	      : tail -> eval (env, [n : stack, st, world], tail)
+      | LABEL (stack)     : tail -> eval (env, configuration, tail)
+      | JMP   (lbl)       : tail -> eval (env, configuration, env.fromLabel(env, lbl))
+      | DUP               : tail -> eval (env, configuration, tail)
+      | CJMP  (znz, lbl)  : tail -> case stack of x : ss ->
+                                      if compznz (x, znz) 
+                                      then  eval (env, [ss, st, world], env.fromLabel(lbl))
+                                      else  eval (env, [ss, st, world], tail)
+                                      fi
+                                    esac
+      | LDA (x)           : tail -> eval (env, [Ref (x) : s, st, w], p)
+      | STI               : tail -> case stack of v : Ref (x) : ss ->
+                                      eval (env, [v : ss, st <- [x, v], world], tail)
+                                    esac
+      | DROP              : tail -> case stack of
+                                      x : stack -> eval (env, [stack, st, world], tail)
+                                    esac
+                                  esac
+  	esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -98,9 +139,98 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
+
+fun last (lbl) {
+  case lbl of
+    {}     -> [{}]
+  | x : {} -> [{}, x]
+  | x : t  -> case last (l) of [a, b] -> [x : a, b] esac
+  esac
+}
+
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+ fun compileEnv(env, stmt) {
+  case stmt of
+   	Skip              -> [env, {}]
+  | Var   (x)         -> [env, LD (x) : {}]
+  | Const (n)         -> [env, CONST (n) : {}]
+  | Ref   (x)         -> [env, LDA (x) : {}]
+  | Read  (x)         -> [env, {READ, ST(x)}]
+  | Write (expr)      -> case compileEnv(env, expr) of
+                            [env, ins] -> [env, ins +++ (WRITE : {})]
+                         esac
+  | Binop (op, left, right) -> 
+      case compileEnv(env, left) of
+        [env, ins1] -> case compileEnv(env, right) of
+                        [env, ins2] -> [env, ins1 +++ ins2 +++ (BINOP (op) : {})]
+                       esac
+      esac
+	| Assn  (x, expr)   -> case compileEnv(env, x) of
+                             [env, ins1] -> case compileEnv(env, expr) of
+                                                [env, ins2] -> [env, ins1 +++ ins2 +++ (STI : {})]
+                                            esac
+                         esac
+	| Seq   (s1, s2)    -> 
+	      case compileEnv(env, s1) of
+                    [env, ins1] -> case compileEnv(env, s2) of
+                                      [env, ins2]-> [env, ins1 +++ ins2] 
+                                   esac 
+        esac
+  | Ignore (x)        -> 
+      case compileEnv(x, env) of
+        [env, ins] -> [env, ins +++ (DROP : {})]
+      esac
+  | If (expr, s1, s2) -> 
+      case env.genLabels(2) of
+        [ls2, lfi, env] ->
+          case compileEnv(env, s1) of
+            [env, ins1] ->
+              case compileEnv(env, s2) of
+                [env, ins2] ->
+                  [env, compileSM (expr)              +++
+                  (CJMP ("z", ls2) : {})              +++ 
+                  (case last (ins1) of
+                      [ins, LABEL (lbl)] -> 
+                        ins1                          +++ 
+                        {JMP (lbl), DUP, LABEL (ls2)} +++
+                        ins2                          +++ 
+                        (LABEL (lbl) : {})
+                      | _                -> 
+                        ins1                          +++
+                        {JMP (lfi), DUP, LABEL (ls2)} +++ 
+                        ins2                          +++ 
+                        (LABEL (lfi) : {})
+                  esac)]
+              esac
+          esac
+      esac 
+  | While (expr, s) ->
+      case env.genLabels(2) of
+        [l1, l2, env] ->
+          case compileEnv(env, s) of
+            [env, ins] -> 
+              [env, {JMP (l2), LABEL (l1)} +++
+              ins                          +++
+              (LABEL (l2) : {})            +++
+              compileSM (expr)             +++
+              (CJMP ("nz", l1) : {})]
+          esac
+      esac
+  | Repeat (s, expr) ->
+      case env.genLabel of
+        [lbl, env] ->
+          case compileEnv(env, s) of
+            [env, ins] ->
+                [env, (LABEL (lbl) : {})  +++
+                ins                     +++
+                compileSM (expr)        +++
+                (CJMP ("z", lbl) : {})]
+          esac
+      esac
+	esac
+ }
+ compileEnv (initCompEnv (), stmt)[1]
 }
