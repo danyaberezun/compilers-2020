@@ -27,7 +27,7 @@ public fun showSM (prg) {
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 -- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-fun eval (c@[stack, map, world@[input, output]], insns) {
+fun eval (c@[stack, map, world@[input, output]], insns) { -- insns список s выражений
 case insns of
 	{} -> c
 	 | head : rest_prog -> case head of
@@ -36,13 +36,13 @@ case insns of
 						      esac
 					| CONST (n) -> eval ([n : stack, map, world], rest_prog)
 					| WRITE -> case stack of
-								first : stack -> eval ([stack, map, writeWorld (first, world)], rest_prog)
+								first : stack -> eval ([stack, map, writeWorld (first, world)], rest_prog) -- writeWorld возвращает новый мир (берём first кладём в карман и уходим в закат)
 						   esac
-					| READ -> eval ([fst (readWorld (world)) : stack, map, snd (readWorld (world))], rest_prog)
+					| READ -> eval ([fst (readWorld (world)) : stack, map, snd (readWorld (world))], rest_prog) -- put num to stack
 					| ST (x) -> case stack of
 								first : stack -> eval ([stack, map <- [x, first], world], rest_prog)
 						    esac
-					| LD (x) -> eval ([map (x) : stack, map, world], rest_prog)
+					| LD (x) -> eval ([map (x) : stack, map, world], rest_prog) -- берём 
 				esac
 esac
 }
@@ -66,9 +66,9 @@ esac
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
-public fun compileSM (stmt) {
+public fun compileSM (stmt) { -- переводит в s выражения на stack machine
 case stmt of 
-	 Read (x) -> (READ : {}) +++ (ST (x) : {})
+	 Read (x) -> (READ : {}) +++ (ST (x) : {}) -- read обарачиваем в список -> {READ}
 	| Write (e) -> compileExpr (e) +++ (WRITE : {})
 	| Seq (s1, s2) -> compileSM (s1) +++ compileSM (s2)
 	| Assn (x, e) -> compileExpr (e) +++ (ST (x) : {})
