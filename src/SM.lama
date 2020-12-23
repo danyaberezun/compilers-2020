@@ -93,13 +93,13 @@ fun eval (environment, condition@[stack, state, world@[in, out]], instance) {
       case in of x:rin-> -- remaining input stream
         eval(environment, [x:stack, state, [rin, out]], remaining)
       esac
-    | WRITE : remaining
+    | WRITE : remaining->
       case stack of out_value : rstack->
         eval(environment, [rstack, state, [in, out_value:out]], remaining)
       esac
-    | LD(x) : remaining-> eval(environment, [st(x):stack, state, world], remaining)
+    | LD(x) : remaining-> eval(environment, [state(x):stack, state, world], remaining)
     | ST(x) : remaining->
-      case stack of last:rstack
+      case stack of last:rstack->
         eval(environment, [stack, (state<-[x,last]), world], remaining)
       esac
       -- ММм меточки
@@ -110,7 +110,7 @@ fun eval (environment, condition@[stack, state, world@[in, out]], instance) {
       condition, 
       environment.fromLabel(label))
     | CJMP(znz, label) : remaining->
-      case stack of x:rstack
+      case stack of x:rstack->
         if compznz(x, znz) then eval(environment, 
           condition, 
           environment.fromLabel(label)) else eval(environment, 
@@ -174,14 +174,11 @@ fun compileExpr (expression) {
 
 -- добавить конструктор хардкода while/repeat и if
 
-fun last(label){
+fun last(label) {
   case label of
-    {}-> [{}]
-    | el:{}->[{}, el]
-    | el:nxt->
-      case last(nxt) of [fi, se]-> 
-        [el:fi, se]
-      esac
+      {} -> [{}]
+    | x : {} -> [{}, x]
+    | x : y -> case last(y) of [a, b] -> [x:a, b] esac
   esac
 }
 
@@ -200,7 +197,7 @@ public fun compileSM (statement) {
       Skip-> [{}, environment]
       | Assn(elem, expression) -> [compileExpr(expression) +++ singleton(ST(elem)), environment]
       | Read(elem)-> [{READ, ST(elem)}, environment] -- singleton(READ) +++ singleton(ST(elem)) also works
-      | Write(expression)-> [{compileExpr(expression), WRITE}, environment]
+      | Write(expression)-> [compileExpr(expression)+++singleton(WRITE), environment]
       | Seq(s1, s2)->
         case wrCompileSM(s1, environment) of
           [instnc, environment]->
@@ -246,7 +243,7 @@ public fun compileSM (statement) {
         case wrCompileSM(ssstatement, environment) of
           [instnc, environment]->
           [
-          (LABEL(label):{}+++instnc+++compileExpr(expression)+++CJMP("z", label):{}),
+          (LABEL(label):{})+++instnc+++compileExpr(expression)+++(CJMP("z", label):{}),
           environment
           ]
         esac
