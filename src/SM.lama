@@ -26,25 +26,25 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (conf@[st, env, wrld], insns) {
-  case insns of 
-      {} -> conf
-  | x:xs -> {
-
-      conf := 
-        case x of 
-          BINOP (op) -> case st of 
-                          y:x:st -> [(evalExpr (env, Binop (op, Const (x), Const (y)))):st, env, wrld]
-                        esac
-        |  READ      -> case readWorld (wrld) of [z, wrld] -> [z:st, env, wrld] esac
-        | WRITE      -> case st of z:st -> [st, env, writeWorld (z, wrld)] esac
-        |    ST (x)  -> case st of z:st -> [st, env <- [x, z], wrld] esac
-        |    LD (x)  -> [env(x):st, env, wrld]
-        | CONST (c)  -> [c:st, env, wrld]
-        esac;
-
-      eval (conf, xs)
-    }
+fun eval (c, insns) {
+  case c of
+    [s, st, world@[input, output]] -> case insns of
+       {} -> c
+       | BINOP (op) : irest -> case s of 
+          rhs : lhs : rest -> eval ([evalBinop (op, lhs, rhs) : rest, st, world], irest) 
+        esac
+       | CONST (n) : irest -> eval ([n : s, st, world], irest)
+       | READ : irest -> case input of 
+          lhs : it -> eval ([lhs : s, st, [it, output]], irest) 
+        esac
+       | WRITE : irest -> case s of 
+          var : rest -> eval ([rest, st, [input, var : output]], irest) 
+        esac
+       | LD (var) : irest -> eval ([st (var) : s, st, world], irest)
+       | ST (var) : irest -> case s of 
+          var2 : rest -> eval ([s, (st <- [var, var2]), world], irest) 
+        esac
+    esac
   esac
 }
 
@@ -58,10 +58,10 @@ public fun evalSM (input, insns) {
 -- of stack machine instructions
 fun compileExpr (expr) {
  case expr of
-    Const (c)        -> CONST (c) :{}
-  |   Var (x)        -> LD (x) :{}
-  | Binop (op, l, r) -> compileExpr (l) +++ compileExpr (r) +++ (BINOP (op) :{})
-  esac
+     Const (numb)        -> singleton(CONST (numb))
+   | Var (var)          -> singleton(LD (var))
+   | Binop (op, lhs, rhs) -> compileExpr(lhs) +++ compileExpr(rhs) +++ singleton(BINOP (op))
+   esac
 }
 
 -- Compiles a statement into a stack machine code.
@@ -69,10 +69,9 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
   case stmt of
-    Skip           -> {}
-  | Read  (x)      -> {READ, ST (x)}
-  | Write (e)      -> compileExpr (e) +++ (WRITE :{})
-  |  Assn (x, e)   -> compileExpr (e) +++ (ST (x) :{})
-  |   Seq (e1, e2) -> compileSM (e1) +++ compileSM (e2)
-  esac
+     Assn (var, expr) -> compileExpr(expr) +++ singleton(ST (var))
+   | Read (var) -> {READ, ST (var)}
+   | Write (expr) -> compileExpr(expr) +++ singleton(WRITE)
+   | Seq (s1, s2) -> compileSM(s1) +++ compileSM(s2)
+   esac
 }

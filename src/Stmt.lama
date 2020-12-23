@@ -16,13 +16,17 @@ import World;
 --        Read   (string)           |
 --        Write  (expr)             |
 
-fun eval (c@[state, world], stmt) {
-  case stmt of
-     Skip          -> c
-  |  Read (x)      -> case readWorld (world) of [v, world] -> [state <- [x, v], world] esac
-  | Write (e)      -> [state, writeWorld(evalExpr(state, e), world)]
-  |  Assn (x, e)   -> [state <- [x, evalExpr(state, e)], world]
-  |   Seq (e1, e2) -> eval (eval (c, e1), e2)
+fun eval (c, stmt) {
+  case c of [st, world@[input, output]] ->
+    case stmt of
+         Skip -> c
+       | Read (var) -> case input of 
+            v : rest -> [st <- [var, v], [rest, output]] 
+          esac
+       | Write (expr) -> [st, [input, evalExpr(st, expr) : output]]
+       | Assn (var, expr) -> [(st <- [var, evalExpr(st, expr)]), [input, output]]
+       | Seq (s1, s2) -> eval (eval (c, s1), s2)
+    esac
   esac
 }
 
