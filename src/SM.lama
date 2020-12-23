@@ -133,25 +133,25 @@ fun compileExpr (expr) {
 public fun compileSM (stmt) {
   fun compileEnv (env, stmt) {
     case stmt of
-	      Assn(x, expr) -> [env, compileExpr(expr) +++ singleton(ST(x))] |
-	     |Read(x) -> [env, {READ, ST(x)}] |
-	     |Write(expr) -> [env, compileExpr(expr) +++ singleton(WRITE)] |
-	     |Skip -> [env, {}] |
+	      Assn(x, expr) -> [env, compileExpr(expr) +++ singleton(ST(x))] 
+	     |Read(x) -> [env, {READ, ST(x)}] 
+	     |Write(expr) -> [env, compileExpr(expr) +++ singleton(WRITE)] 
+	     |Skip -> [env, {}] 
 	     |Seq(s1,s2) -> case compileEnv(env, s1) of
 	     			[env1, stmt1] -> case compileEnv (env1, s2) of
 	     				[env2, stmt2] -> [env2, stmt1 +++ stmt2]
 	     				esac
-	     			esac | 
+	     			esac  
 	     |While(expr, s) -> case genLabels(env,2) of
 	     			[l1, l2, env1] -> case compileEnv(env1, s) of
 	     				[env2, insns] -> [env2, {JMP (l2), LABEL (l1)} +++ insns +++ singleton (LABEL (l2)) +++ compileExpr(expr) +++ singleton(CJMP ("nz", l1))]
 	     				esac
-	     			esac |
+	     			esac 
 	     |Repeat(s, expr) -> case genLabels(env, 1) of 
 	     				[l, env1] -> case compileEnv(env1, s) of
 	     					[env2, insns] -> [env2, singleton(LABEL (l)) +++ insns +++ compileExpr(expr) +++ singleton(CJMP("z", l))]
 	     					esac
-	     			esac |
+	     			esac 
 	     |If(expr, s1, s2) -> case genLabels(env, 2) of
 	     				[le, lf, env1] -> case compileEnv (env1, s1) of
 	     					[env2, stmt1] -> case compileEnv(env2, s2) of
