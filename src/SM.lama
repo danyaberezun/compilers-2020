@@ -180,7 +180,7 @@ public fun compileSM (stmt) {
                                    esac 
         esac
   | Ignore (x)        -> 
-      case compileEnv(x, env) of
+      case compileEnv(env, x) of
         [env, ins] -> [env, ins +++ (DROP : {})]
       esac
   | If (expr, s1, s2) -> 
