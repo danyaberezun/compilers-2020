@@ -7,6 +7,8 @@ import List;
 import Manifest;
 import Buffer;
 
+local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+
 -- Assembler language interface
 -- The registers: 
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
@@ -360,6 +362,7 @@ fun prologue (fLabel) {
 fun epilogue (env) {
   local metaDef = Meta (sprintf ("\t.set\t%s_SIZE,\t%d\n", env.currentFunction, env.staticSize * wordSize));
 
+  local unit = fprintf(stderr, "Generate epilogue for : %s\n", env.currentFunction.string);
   if compare (env.currentFunction, "main") == 0
   then [env, singletonBuffer (Mov (ebp, esp)) <+ Pop (ebp) <+ Binop ("^", eax, eax) <+ Ret <+ metaDef]
   else case env.pop of
@@ -478,6 +481,7 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+        local unit = fprintf(stderr, "Process command: %s, code: %s\n", i.string, code.string);
         case i of
           READ ->
             case env.allocate of
@@ -489,11 +493,11 @@ fun compile (env, code) {
             esac
         | LD (name) ->
             case env.allocate of
-              [s, updenv] -> [updenv.addGlobal(name), code <+> move(updenv.loc(name), s)]
+              [s, updenv] -> [updenv, code <+> move(updenv.loc(name), s)]
             esac
         | ST (name) ->
             case env.pop of
-              [s, updenv] -> [updenv.addGlobal(name), code  <+> move (s, updenv.loc(name))]
+              [s, updenv] -> [updenv, code  <+> move (s, updenv.loc(name))]
             esac
         | BINOP (op) ->
             case env.pop2 of
@@ -513,6 +517,7 @@ fun compile (env, code) {
                 esac
               esac
             esac
+        | GLOBAL(name) -> [env.addGlobal(name), emptyBuffer()]
         | CONST (val) ->
             case env.allocate of
               [s, updenv] -> [updenv, code <+ Mov (L (val), s)]
@@ -525,7 +530,7 @@ fun compile (env, code) {
             esac
         | LDA (name) ->
             case env.allocate of
-              [s, updenv] -> [updenv.addGlobal(name), code <+> lea(updenv.loc(name), s)]
+              [s, updenv] -> [updenv, code <+> lea(updenv.loc(name), s)]
             esac
         | STI ->
             case env.pop2 of
@@ -537,7 +542,6 @@ fun compile (env, code) {
             case env.pop of
               [s, updenv] -> [updenv, code]
             esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* Assignment *)
 
          -- Some guidelines for generating function calls:
@@ -555,6 +559,10 @@ fun compile (env, code) {
          -- 1. generate proper prologue for BEGIN instruction (use "prologue" helper); use
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
+       | BEGIN (label, argc, localc) ->  [enterFunction(env, label, localc), code <+> prologue(label)]
+       | END                         ->  case epilogue(env) of
+                                           [ev, epilog] -> [ev,  code <+> epilog]
+                                         esac
 
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         (* End *)
@@ -562,12 +570,16 @@ fun compile (env, code) {
       }, [env, emptyBuffer ()], code)
   }
 
-  compile (env, code) 
+  local unit = fprintf(stderr, "Compile SM code: %s\n", code.string);
+  local code = compile (env, code);
+  local unit2 = fprintf(stderr, "x86 code: %s\n", code[1].string);
+  code
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,
 -- compiles the program into machine code, and compiles the machine code into an executable
 public fun compileX86 (args, code) {
+    local unit = fprintf(stderr, "Compile SM code: %s\n", code.string);
   case compile (initEnv (), code) of
     [env, code] ->
        local asmFile = args.getBaseName ++ ".s",

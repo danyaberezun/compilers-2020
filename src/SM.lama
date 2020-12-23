@@ -581,7 +581,7 @@ public fun compileSM (expr) {
                                  <+> initCode <+ LABEL(l1) <+ END;
                            local fullSMCode = mainFunction <+> compileFuncsFixPoint(ev, {});
 
-                           -- fprintf(stderr, "Generated code: %s\n", fullSMCode.string);
+                           fprintf(stderr, "Generated code: %s\n", fullSMCode.string);
                            fullSMCode.getBuffer
                         }
     esac
