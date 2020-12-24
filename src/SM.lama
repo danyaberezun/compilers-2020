@@ -81,8 +81,9 @@ fun eval (env, c, insns) {
                              esac
     esac
   esac
-}
-}
+  
+  
+  }
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
