@@ -16,16 +16,14 @@ import List;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
---        if     (expr, stmt, stmt) |
---        While  (expr, stmt)       |
---        Repeat (stmt, expr)
+
 
 fun eval (c, stmt) {
   case stmt of
     Skip -> c
-	| Assn(x, e)  -> 	[c[0] <- [x, evalExpr(c[0], e)], c[1]]
+	  | Assn(x, e)  -> 	[c[0] <- [x, evalExpr(c[0], e)], c[1]]
     | Seq(s1, s2) -> 	eval(eval(c, s1), s2)
-	| Read(x)	  -> 	local res = readWorld(c[1]);
+		| Read(x)	  -> 	local res = readWorld(c[1]);
 							[c[0] <- [x, res[0]], res[1]]
     | Write(x)    -> 	[c[0], writeWorld(evalExpr(c[0], x), c[1])]
     | If (expr, s1, s2) -> if (evalExpr(c[0], expr)) then eval (c, s1) else eval (c, s2) fi
@@ -38,5 +36,4 @@ fun eval (c, stmt) {
 -- Evaluates a program with a given input and returns an output
 public fun evalStmt (input, stmt) {
   eval ([emptyState, createWorld (input)], stmt).snd.getOutput
-}
 }

@@ -7,8 +7,7 @@ import Expr;
 import Buffer;
 import Fun;
 
--- Stack code printer. Takes a list of SM instructions, return its
--- string representation.
+
 public fun showSMInsn (i) {
   case i of
     READ      -> sprintf ("READ")
@@ -26,10 +25,11 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c@[st, state, w], insns) {
   case insns of
       {} -> [st, state, w]
-    | BINOP(op) : s -> eval([evalop(op, st[1][0], st[0]) : st[1][1], state, w], s)
+    | BINOP(op) : s -> eval([ebinop(op, st[1][0], st[0]) : st[1][1], state, w], s)
     | CONST(n)  : s -> eval([n : st, state, w], s)
     | READ      : s -> local world_ = readWorld(w); eval([world_[0] : st, state, world_[1]], s)
     | WRITE     : s -> eval([st[1], state, writeWorld(st[0], w)], s)
@@ -47,7 +47,7 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-   case expr of
+    case expr of
       Const (n)     ->  singleton(CONST(n))
     | Var (x)       ->  singleton(LD(x))
     | Binop(op, l, r) ->  compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
@@ -65,5 +65,5 @@ public fun compileSM (stmt) {
     | Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2)
     | Skip        -> {}
   esac
-  
+
 }

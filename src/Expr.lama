@@ -13,7 +13,7 @@ import State;
 --        Const (int)                |
 --        Binop (string, expr, expr)
 
-public fun evalop(op, l, r) {
+public fun ebinop(op, l, r) {
     case op of
 		  "+" -> l + r
 		| "-" -> l - r
@@ -34,7 +34,7 @@ public fun evalop(op, l, r) {
 public fun evalExpr (st, expr) {
 	case expr of
 		  Var (x)	-> st(x)
-		| Binop (op, l, r) -> evalop(op, evalExpr(st, l), evalExpr(st, r))
+		| Binop (op, l, r) -> ebinop(op, evalExpr(st, l), evalExpr(st, r))
 		| Const (n)	-> n
 
 	esac

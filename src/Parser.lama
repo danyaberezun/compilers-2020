@@ -15,15 +15,15 @@ fun inbr (l, p, r) {
 
 
 -- Primary expression
-fun BOpop(l, op, r) {
+fun binOpop(l, op, r) {
   Binop (op, l, r)
 }
 
-local oper = {[Left, [s("!!"), BOpop] : {}],
-             	[Left, [s("&&"), BOpop]: {}],
-             	[Nona, [s("==") | s("!=") | s("<") | s(">") | s(">=") | s("<="), BOpop] : {}],
-             	[Left, [s("+") | s("-"), BOpop] : {}],
-             	[Left, [s("*") | s("/") | s("%"), BOpop] : {}]
+local oper = {[Left, [s("!!"), binOpop] : {}],
+             	[Left, [s("&&"), binOpop]: {}],
+             	[Nona, [s("==") | s("!=") | s("<") | s(">") | s(">=") | s("<="), binOpop] : {}],
+             	[Left, [s("+") | s("-"), binOpop] : {}],
+             	[Left, [s("*") | s("/") | s("%"), binOpop] : {}]
 };
 
 local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
