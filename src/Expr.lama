@@ -68,7 +68,6 @@ fun lookupVal (state, name) {
 
 -- Helper function: checks that given name designates a function in
 -- a given state
-
 fun lookupFun (state, name) {
   case state.lookup (name) of
     x@Fun (_, _) -> x

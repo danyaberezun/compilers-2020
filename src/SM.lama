@@ -79,7 +79,6 @@ fun fromLabel (env, lab) {
 -- Stack machine interpreter. Takes an environment, a world and a program,
 -- returns a final output
 fun eval (env, w, insns) {
-
   -- Global state maps names of global variables to values
   local globalState = ref (fun (x) {error (sprintf ("name ""%s"" is undefined", x), getLoc (x))});
   

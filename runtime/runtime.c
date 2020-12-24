@@ -61,7 +61,8 @@ int Bread () {
   int result;
 
   scanf  ("%d", &result);
-
+  
   return result;
+  return BOX(result);
 }
 
