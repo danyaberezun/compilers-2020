@@ -66,9 +66,8 @@ fun compznz (x, znz) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, configuration, insns) {
-	case configuration of
-    [stack, st, world@[i, o]] -> case insns of
+fun eval (env, configuration@[stack, st, world@[i, o]], insns) {
+    case insns of
         {} -> configuration
       | READ      	      : tail -> case i of 
 					                                x : it     -> eval (env, [x : stack, st, [it, o]], tail) 
@@ -100,7 +99,6 @@ fun eval (env, configuration, insns) {
       | DROP              : tail -> case stack of
                                       x : stack -> eval (env, [stack, st, world], tail)
                                     esac
-                                  esac
   	esac
 }
 
