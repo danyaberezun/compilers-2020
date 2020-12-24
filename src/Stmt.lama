@@ -15,9 +15,6 @@ import World;
 --        Skip                      |
 --        Read   (string)           |
 --        Write  (expr)             |
---        if     (expr, stmt, stmt) |
---        While  (expr, stmt)       |
---        Repeat (stmt, expr)
 
 fun eval (c, stmt) {
   -- failure ("Stmt eval not implemented\n")
