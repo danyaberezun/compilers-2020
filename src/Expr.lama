@@ -112,7 +112,7 @@ fun unboxRef(expr) {
   | x          -> failure (sprintf("Parser expected a reference, got %s instead", expr.string))
   esac
 }
-local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+-- local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
 
 -- Evaluates a list of expressions, properly threading a configurations.
 -- Returns the final configuration and the list of values

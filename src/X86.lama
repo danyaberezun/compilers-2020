@@ -7,7 +7,7 @@ import List;
 import Manifest;
 import Buffer;
 
-local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+-- local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
 
 -- Assembler language interface
 -- The registers: 

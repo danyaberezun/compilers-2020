@@ -12,7 +12,7 @@ import Lexer;
 import Expr;
 import Buffer;
 
-local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
+-- local stderr = fopen("/dev/stderr", "w"); -- open stderr for debugging :)
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -63,7 +63,7 @@ fun initEvalEnv (insns) {
             esac
           }
         }) $ [emptyMap (compare), insns];
-  
+
   [fun (l) {
      case findMap (map, l) of Some (insns) -> insns esac
   }]
@@ -81,6 +81,8 @@ fun fromLabel (env, lab) {
 fun eval (env, w, insns) {
   -- Global state maps names of global variables to values
   local globalState = ref (fun (x) {error (sprintf ("name ""%s"" is undefined", x), getLoc (x))});
+   -- we will count level inception, just curious
+  -- local inceptionCounter = ref(0);
 
   -- Make a fresh local state: a pair of arrays for arguments and local variables;
   -- takes the numbers of arguments and local variables respectively
@@ -138,67 +140,80 @@ fun eval (env, w, insns) {
         esac
     }
 
+  -- Core interpreter: evaluates single instruction
+  fun evalInstruction (c@[st, cst, s, w], instruction) {
+      case instruction of
+        READ            -> case readWorld (w) of [v, w]     -> [v : st, cst, s, w]                 esac
+      | WRITE           -> case st            of v : st     -> [st, cst, s, writeWorld(v, w)]      esac
+      | BINOP (op)      -> case st            of y : x : st -> [applyOp (op, x, y) :st, cst, s, w] esac
+      | CONST (val)     -> [val                  : st, cst, s, w]
+      | LD    (loc)     -> [lookup (s, loc)      : st, cst, s, w]
+      | LDA   (loc)     -> [Ref (loc)            : st, cst, s, w]
+      | DUP             -> case st of h:hs -> [h : st, cst, s, w] esac
+      | DROP            -> case st of _:hs -> [    hs, cst, s, w]
+                                    | _    ->  failure(sprintf("Stack exausted! Rest of the program: ""%s""\n", insns.string))
+                           esac
+      | STI             -> case st of v : Ref (x) : st  -> assign (s, x, v); [v : st, cst, s, w] esac
+      | ST    (x)       -> case st of z : st            -> assign (s, x, z); [z : st, cst, s, w] esac
+      | LABEL (_)       -> c
+      | BEGIN (_, argc, localc)
+                        -> case take (st, argc) of
+                             [st, argv] ->
+                               local s = makeState (argc, localc);
+                               foldl (fun (i, arg) {assign (s, Arg (i), arg); i + 1}, 0, argv);
+                               [st, cst, s, w]
+                           esac
+      | GLOBAL (x)      -> assign (s, Glb (x), 0); [st, cst, s, w]
+      | x : _ -> failure (sprintf("SM interpreter doesn't know instruction %s\n", x.string))
+      esac
+  }
+
   -- Core interpreter: takes a configuration and a program, returns a configuration
-  fun eval (c@[st, cst, s, w], insns) {
+  fun eval (c, insns) {
     -- implementation was borrowed from lection 04.12.2020
     -- and from previous version:
     -- https://github.com/kry127/compilers-2020/blob/A07-scopes-functions-int-dev/src/SM.lama
-    case insns of
-      {}                       -> c
-    | JMP  (l) : _             -> {
-                                     -- fprintf(stderr, "Jump to ""%s"" and continue with ""%s""\n", l, fromLabel (env, l).string);
-                                      eval (c, fromLabel (env, l))
-                                  }
-    | CJMP (znz, l) : insns ->
-        case st of
-          n : st -> if (case znz of Z -> n == 0 | _ -> n != 0 esac)
-                    then eval ([st, cst, s, w], fromLabel (env, l))
-                    else eval ([st, cst, s, w], insns)
-                    fi
-        esac
-    | CALL (f, _) : insns      -> {
-                                    -- fprintf(stderr, "Calling function ""%s""\n", f.string);
-                                    eval ([st, [s, insns] : cst, s, w], fromLabel (env, f))
-                                  }
-    | END : _                  ->
-        case cst of
-          [s, insns] : cst -> {
-                                -- fprintf(stderr, "Return from function and back to ""%s""\n", insns.hd.string);
-                                eval ([st, cst, s, w], insns)
-                              }
-        | {}               -> c
-        esac
-    | instruction : continuation ->
-        eval (
-          {
-          --local unit = fprintf(stderr, "Interpret instruction: %s, state: %s\n", instruction.string, c.string);
-          case instruction of
-            READ            -> case readWorld (w) of [v, w]     -> [v : st, cst, s, w]                 esac
-          | WRITE           -> case st            of v : st     -> [st, cst, s, writeWorld(v, w)]      esac
-          | BINOP (op)      -> case st            of y : x : st -> [applyOp (op, x, y) :st, cst, s, w] esac
-          | CONST (val)     -> [val                  : st, cst, s, w]
-          | LD    (loc)     -> [lookup (s, loc)      : st, cst, s, w]
-          | LDA   (loc)     -> [Ref (loc)            : st, cst, s, w]
-          | DUP             -> case st of h:hs -> [h : st, cst, s, w] esac
-          | DROP            -> case st of _:hs -> [    hs, cst, s, w]
-                                        | _    ->  failure(sprintf("Stack exausted! Rest of the program: ""%s""\n", insns.string))
-                               esac
-          | STI             -> case st of v : Ref (x) : st  -> assign (s, x, v); [v : st, cst, s, w] esac
-          | ST    (x)       -> case st of z : st            -> assign (s, x, z); [z : st, cst, s, w] esac
-          | LABEL (_)       -> c
-          | BEGIN (_, argc, localc)
-                            -> case take (st, argc) of
-                                 [st, argv] ->
-                                   local s = makeState (argc, localc);
-                                   foldl (fun (i, arg) {assign (s, Arg (i), arg); i + 1}, 0, argv);
-                                   [st, cst, s, w]
-                               esac
-          | GLOBAL (x)      -> assign (s, Glb (x), 0); [st, cst, s, w]
-          | x : _ -> failure (sprintf("SM interpreter doesn't know instruction %s\n", x.string))
-          esac},
-          continuation
-        )
-    esac
+    local config = ref(c);
+    local instructions = ref(insns);
+
+    while 1 do
+      case deref(config) of c@[st, cst, s, w] ->
+      case deref(instructions) of
+        {}                       -> return c
+      | JMP  (l) : _             -> instructions ::= fromLabel (env, l)
+      | CJMP (znz, l) : insns ->
+          case st of
+            n : st -> config ::= [st, cst, s, w];
+                      if (case znz of Z -> n == 0 | _ -> n != 0 esac)
+                      then instructions ::= fromLabel (env, l)
+                      else instructions ::= insns
+                      fi
+          esac
+      | CALL (f, _) : insns      -> {
+                                      -- local tmp = deref(inceptionCounter);
+                                      -- inceptionCounter ::= 1 + tmp;
+                                      -- fprintf(stderr, "Calling function ""%s"", ", f.string);
+                                      -- fprintf(stderr, "lvl=%d\n", deref(inceptionCounter));
+                                      config       ::= [st, [s, insns] : cst, s, w];
+                                      instructions ::= fromLabel (env, f)
+                                    }
+      | END : _                  ->
+          case cst of
+            [s, insns] : cst -> {
+                                  -- local tmp = deref(inceptionCounter);
+                                  -- inceptionCounter ::= tmp - 1;
+                                  -- fprintf(stderr, "Return from function and back to ""%s"", lvl=%d\n", insns.hd.string);
+                                  -- fprintf(stderr, "lvl=%d\n", deref(inceptionCounter));
+                                  config       ::= [st, cst, s, w];
+                                  instructions ::= insns
+                                }
+          | {}               -> return c -- call stacks ended
+          esac
+      | instruction : continuation -> config ::= evalInstruction(c, instruction);
+                                      instructions ::= continuation
+      esac
+      esac
+    od
   }
 
   eval ([{}, {}, makeState (0, 0), w], insns) [3].getOutput
@@ -435,9 +450,9 @@ public fun compileSM (expr) {
   -- Returns [env, SMCode]
   fun compileExprList (env, exprs, endLabel) {
     case exprs of
-      {e}    -> compileExpr (env, e, endLabel)
+      {e}    -> compileExpr (env, e, endLabel, NoTail)
     | e : ex -> case genLabels(env, 1) of
-              [l1, ev] -> case compileExpr (ev, e, Some(l1)) of
+              [l1, ev] -> case compileExpr (ev, e, Some(l1), NoTail) of
                 [ev1, code1] -> case compileExprList (ev1, ex, endLabel) of
                     [ev2, code2] -> [ev2, code1 <+ LABEL(l1) <+> code2]
                   esac
@@ -446,32 +461,52 @@ public fun compileSM (expr) {
     esac
   }
 
+  -- optimization
+  fun tailRecursiveCall(fLabel, n, tail) {
+     fun reassignArgsInstructions(n) {
+       if n > 0
+       then listBuffer({ ST (Arg (n - 1)), DROP}) <+> reassignArgsInstructions(n - 1)
+       else emptyBuffer()
+       fi
+     }
+
+     case tail of
+       Tail(funLab, bodyLab, argc) ->
+           if compare(funLab, fLabel) == 0
+           then return (reassignArgsInstructions(n) <+ JMP (bodyLab)) -- tail recursion
+           fi
+     | NoTail                      -> { }
+     esac;
+     singletonBuffer(CALL (fLabel, n))
+  }
+
   -- Compiles an expression
   -- reference to prev impl: https://github.com/kry127/compilers-2020/blob/20caaa88d46ee3caa895b8f3e9faeb6b4878f184/src/SM.lama#L175
   -- Returns [env, SMCode]
-  fun compileExpr (env, stmt, endLabel) {
+  fun compileExpr (env, stmt, endLabel, tail) {
     -- local unit = fprintf (stderr, "Statement to compile to SM: ""%s""\n", stmt.string);
-    local result = case stmt of
-        Assn (name, expr) -> case compileExpr(env, name, None) of
-          [ev, sm] -> case compileExpr(ev, expr, None) of
+
+    case stmt of
+        Assn (name, expr) -> case compileExpr(env, name, None, NoTail) of
+          [ev, sm] -> case compileExpr(ev, expr, None, NoTail) of
             [ev2, sm2] -> [ev2, sm <+> sm2 <+ STI <+> maybeJump(endLabel)]
           esac
         esac
-      | Seq (expr1, expr2) -> case compileExpr(env, expr1, None) of
-          [ev, sm] -> case compileExpr(ev, expr2, endLabel) of
+      | Seq (expr1, expr2) -> case compileExpr(env, expr1, None, NoTail) of
+          [ev, sm] -> case compileExpr(ev, expr2, endLabel, tail) of
             [ev2, sm2] -> [ev2, sm <+> sm2]
           esac
         esac
       | Skip              -> [env, maybeJump(endLabel)]
       | Read (name) -> [env, singletonBuffer(READ) <+ ST (lookupVar(env, name)) <+ DROP <+> maybeJump(endLabel)]
-      | Write (expr) -> case compileExpr(env, expr, None) of
+      | Write (expr) -> case compileExpr(env, expr, None, NoTail) of
            [ev, sm] -> [ev, sm <+ WRITE <+> maybeJump(endLabel)]
          esac
       | If (cond, s1, s2) -> case endLabel of
              Some(l2) -> case genLabels(env, 1) of
-               [l1, ev] -> case compileExpr(ev, cond, None) of
-                 [ev1, sm_expr] -> case compileExpr(ev1, s1, Some(l2)) of
-                   [ev2, sm1] -> case compileExpr(ev2, s2, Some(l2)) of
+               [l1, ev] -> case compileExpr(ev, cond, None, NoTail) of
+                 [ev1, sm_expr] -> case compileExpr(ev1, s1, Some(l2), tail) of
+                   [ev2, sm1] -> case compileExpr(ev2, s2, Some(l2), tail) of
                      [ev3, sm2] -> [ev3, sm_expr <+ CJMP(Z, l1)
                                          <+> sm1 <+ LABEL(l1) <+> sm2]
                      esac
@@ -479,9 +514,9 @@ public fun compileSM (expr) {
                  esac
                esac
            | None     -> case genLabels(env, 2) of
-               [l1, l2, ev] -> case compileExpr(ev, cond, None) of
-                 [ev1, sm_expr] -> case compileExpr(ev1, s1, Some(l2)) of
-                   [ev2, sm1] -> case compileExpr(ev2, s2, Some(l2)) of
+               [l1, l2, ev] -> case compileExpr(ev, cond, None, NoTail) of
+                 [ev1, sm_expr] -> case compileExpr(ev1, s1, Some(l2), tail) of
+                   [ev2, sm1] -> case compileExpr(ev2, s2, Some(l2), tail) of
                      [ev3, sm2] -> [ev3, sm_expr <+ CJMP(Z, l1)
                                          <+> sm1 <+ LABEL(l1) <+> sm2 <+ LABEL(l2)]
                    esac
@@ -490,8 +525,8 @@ public fun compileSM (expr) {
              esac
            esac
       | While (cond, s)   -> case genLabels(env, 2) of
-               [l1, l2, ev] -> case compileExpr(ev, cond, None) of
-                  [ev2, sm_expr] -> case compileExpr(ev2, s, Some(l1)) of
+               [l1, l2, ev] -> case compileExpr(ev, cond, None, NoTail) of
+                  [ev2, sm_expr] -> case compileExpr(ev2, s, Some(l1), NoTail) of
                      [ev3, sm] -> [ev3, singletonBuffer(JMP (l1)) <+ LABEL (l2) <+> sm
                          <+ LABEL(l1) <+> sm_expr <+ CJMP(NZ, l2)
                          <+> maybeJump(endLabel)]
@@ -499,8 +534,8 @@ public fun compileSM (expr) {
                   esac
                esac
       | Repeat (s, cond)  -> case genLabels(env, 2) of
-               [l1, l2, ev] -> case compileExpr(ev, s, Some(l1)) of
-                  [ev2, sm] -> case compileExpr(ev2, cond, None) of
+               [l1, l2, ev] -> case compileExpr(ev, s, Some(l1), NoTail) of
+                  [ev2, sm] -> case compileExpr(ev2, cond, None, NoTail) of
                     [ev3, sm_expr] -> [ev3,     singletonBuffer(LABEL(l2)) <+> sm
                                        <+ LABEL(l1) <+> sm_expr <+ CJMP(Z, l2)
                                        <+> maybeJump(endLabel)]
@@ -510,12 +545,12 @@ public fun compileSM (expr) {
       | Var (name) -> [env, singletonBuffer(LD (lookupVar(env, name))) <+> maybeJump(endLabel)]
       | Ref (name) -> [env, singletonBuffer(LDA (lookupVar(env, name))) <+> maybeJump(endLabel)]
       | Const (val) -> [env, singletonBuffer(CONST (val)) <+> maybeJump(endLabel)]
-      | Binop (op, expr1, expr2) -> case compileExpr(env, expr1, None) of
-                 [ev1, sm1] -> case compileExpr(ev1, expr2, None) of
+      | Binop (op, expr1, expr2) -> case compileExpr(env, expr1, None, NoTail) of
+                 [ev1, sm1] -> case compileExpr(ev1, expr2, None, NoTail) of
                    [ev2, sm2] -> [ev2, sm1 <+> sm2 <+ BINOP (op) <+> maybeJump(endLabel)]
                  esac
                esac
-      | Ignore (expr)  -> case compileExpr(env, expr, None) of
+      | Ignore (expr)  -> case compileExpr(env, expr, None, NoTail) of
               [ev2, sm] -> [ev2, sm <+ DROP <+> maybeJump(endLabel)]
             esac
       | Call (f, {})  ->
@@ -524,10 +559,11 @@ public fun compileSM (expr) {
                  esac
       | Call (f, args)  ->
                  case genLabels(env, 1) of
-                   [l1, ev] -> case compileExprList(ev, args, Some(l1)) of
+                   [l1, ev] -> case compileExprList(ev, args, Some(l1), tail) of
                      [ev1, sm_args] ->
                        case lookupFun (ev1, f) of
-                         Fun (fLabel, n) -> [ev1, sm_args <+ LABEL(l1) <+ CALL (fLabel, n)]
+                         Fun (fLabel, n) ->
+                           [ev1, sm_args <+ LABEL(l1) <+> tailRecursiveCall(fLabel, n, tail)]
                        esac
                    esac
                  esac
@@ -557,39 +593,43 @@ public fun compileSM (expr) {
                  of
                    [ev, funs, globals] ->
                    case compileExpr(foldl(secondaryProcessDefinition,
-                                          ev, funs), expr, None) of
+                                          ev, funs), expr, None, tail) of
                      [ev1, sm_code] -> [endScope(ev1), globals <+> sm_code]
                    esac
                  esac
-    esac;
-    -- local unit2 = fprintf (stderr, "Statement to compiled to SM: ""%s""\n", stmt.string);
-    result
+    esac
   }
 
-  local compileFuncsFixPoint = fix (fun (f) {
-      fun (env, fList) {
-       case fList of
-         {} -> case getFuns(env) of
-                [{}, ev] -> emptyBuffer()
-              | [fs, ev] -> f(ev, fs)
-              esac
-       | Fun (flabel, argv, body, state) : fs ->
-         case genLabels(addArgs (beginFun(env, state), argv), 1) of
-           [l1, ev] ->
-           case compileExpr(ev, body, Some(l1)) of
-             [ev1, sm_body] ->
-               singletonBuffer (LABEL (flabel))
-               <+ BEGIN (flabel, argv.size, getLocals (ev1))
-               <+> sm_body <+ LABEL(l1) <+ END <+> f(ev1, fs)
+  fun compileFuncsFixPoint(env, fList) {
+       local renv = ref(env);
+       local rfList = ref(fList);
+       local rret = ref(emptyBuffer());
+       while 1 do
+         case deref(renv) of env ->
+         case deref(rfList) of
+           {} -> case getFuns(env) of
+                  [{}, ev] -> return deref(rret)
+                | [fs, ev] -> renv ::= ev; rfList ::= fs
+                esac
+         | Fun (flabel, argv, body, state) : fs ->
+           case genLabels(addArgs (beginFun(env, state), argv), 2) of
+             [l1, lfbody, ev] ->
+             case compileExpr(ev, body, Some(l1), Tail(flabel, lfbody, argv.size)) of
+               [ev1, sm_body] -> renv ::= ev1; rfList ::= fs;
+                 rret ::= (deref(rret) <+ LABEL (flabel)
+                          <+ BEGIN (flabel, argv.size, getLocals (ev1))
+                          <+ LABEL (lfbody)
+                          <+> sm_body <+ LABEL(l1) <+ END)
+             esac
            esac
          esac
-       esac
-      }
-    });
+         esac
+       od
+  }
 
   -- fprintf(stderr, "CompileSM: %s\n", expr.string);
   case genLabels(initCompEnv(), 1) of
-    [l1, env] -> case compileExpr(env, expr, Some(l1)) of
+    [l1, env] -> case compileExpr(env, expr, Some(l1), NoTail) of
       [ev, initCode] ->
         {
            local mainFunction = singletonBuffer (LABEL ("main"))
