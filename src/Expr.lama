@@ -67,6 +67,7 @@ fun eval (configuration@[st, world], expr) {
   case expr of
       Var    (x)               -> [configuration, st(x)]
     | Const  (n)               -> [configuration, n]
+    | Ref    (x)               -> [configuration, Ref (x)]
     | Binop  (op, left, right) -> case evalList (configuration, {left, right}) of
                                     [configuration, {v, world}] -> [configuration, evalOp (op, v, world)]
                                   esac
@@ -85,15 +86,11 @@ fun eval (configuration@[st, world], expr) {
                                     [configuration, v] -> eval (configuration, if v then s1 else s2 fi)
                                   esac
     | While  (exp, s)          -> case eval (configuration, exp) of
-                                    [configuration, 0] -> [configuration, None]
-                                  | [configuration, _ ] -> case eval (configuration, s)  of
-                                                            [configuration, value] -> eval (configuration, expr)
-                                                           esac
+                                    [configuration, v] -> if v then eval (eval (configuration, s)[0], While (exp, s)) else [configuration, None] fi
                                   esac
     | Repeat (s, exp)          -> case eval (eval (configuration, s)[0], exp) of
                                     [configuration, v] -> if v then [configuration, None] else eval (configuration, Repeat (s, exp)) fi
                                   esac
-    | Ref    (x)               -> [configuration, Ref (x)]
     | Ignore (exp)             -> [eval (configuration, exp)[0], None]
     | _                        -> failure("Statement %s not found. \n", expr)
   esac
