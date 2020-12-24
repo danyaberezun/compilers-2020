@@ -230,5 +230,5 @@ public fun compileSM (stmt) {
       esac
 	esac
  }
- compileEnv (initCompEnv (), stmt)[1]
+ compileEnv (initCompEnv (), stmt)[0]
 }
