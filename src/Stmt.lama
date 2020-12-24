@@ -12,25 +12,36 @@ import World;
 --
 -- stmt = Assn   (string, expr)     |
 --        Seq    (stmt, stmt)       |
---        Skip                      |
---        Read   (string)           |
---        Write  (expr)             |
-<<<<<<< HEAD
---        if     (expr, stmt, stmt) |
+--        Skip                      | -- res[1] мир без res[0] не мир, мир это миф
+--        Read   (string)           | -- res[0] число из входного потока
+--        Write  (expr)             | -- с[0] state маппинг
+--        if     (expr, stmt, stmt) | -- c[1] world массив из двух потоков
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
-=======
->>>>>>> A03-straight-line-parser
 
 fun eval (c, stmt) {
   
 case stmt of
-		        Assn(str, expr) -> [c[0] <- [str, evalExpr(c[0], expr)], c[1]]
+		      Assn(str, expr) -> [c[0] <- [str, evalExpr(c[0], expr)], c[1]]
 		      | Seq(s1, s2) -> eval(eval(c, s1), s2)
 		      | Skip -> c
-			| Read(str) -> local res = readWorld(c[1]);
+			  | Read(str) -> local res = readWorld(c[1]);
 							 [c[0] <- [str, res[0]], res[1]]
-			| Write(str) -> [c[0], writeWorld(evalExpr(c[0], str), c[1])]
+			  | Write(str) -> [c[0], writeWorld(evalExpr(c[0], str), c[1])]
+              | If (e, s1, s2) -> case evalExpr (c[0], e) of
+				0 -> eval (c, s2)
+			  | _ -> eval (c, s1)
+			    esac
+	          | While (e, statement) -> case evalExpr (c[0], e) of
+				0 -> [c[0], c[1]]
+		      | _ -> eval (eval (c, statement), stmt)
+				  esac
+	          | Repeat (stmt, e) -> case eval (c, stmt) of
+				new_c -> case evalExpr (new_c[0], e) of
+								0 -> eval (new_c, Repeat (stmt, e))
+								| _ -> [new_c[0], new_c[1]]
+							esac
+			      esac
 		esac
 }
 

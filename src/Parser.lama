@@ -31,11 +31,21 @@ local primary = memo $ eta (
                             inbr (s ("("), exp, s (")"))),
       exp = memo $ eta expr (oprts, primary);
 
+local elsePart = memo $ eta syntax (
+				kElse statement=stmt kFi {statement} |
+				kElif condition=exp kThen statement1=stmt statement2=elsePart {If (condition, statement1, statement2)}
+				);
+
 local simple_stmt = memo $ eta syntax (
-                            x=lident s[":="] e=exp {Assn (x, e)} |
                             kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
                             kWrite x=inbr[s("("), exp, s(")")] {Write (x)} | 
-                            kSkip {Skip} 
+                            kSkip {Skip} |
+  			                kIf condition=exp kThen statement1=stmt kFi {If (condition, statement1, Skip)} |
+			                kIf condition=exp kThen statement1=stmt statement2=elsePart {If (condition, statement1, statement2)} |
+			                kWhile condition=exp kDo statement=stmt kOd {While (condition, statement)} |
+			                kRepeat statement=stmt kUntil condition=exp {Repeat (statement, condition)} |
+		                	kFor declaration=stmt s[","] condition=exp s[","] change=stmt kDo statement=stmt kOd {Seq (declaration, While (condition, Seq (statement, change)))} |
+                            x=lident s[":="] e=exp {Assn (x, e)} 
                             );
 
 local stmt = memo $ eta syntax ( 
