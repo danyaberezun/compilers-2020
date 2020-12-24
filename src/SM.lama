@@ -1,12 +1,10 @@
--- Stack maSchine.
-
+-- Stack machine.
 import List;
 import World;
 import State;
 import Expr;
 import Buffer;
 import Fun;
-
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
 public fun showSMInsn (i) {
@@ -19,62 +17,54 @@ public fun showSMInsn (i) {
   | CONST (n) -> sprintf ("CONST %d", n)
   esac
 }
-
 public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c, insns) {
-  foldl (evalInstruction, c, insns)
-}
-
-
-fun evalInstruction ([stack, state, world], instruction) {
-  case instruction of
-    CONST (val)  -> [val:stack, state, world]
-  | LD (name)    -> [state(name):stack, state, world]
-  | ST (name)    -> case stack of
-                      x:stackTail -> [stackTail, state <- [name, x], world]
-                    esac
-  | BINOP (op)   -> case stack of
-                      x:y:stackTail -> [evalOp (op, y, x):stackTail, state, world]
-                    esac
-  | READ         -> case readWorld (world) of
-                     [value, newWorld] -> [value:stack, state, newWorld]
-                    esac
-  | WRITE        -> case stack of
-                     value:stackTail -> [stackTail, state, writeWorld (value, world)]
-                    esac
-  esac
+case c of [s, st, w@[in, out]] ->
+        case insns of
+             {} -> c
+            |BINOP(bin): p -> case s of r : l : ss -> eval([operation(bin, l, r): ss, st, w], p) esac
+            |CONST(n): p-> eval([n : s, st, w], p)
+            |READ: p -> case in of elem : i -> eval([elem: s, st, [i, out]], p) esac
+            |WRITE: p-> case s of elem : ss -> eval([ss, st, [in, elem : out]], p) esac
+            |LD(elem): p -> eval([st(elem) : s, st, w], p)
+            |ST(elem): p -> 
+                case s of elemo : ss -> 
+                    eval([s, (st <- [ elem, elemo ] ), w], p)
+                esac
+        esac
+    esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
-
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  case expr of
-    Const (val)             -> singleton (CONST (val))
-  | Var (name)              -> singleton (LD (name))
-  | Binop (op, left, right) -> compileExpr (left) +++ compileExpr (right) +++ singleton (BINOP (op))
-  esac
+case expr of
+         Var(elem) -> singleton(LD(elem))
+        |Const(n) -> singleton(CONST(n))
+        |Binop(op, l, r) -> compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+    esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  case stmt of
-    Assn (name, expr)   -> compileExpr (expr) +++ singleton (ST (name))
-  | Seq  (stmt1, stmt2) -> compileSM (stmt1) +++ compileSM (stmt2)
-  | Skip                -> {}
-  | Read (name)         -> {READ, ST (name)}
-  | Write (expr)        -> compileExpr (expr) +++ singleton (WRITE)
-  esac
-}
+case stmt of
+         Read(elem) -> singleton(READ) +++ singleton(ST(elem))
+        |Write(elem) -> compileExpr(elem) +++ singleton(WRITE)
+        |Assn(elem, expr) -> compileExpr(expr) +++ singleton(ST(elem))
+        |Skip -> {}
+        |Seq(s1, s2) -> compileSM(s1) +++ compileSM(s2)
+    esac
+} 
