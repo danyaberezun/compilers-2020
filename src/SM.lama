@@ -69,21 +69,21 @@ fun compznz (x, znz) {
 fun eval (env, configuration@[stack, st, world@[i, o]], insns) {
     case insns of
         {} -> configuration
-      | READ      	      : tail -> case i of 
-					                                x : it     -> eval (env, [x : stack, st, [it, o]], tail) 
-				                            esac
-      | WRITE     	      : tail -> case stack of 
-					                                x : ss     -> eval (env, [ss, st, [i, x : o]], tail)
-				                            esac
+      | READ      	  : tail -> case i of 
+					x : it     -> eval (env, [x : stack, st, [it, o]], tail) 
+				    esac
+      | WRITE     	  : tail -> case stack of 
+					x : ss     -> eval (env, [ss, st, [i, x : o]], tail)
+				    esac
       | BINOP (str)       : tail -> case stack of 
-					                                x : y : ss -> eval (env, [evalOp (str, y, x) : ss, st, world], tail) 
-				                            esac
-      | LD    (x) 	      : tail -> eval (env, [st (x) : stack, st, world], tail)
-      | ST    (x) 	      : tail -> case stack of 
-					                                y : ss     -> eval (env, [ss, (st <- [x, y]), world], tail) 
-				                            esac
-      | CONST (n) 	      : tail -> eval (env, [n : stack, st, world], tail)
-      | LABEL (stack)     : tail -> eval (env, configuration, tail)
+					x : y : ss -> eval (env, [evalOp (str, y, x) : ss, st, world], tail) 
+				    esac
+      | LD    (x) 	  : tail -> eval (env, [st (x) : stack, st, world], tail)
+      | ST    (x) 	  : tail -> case stack of 
+					y : ss     -> eval (env, [ss, (st <- [x, y]), world], tail) 
+				    esac
+      | CONST (n) 	  : tail -> eval (env, [n : stack, st, world], tail)
+      | LABEL (lbl)       : tail -> eval (env, configuration, tail)
       | JMP   (lbl)       : tail -> eval (env, configuration, env.fromLabel(env, lbl))
       | DUP               : tail -> eval (env, configuration, tail)
       | CJMP  (znz, lbl)  : tail -> case stack of x : ss ->
@@ -152,7 +152,7 @@ fun last (lbl) {
 public fun compileSM (stmt) {
  fun compileEnv(env, stmt) {
   case stmt of
-   	Skip              -> [env, {}]
+    Skip              -> [env, {}]
   | Var   (x)         -> [env, LD (x) : {}]
   | Const (n)         -> [env, CONST (n) : {}]
   | Ref   (x)         -> [env, LDA (x) : {}]
@@ -166,12 +166,12 @@ public fun compileSM (stmt) {
                         [env, ins2] -> [env, ins1 +++ ins2 +++ (BINOP (op) : {})]
                        esac
       esac
-	| Assn  (x, expr)   -> case compileEnv(env, x) of
+  | Assn  (x, expr)   -> case compileEnv(env, x) of
                              [env, ins1] -> case compileEnv(env, expr) of
                                                 [env, ins2] -> [env, ins1 +++ ins2 +++ (STI : {})]
                                             esac
                          esac
-	| Seq   (s1, s2)    -> 
+  | Seq   (s1, s2)    -> 
 	      case compileEnv(env, s1) of
                     [env, ins1] -> case compileEnv(env, s2) of
                                       [env, ins2]-> [env, ins1 +++ ins2] 
@@ -223,12 +223,12 @@ public fun compileSM (stmt) {
           case compileEnv(env, s) of
             [env, ins] ->
                 [env, (LABEL (lbl) : {})  +++
-                ins                     +++
-                compileSM (expr)        +++
+                ins                       +++
+                compileSM (expr)          +++
                 (CJMP ("z", lbl) : {})]
           esac
       esac
-	esac
+  esac
  }
- compileEnv (initCompEnv (), stmt)[0]
+ compileEnv (initCompEnv (), stmt)[1]
 }
