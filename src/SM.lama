@@ -57,7 +57,7 @@ fun fromLabel (env, lab) {
   env [0] (lab)
 }
 
-fun compileExprList (env, exprs) {
+fun compileSMList (env, exprs) {
   case foldl (fun ([env, vals], e) {
     case compileExpr(env, e) of
       [env, val] -> [env, val:vals]
@@ -103,31 +103,31 @@ fun eval (env, c, insns) {
 fun compileSMEnv(env, expression) {
   -- printf("expression=%s\n\n", expression.string);
   case expression of
-    Assn   (expr1, expr2)         -> case compileSMList(env, {expr1, expr2}) of [env, sm1 : sm2 : _] -> [env, sm2 +++ sm1 +++ singleton(STI)] esac
-    | Seq    (expr1, expr2)       -> case compileSMList(env, {expr1, expr2}) of [env, sm1 : sm2 : _] -> [env, sm1 +++ sm2] esac
-    | Skip                        -> [env, {}]
-    | Read   (str)                -> [env, {READ, ST(str)}]
-    | Write  (expr)               -> case compileSMEnv(env, expr) of [env, sm] -> [env, sm +++ singleton(WRITE)] esac
-    | If     (expr, expr1, expr2) -> case genLabels(env, 2) of [lel, lex, env] -> 
+      Assn (expr1, expr2) -> case compileSMList(env, {expr1, expr2}) of [env, sm1 : sm2 : _] -> [env, sm2 +++ sm1 +++ singleton(STI)] esac
+    | Seq (expr1, expr2) -> case compileSMList(env, {expr1, expr2}) of [env, sm1 : sm2 : _] -> [env, sm1 +++ sm2] esac
+    | Skip -> [env, {}]
+    | Read (str) -> [env, {READ, ST(str)}]
+    | Write (expr) -> case compileSMEnv(env, expr) of [env, sm] -> [env, sm +++ singleton(WRITE)] esac
+    | If (expr, expr1, expr2) -> case genLabels(env, 2) of [lel, lex, env] -> 
         case compileSMList(env, {expr, expr1, expr2}) of
           [env, sme : sme1 : sme2 : _] -> [env, sme +++ singleton(CJMP("z", lel)) +++ sme1 +++ {JMP(lex), LABEL(lel)} +++ sme2 +++ singleton(LABEL(lex))]
         esac
       esac
-    | While  (expr, exprb)        -> case genLabels(env, 2) of [le, ls, env] ->
+    | While (expr, exprb) -> case genLabels(env, 2) of [le, ls, env] ->
         case compileSMList(env, {expr, exprb}) of
           [env, sme : smb : _] -> [env, {JMP(le), LABEL(ls)} +++ smb +++ singleton(LABEL(le)) +++ sme +++ singleton(CJMP("nz", ls))]
         esac
       esac
-    | Repeat (exprb, expr)        -> case genLabel(env) of [ls, env] ->
+    | Repeat (exprb, expr) -> case genLabel(env) of [ls, env] ->
         case compileSMList(env, {exprb, expr}) of
           [env, smb : sme : _] -> [env, singleton(LABEL(ls)) +++ smb +++ sme +++ singleton(CJMP("z", ls))]
         esac
       esac
-    | Var    (str)                -> [env, singleton(LD(str))]
-    | Ref    (str)                -> [env, singleton(LDA(str))]
-    | Const  (v)                  -> [env, singleton(CONST(v))]
-    | Binop  (str, expr1, expr2)  -> case compileSMList(env, {expr1, expr2}) of [env, lsm : rsm : _] -> [env, lsm +++ rsm +++ singleton(BINOP(str))] esac
-    | Ignore (expr)               -> case compileSMEnv(env, expr) of [env, sm] -> [env, sm +++ singleton(DROP)] esac
+    | Var (str) -> [env, singleton(LD(str))]
+    | Ref (str) -> [env, singleton(LDA(str))]
+    | Const (v) -> [env, singleton(CONST(v))]
+    | Binop (str, expr1, expr2) -> case compileSMList(env, {expr1, expr2}) of [env, lsm : rsm : _] -> [env, lsm +++ rsm +++ singleton(BINOP(str))] esac
+    | Ignore (expr) -> case compileSMEnv(env, expr) of [env, sm] -> [env, sm +++ singleton(DROP)] esac
   esac
 }
 
