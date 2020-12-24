@@ -150,85 +150,90 @@ fun last (lbl) {
 -- Takes an expression, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
- fun compileEnv(env, stmt) {
-  case stmt of
-    Skip              -> [env, {}]
-  | Var   (x)         -> [env, LD (x) : {}]
-  | Const (n)         -> [env, CONST (n) : {}]
-  | Ref   (x)         -> [env, LDA (x) : {}]
-  | Read  (x)         -> [env, {READ, ST(x)}]
-  | Write (expr)      -> case compileEnv(env, expr) of
-                            [env, ins] -> [env, ins +++ (WRITE : {})]
-                         esac
-  | Binop (op, left, right) -> 
-      case compileEnv(env, left) of
-        [env, ins1] -> case compileEnv(env, right) of
-                        [env, ins2] -> [env, ins1 +++ ins2 +++ (BINOP (op) : {})]
-                       esac
-      esac
-  | Assn  (x, expr)   -> case compileEnv(env, x) of
-                             [env, ins1] -> case compileEnv(env, expr) of
-                                                [env, ins2] -> [env, ins1 +++ ins2 +++ (STI : {})]
-                                            esac
-                         esac
-  | Seq   (s1, s2)    -> 
-	      case compileEnv(env, s1) of
-                    [env, ins1] -> case compileEnv(env, s2) of
-                                      [env, ins2]-> [env, ins1 +++ ins2] 
-                                   esac 
+ fun compileEnv (stmt, env) {
+    case stmt of
+      Var   (x)            -> [LD (x) : {}, env]
+    | Const (n)            -> [CONST (n) : {}, env]
+    | Binop (op, left, right)    -> 
+      case compileEnv (left, env) of
+        [ins1, env] -> 
+        case compileEnv (right, env) of
+          [ins2, env] -> [ins1 +++ ins2 +++ (BINOP (op) : {}), env]
         esac
-  | Ignore (x)        -> 
-      case compileEnv(env, x) of
-        [env, ins] -> [env, ins +++ (DROP : {})]
       esac
-  | If (expr, s1, s2) -> 
-      case genLabels(env, 2) of
+    | Ref   (x)            -> [LDA (x) : {}, env]
+    | Ignor (x)            -> 
+      case compileEnv (x, env) of
+        [ins, env] -> [ins +++ (DROP : {}), env]
+      esac
+    | Assn  (x, expr)      ->
+      case compileEnv (x, env) of
+        [ins1, env] ->
+        case compileEnv (expr, env) of
+          [ins2, env] -> [ins1 +++ ins2 +++ (STI : {}), env]
+        esac
+      esac
+    | Read  (x)            -> [{READ, ST (x)}, env]
+    | Write (expr)         -> 
+      case compileEnv (expr, env) of
+        [ins, env] -> [ins +++ (WRITE : {}), env]
+      esac
+    | Skip                 -> [{}, env]
+    | Seq   (s1, s2)       -> 
+      case compileEnv (s1, env) of
+        [ins1, env] ->
+          case compileEnv (s2, env) of
+            [ins2, env] -> [ins1 +++ ins2, env]
+          esac
+      esac
+    | If    (expr, s1, s2) -> 
+      case env.genLabels(2) of
         [ls2, lfi, env] ->
-          case compileEnv(env, s1) of
-            [env, ins1] ->
-              case compileEnv(env, s2) of
-                [env, ins2] ->
-                  [env, compileSM (expr)              +++
-                  (CJMP ("z", ls2) : {})              +++ 
-                  (case last (ins1) of
-                      [ins, LABEL (lbl)] -> 
-                        ins1                          +++ 
-                        {JMP (lbl), DUP, LABEL (ls2)} +++
-                        ins2                          +++ 
-                        (LABEL (lbl) : {})
-                      | _                -> 
-                        ins1                          +++
-                        {JMP (lfi), DUP, LABEL (ls2)} +++ 
-                        ins2                          +++ 
-                        (LABEL (lfi) : {})
-                  esac)]
+          case compileEnv (s1, env) of
+            [ins1, env] ->
+              case compileEnv (s2, env) of
+                [ins2, env] ->
+                [compileSM (expr)      +++
+                (CJMP ("z", ls2) : {})   +++ 
+                (case last (ins) of
+                    [ins1, LABEL (lbl)] -> 
+                    ins1               +++ 
+                    {JMP (lbl), DUP, LABEL (ls2)} +++
+                    ins2              +++ 
+                    (LABEL (lbl) : {})
+                  | _                -> 
+                    ins1 +++
+                    {JMP (lfi), DUP, LABEL (ls2)} +++ 
+                    ins2              +++ 
+                    (LABEL (lfi) : {})
+                esac), env]
               esac
           esac
       esac 
-  | While (expr, s) ->
-      case genLabels(env, 2) of
+    | While (expr, s) ->
+      case env.genLabels(2) of
         [l1, l2, env] ->
-          case compileEnv(env, s) of
-            [env, ins] -> 
-              [env, {JMP (l2), LABEL (l1)} +++
-              ins                          +++
-              (LABEL (l2) : {})            +++
-              compileSM (expr)             +++
-              (CJMP ("nz", l1) : {})]
+          case compileEnv (s, env) of
+            [ins, env] -> 
+            [{JMP (l2), LABEL (l1)} +++
+            ins                     +++
+            (LABEL (l2) : {})       +++
+            compileSM (expr)      +++
+            (CJMP ("nz", l1) : {}), env]
           esac
       esac
-  | Repeat (s, expr) ->
-      case genLabel(env) of
+    | Repeat (s, expr) ->
+      case env.genLabel of
         [lbl, env] ->
-          case compileEnv(env, s) of
-            [env, ins] ->
-                [env, (LABEL (lbl) : {})  +++
-                ins                       +++
-                compileSM (expr)          +++
-                (CJMP ("z", lbl) : {})]
+          case compileEnv (s, env) of
+            [ins, env] ->
+              [(LABEL (lbl) : {})  +++
+              ins                +++
+              compileSM (expr) +++
+              (CJMP ("z", lbl) : {}), env]
           esac
       esac
   esac
- }
- compileEnv (initCompEnv (), stmt)[1]
+  }
+  compileEnv (stmt, initCompEnv ())[0]
 }
