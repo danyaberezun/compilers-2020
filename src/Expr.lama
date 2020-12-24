@@ -14,10 +14,9 @@ import State;
 --        Const (int)                |
 --        Binop (string, expr, expr)
 
-<<<<<<< HEAD
 public fun evalExpr (st, expr) {
   failure ("evalExpr not implemented\n")
-=======
+
 public fun getBinop (op, lefVal, rigVal) {
 	case op of
 		"+"  -> lefVal + rigVal
@@ -34,7 +33,6 @@ public fun getBinop (op, lefVal, rigVal) {
 		| "&&" -> lefVal && rigVal
 		| "!!" -> lefVal !! rigVal
 	esac
->>>>>>> A01-straight-line-int-sm
 }
 
 public fun evalExpr (st, expr) {
