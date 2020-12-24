@@ -195,7 +195,7 @@ public fun compileSM (stmt) {
                 [ins2, env] ->
                 [compileSM (expr)      +++
                 (CJMP ("z", ls2) : {})   +++ 
-                (case last (ins) of
+                (case last (ins1) of
                     [ins1, LABEL (lbl)] -> 
                     ins1               +++ 
                     {JMP (lbl), DUP, LABEL (ls2)} +++
