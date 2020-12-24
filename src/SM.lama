@@ -57,7 +57,7 @@ fun fromLabel (env, lab) {
 fun eval (env, c, insns) {
  case c of
     [stack, st, w@[i, o]] -> case insns of
-       BINOP (b) : other -> case stack of x : y : nstack -> eval (env, [evalBinop (b, y, x) : nstack, st, w], other) esac
+       BINOP (b) : other -> case stack of x : y : nstack -> eval (env, [eval_Binop (b, y, x) : nstack, st, w], other) esac
       | CONST (n) : other -> eval (env, [n : stack, st, w], other)
       | READ      : other -> case i of x : ni -> eval (env, [x : stack, st, [ni, o]], other) esac
       | WRITE     : other -> case stack of x : nstack -> eval (env, [nstack, st, [i, x : o]], other) esac
