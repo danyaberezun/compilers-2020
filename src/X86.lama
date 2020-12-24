@@ -354,6 +354,13 @@ fun znzene (znz) {
   esac
 }
 
+funoperationTypes (op) {
+  case op of
+      "+" -> 1 | "-" -> 1 | "*" -> 1
+      | _ -> 0
+  esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -387,9 +394,11 @@ fun compile (env, code) {
               [x, y, env] -> 
               case env.allocate of
                 [s, env] -> case op of
-                  "+"  -> [env, code <+ Mov (y, eax) <+ Binop("+", x, eax)    <+ Mov (eax, s)]
-                | "-"  -> [env, code <+ Mov (y, eax) <+ Binop("-", x, eax)    <+ Mov (eax, s)]
-                | "*"  -> [env, code <+ Mov (y, eax) <+ Binop("*", x, eax)    <+ Mov (eax, s)]
+                  op   ->
+                        case operationTypes (op) of
+                          1 -> [env, code <+ Mov (y, eax) <+ Binop (op, x, eax) <+ Mov (eax, s)]
+                        | 0 -> [env, code <+ Mov (x, edx) <+ Binop ("cmp", edx, y) <+ Mov (L (0), eax) <+ Set (suffix (op), "%al") <+ Mov (eax, s)]
+                        esac
                 | "/"  -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x)      <+ Mov (eax, s)]
                 | "%"  -> [env, code <+ Mov (y, eax) <+ Cltd <+ IDiv (x)      <+ Mov (edx, s)]
                 | "&&" -> [env, code <+ Mov (y, edx) <+ Binop ("*", x, edx)   <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), eax)         <+ Set ("ne", "%al") <+ Mov (eax, s)]
