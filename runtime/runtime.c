@@ -1,93 +1,68 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <stdarg.h>
-# include <string.h>
+#include <inttypes.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
-# define UNBOXED(x)  (((int) (x)) &  0x0001)
-# define UNBOX(x)    (((int) (x)) >> 1)
-# define BOX(x)      ((((int) (x)) << 1) | 0x0001)
-
-# define STRING_TAG  0x00000001
-# define ARRAY_TAG   0x00000003
-
-# define LEN(x) ((x & 0xFFFFFFF8) >> 3)
-# define TAG(x) (x & 0x00000007)
-
-# define TO_DATA(x) ((data*)((char*)(x)-sizeof(int)))
+enum {
+    ARRAY_TAG, STRING_TAG
+};
 
 typedef struct {
-  int tag; 
-  char contents[0];
-} data; 
+    uint8_t elemLength;
+    unsigned tag : 24;
+    uint32_t length;
+} Header;
 
-int Blength (void *p) {
-  data *a = TO_DATA(p);
-  return BOX(LEN(a->tag));
+uint32_t Blength (void *p) {
+    return *(((uint32_t *) p) - 1);
 }
 
-void* Barray (int n0, ...) {
-  int     n = UNBOX(n0);
-  va_list args; 
-  int     i, ai; 
-  data    *r; 
+void* Barray (int n, ...) {
+    n /= 2;
+    va_list args; 
+    void *r = malloc(sizeof(Header) + n * sizeof(int));
+    Header *h = r;
+    h->tag = ARRAY_TAG;
+    h->length = n;
+    h->elemLength = 4;
 
-  r = (data*) malloc (sizeof(int) * (n+1));
+    int *data = r + sizeof(Header);
 
-  r->tag = ARRAY_TAG | (n << 3);
-  
-  va_start(args, n);
-  
-  for (i = 0; i<n; i++) {
-    ai = va_arg(args, int);
-    ((int*) r->contents)[i] = ai;
-  }
-  
-  va_end(args);
+    va_start(args, n);
 
-  return r->contents;
+    for (int i = 0; i < n; ++i) {
+        data[i] = va_arg(args, int);
+    }
+
+    va_end(args);
+
+    return (void *) data;
 }
 
-void* Bstring (void *p) {
-  int   n = strlen (p);
-  data *s;
-  
-  s = (data*) malloc (n + 1 + sizeof (int));
-  s->tag = STRING_TAG | (n << 3);
+void* Bstring (char *str) {
+    int n = strlen(str);
+    void *r = malloc(sizeof(Header) + (n + 1) * sizeof(char));
+    Header *h = r;
+    h->tag = STRING_TAG;
+    h->length = n;
+    h->elemLength = 1;
 
-  strncpy (s->contents, p, n + 1);
-  return s->contents;
+    char *data = r + sizeof(Header);
+    memcpy(data, str, (n + 1) * sizeof(char));
+    return data;
 }
 
-void* Belem (void *p, int i0) {
-  int i = UNBOX(i0);
-  data *a = TO_DATA(p);
-  
-  if (TAG(a->tag) == STRING_TAG) {
-    return (void*) BOX(a->contents[i]);
-  }
-  
-  return (void*) ((int*) a->contents)[i];
+void Bwrite (int x) {
+  printf ("%d\n", (x >> 1));
 }
 
-void* Bsta (int i0, void *v, void *x) {
-  int i = UNBOX (i0);
-  
-  if (TAG(TO_DATA(x)->tag) == STRING_TAG) 
-    ((char*) x)[i] = UNBOX((int) v);  
-  else ((int*) x)[i] = (int) v;
-
-  return v;
-}
-
-void Lwrite (int x) {
-  printf ("%d\n", UNBOX (x));
-}
-
-int Lread () {
+int Bread () {
   int result;
 
   scanf  ("%d", &result);
-
+  
+  return result;
   return BOX(result);
 }
 

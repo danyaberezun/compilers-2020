@@ -67,7 +67,7 @@ fun initEvalEnv (insns) {
         }) $ [emptyMap (compare), insns];
   
   [fun (l) {
-     case findMap (map, l) of Some (insns) -> insns esac
+     case findMap (map, l) of Some (insns) -> insns | _ -> failure("No label %s\n", l) esac
   }]
 }
 
@@ -121,12 +121,75 @@ fun eval (env, w, insns) {
   }
 
   -- Core interpreter: takes a configuration and a program, returns a configuration
-  (* Assignment *)
-  fun eval (c@[st, cst, s, w], insns) {
-    failure ("SM interpreter is not implemented\n")
+  fun eval (c@[stack, cst, s, world], insns) {
+    while compare(insns, {}) do
+      local i = hd(insns);
+      -- printf("%s %s\n", i.string, stack.string);
+      insns := tl(insns);
+      case [i, stack] of
+        [BINOP(op), arg2:arg1:tl] ->
+          stack := evalOp(op, arg1, arg2):tl |
+        [LD (x), _] ->
+          stack := lookup(s, x):stack |
+        [CONST (x), _] -> 
+          stack := x:stack |
+        [LABEL (l), _] -> skip |
+        [JMP (l), _] ->
+          insns := env.fromLabel(l) |
+        [CJMP (tp, l), arg:tl] ->
+          stack := tl;
+          if (arg == 0) == (compare(tp, "z") == 0) then
+            insns := env.fromLabel(l)
+          fi |
+        [DROP, _:tl] ->
+          stack := tl |
+        [LDA (x), _] -> 
+          stack := x:stack |
+        [STI, addr:val:tl] ->
+          stack := val : tl;
+          assign(s, addr, val) |
+        [CALL (l, n), _] ->
+          cst := [s, insns] : cst;
+          insns := env.fromLabel(l) |
+        [BEGIN (_, na, nl), _] ->
+          s := makeState(na, nl);
+          for local i = 0;, i < na, i := i + 1 do
+            assign(s, Arg (na - 1 - i), hd(stack));
+            stack := tl(stack)
+          od |
+        [END, _] ->
+          if compare(cst, {}) == 0 then
+            insns := {}
+          else
+            case cst of
+              [newState, newInsns] : tl ->
+                cst := tl;
+                insns := newInsns;
+                s := newState
+            esac
+          fi |
+        [STRING (str), _] ->
+          stack := str : stack |
+        [ARRAY (n), _] -> case take(stack, n) of
+          [rest, arr] ->
+            stack := listArray(arr) : rest
+        esac |
+        [BUILTIN (name, n), _] -> case take(stack, n) of
+          [rest, args] -> case evalBuiltin(name, args, world) of
+            [v, w] ->
+              stack := v : rest;
+              world := w
+          esac
+        esac |
+        [STA, i : a : v : rest] ->
+          a[i] := v;
+          stack := v : rest |
+        [ELEM, i : a : rest] ->
+          stack := a[i] : rest
+      esac
+    od;
+    [stack, cst, s, world]
   }
-  (* End *)
-  
   eval ([{}, {}, makeState (0, 0), w], insns) [3].getOutput
 }
 
@@ -243,7 +306,7 @@ fun makeCompEnv (nLabels, scopeDepth, state, nLocals, nArgs, functions) {
 
 -- Initialize a new compilation environment
 fun initCompEnv () {
-  makeCompEnv (0, 0, emptyState (), 0, 0, {})
+  beginScope(makeCompEnv (0, 0, emptyState (), 0, 0, {}))
 }
 
 -- Accessor functions
@@ -353,6 +416,179 @@ fun addVars (env, names) {
 --    (use env.addArg).
 
 public fun compileSM (expr) {
-  failure ("compileSM not implemented\n")
+  local builtins = {"read", "write", "length"};
+  fun inner(stmt, env) {
+    case stmt of
+      Binop (op, e1, e2) -> case inner(e1, env) of
+        [instr1, env] -> case inner(e2, env) of
+          [instr2, env] -> [instr1 +++ instr2 +++ singleton(BINOP (op)), env]
+        esac
+      esac |
+      Var (x) -> [singleton(LD (lookupVar(env, x))), env] |
+      Const (x) -> [singleton(CONST (x)), env] |
+      Ref (x) -> [singleton(LDA (lookupVar(env, x))), env] |
+      Ignore (exp) -> case inner(exp, env) of
+        [instr, env] -> [instr +++ singleton(DROP), env]
+      esac |
+      Assn (dest, exp) -> case inner(exp, env) of
+        [instr1, env] -> case inner(dest, env) of
+          [instr2, env] -> case instr2 of
+            ElemRef(instr2) -> [instr1 +++ instr2 +++ singleton(STA), env] |
+            instr2 -> [instr1 +++ instr2 +++ singleton(STI), env]
+          esac
+        esac
+      esac |
+      Seq (s1, s2) -> case inner(s1, env) of
+        [instr1, env] -> case inner(s2, env) of 
+          [instr2, env] -> [instr1 +++ instr2, env]
+        esac
+      esac |
+      Skip -> [{}, env] |
+      If (cond, s1, s2) -> case env.genLabels(2) of
+        [l1, l2, env] -> case inner(cond, env) of
+          [condInstr, env] -> case inner(s1, env) of
+            [instr1, env] -> case inner(s2, env) of
+              [instr2, env] -> 
+                [
+                  condInstr +++ singleton(CJMP ("z", l1)) +++
+                  instr1 +++ {JMP (l2), LABEL (l1)} +++
+                  instr2 +++ singleton(LABEL (l2))
+                , env]
+            esac
+          esac
+        esac
+      esac |
+      While (cond, stmt) -> case env.genLabels(2) of
+        [l1, l2, env] -> case inner(cond, env) of
+          [condInstr, env] -> case inner(stmt, env) of
+            [body, env] ->
+              [
+                {JMP (l2), LABEL (l1)} +++ body +++ singleton(LABEL (l2)) +++
+                condInstr +++ singleton(CJMP ("nz", l1))
+              , env]
+          esac
+        esac
+      esac |
+      Repeat (stmt, cond) -> case env.genLabel of
+        [l, env] -> case inner(cond, env) of
+          [condInstr, env] -> case inner(stmt, env) of
+            [body, env] ->
+              [
+                singleton(LABEL (l)) +++ body +++ condInstr +++ singleton(CJMP ("z", l))
+              , env]
+          esac
+        esac
+      esac |
+      Scope (defs, exp) -> case beginScope(env) of
+        env -> case
+            foldl(fun (env, def) {
+              case def of 
+                Local (l) -> addVars(env, l) |
+                Fun (name, args, body) -> case genFunLabel(env, name) of
+                  [lab, env] -> addFun(env, name, lab, size(args))
+                esac
+              esac
+            }, env, defs)
+          of env ->
+            case 
+              foldl(fun (env, def) {
+                case def of 
+                  Fun (name, args, body) -> rememberFun(env, lookupFun(env, name)[0], args, body) |
+                  _ -> env
+                esac
+              }, env, defs)
+            of env ->
+              case inner(exp, env) of
+                [instr, env] -> [instr, endScope(env)]
+              esac
+            esac
+          esac
+      esac |
+      Call (f, args) -> case
+        foldl(fun ([instr, env], arg) {
+          case inner(arg, env) of
+            [instr2, env] -> [instr +++ instr2, env]
+          esac
+        }, [{}, env], args)
+      of [instr, env] ->
+        case find(fun (x) { compare(x, f) == 0 }, builtins) of
+          Some (_) -> [instr +++ singleton(BUILTIN (f, size(args))), env] |
+          None -> [instr +++ singleton(CALL (lookupFun(env, f)[0], size(args))), env]
+        esac
+      esac |
+      String (str) -> [singleton(STRING (str)), env] |
+      Array (exprs) -> case 
+        foldl(fun ([instr, env], arg) {
+          case inner(arg, env) of
+            [instr2, env] -> [instr +++ instr2, env]
+          esac
+        }, [{}, env], exprs)
+      of [instr, env] ->
+        [singleton(CONST (size(exprs))) +++ instr +++ singleton(BUILTIN ("array", size(exprs) + 1)), env]
+      esac |
+      Elem (a, i) -> case inner(a, env) of
+        [instr1, env] -> case inner(i, env) of
+          [instr2, env] -> [instr1 +++ instr2 +++ singleton(ELEM), env]
+        esac
+      esac |
+      ElemRef (a, i) -> case inner(a, env) of
+        [instr1, env] -> case inner(i, env) of
+          [instr2, env] -> [ElemRef(instr1 +++ instr2), env]
+        esac
+      esac
+    esac
+  }
+  fun reduceJumps(env, i) {
+    case i of
+      JMP (l) -> case env.fromLabel(l) of 
+          _ : JMP (ol) : _ -> reduceJumps(env, JMP (ol)) |
+          _ -> i
+        esac |
+      CJMP (c, l) -> case env.fromLabel(l) of 
+          _ : JMP (ol) : _ -> reduceJumps(env, CJMP (c, ol)) |
+          _ -> i
+        esac |
+      _ -> i
+    esac
+  }
+  fun compileFunctions(instr, env) {
+    case getFuns(env) of
+      [{}, env] -> instr |
+      [funs, env] -> case
+        foldl(fun ([instr, env], Fun (lab, args, body, st)) {
+            case addArgs(beginFun(env, st), args) of
+              env -> case inner(body, env) of 
+                [body, env] -> 
+                  [
+                    instr +++ {LABEL (lab), BEGIN (lab, size(args), getLocals(env))} +++
+                    body +++
+                    singleton(END)
+                    ,
+                    env
+                  ]
+              esac
+            esac
+          }, [instr, env], funs)
+      of
+        [instr, env] -> compileFunctions(instr, env)
+      esac
+    esac
+  }
+
+  -- reduce jump chains
+  case inner(expr, initCompEnv()) of
+    [instr, env] ->
+    case compileFunctions(
+      {LABEL ("main"), BEGIN ("main", 0, getLocals(env))} +++
+      instr +++
+      singleton(END), env)
+    of
+      instr -> case initEvalEnv(instr) of
+        env -> map(fun (i) {
+            reduceJumps(env, i)
+          }, instr)
+      esac
+    esac
+  esac
 }
 (* End *)

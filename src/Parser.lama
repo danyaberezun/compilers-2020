@@ -104,79 +104,95 @@ fun distributeScope (expr, exprConstructor) {
   | _                   -> exprConstructor (expr)
   esac
 }
- 
-local primary    = memo $ eta syntax (
-                                      -- array constant
-                                      loc=pos x=inbr[s("["), list0(syntax (e=exp {e(Val)})), s("]")] {fun (a) {assertValue (a, Array (x), loc)}}    |
-                                      
-                                      -- string constant
-                                      loc=pos x=strlit                                               {fun (a) {assertValue (a, String (x), loc)}}   |
-                                      
-                                      -- character literal
-                                      loc=pos x=chrlit                                               {fun (a) {assertValue (a, Const (x), loc)}}    |
-                                      
-                                      -- decimal constant
-                                      loc=pos x=decimal                                              {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
 
-                                      -- identifier
-                                      x=lident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? {fun (a) {
-                                                                                                            case args of
-                                                                                                              None -> case a of
-                                                                                                                        Ref  -> Ref (x)
-                                                                                                                      | Void -> Ignore (Var (x))
-                                                                                                                      | _    -> Var (x)
-                                                                                                                      esac
-                                                                                                            | Some (args) -> assertValue (a, Call (x, args))
-                                                                                                            esac
-                                                                                                         }} |
-(* Assignment *)
-                                      $(failure ("the rest of primary parsing in not implemented\n"))),
-(* End *)
-      basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
-                                                          fun (l, loc, r) {
-                                                            fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
-                                                          }])],
-                                      [Left , map (binop, singleton ("!!"))],
-                                      [Left , map (binop, singleton ("&&"))],
-                                      [Nona , map (binop, {"==", "!=", "<", ">", "<=", ">="})],
-                                      [Left , map (binop, {"+", "-"})],
-                                      [Left , map (binop, {"*", "/", "%"})]
-                                     },
-                                     postfix)(id)),
-      postfix    = memo $ eta syntax (loc=pos e=primary ps=(i=inbr[s("["), exp, s("]")] {Index (i (Val))} |
-                                                            -s["."] kLength {Length}
-                                                           )* {fun (a) {foldl (fun (e, p) {                                                                            
-                                                                                 case p of                                                                                   
-                                                                                   Length    -> fun (a) {assertValue (a, Builtin ("length", singleton (e (Val))), loc)}
-                                                                                 | Index (i) ->
-                                                                                     fun (a) {
-                                                                                       case a of
-                                                                                         Ref -> ElemRef (e (Val), i)
-                                                                                       | _   -> assertValue (a, Elem (e (Val), i), loc)
-                                                                                       esac
-                                                                                     }
-                                                                                 esac                                                                            
-                                                                               }, e, ps) (a)
-                                                              }}
-                                     ),
-      scopeExpr  = memo $ eta syntax (ds=definition* e=exp? {fun (a) {fun (e) {
-                                                                        case ds of
-                                                                          {} -> e
-                                                                        | _  -> expandScope (ds, e) 
-                                                                        esac
-                                                                      } (case e of 
-                                                                           Some (e) -> e (a)
-                                                                         | _        -> Skip
-                                                                         esac)
-                                                                      }}),
-      definition = memo $ eta syntax (kLocal ds=list[syntax (lident (s["="] e=basic {e (Val)})?)] s[";"] {Local (ds)} |
-                                      kFun name=lident
-                                           args=inbr[s("("), list0 (lident), s(")")]
-                                           body=inbr[s("{"), scopeExpr, s("}")] {
-                                           Fun (name, args, body (Weak))
-                                      }
-                                     ),                                    
-      exp        = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
+local primary  = memo $ eta syntax (
+    -- array constant
+    loc=pos x=inbr[s("["), list0(syntax (e=exp {e(Val)})), s("]")] {fun (a) {assertValue (a, Array (x), loc)}} |
+    
+    -- string constant
+    loc=pos x=strlit {fun (a) {assertValue (a, String (x), loc)}} |
+    
+    -- character literal
+    loc=pos x=chrlit {fun (a) {assertValue (a, Const (x), loc)}} |
+
+    -- decimal constant
+    loc=pos x=decimal {fun (a) {assertValue (a, Const (stringInt (x)), loc)}} |
+
+    -- identifier
+    x=lident {fun (a) {
+        case a of
+            Ref  -> Ref (x) |
+            Void -> Ignore (Var (x)) |
+            _    -> Var (x)
+        esac
+      }
+    } |
+    loc=pos kSkip {fun (a) {assertVoid (a, Skip, loc)}} |
+    loc=pos kWhile cond=exp kDo st=scopeExpr kOd {
+      fun (a) {assertVoid(a, While (cond (Val), st (Void)), loc)}
+    } |
+    loc=pos kRepeat st=scopeExpr kUntil cond=basic {
+      fun (a) {assertVoid(a, case st(Val) of Scope(defs, expr) -> Scope(defs, Repeat (expr, cond (Val))) esac, loc)}
+    } |
+    loc=pos kIf cond=exp kThen s1=exp s2=elseBranch {
+      fun (a) {If (cond (Val), s1(a), s2(a))}
+    } |
+    loc=pos kFor init=scopeExpr s[","] cond=exp s[","] step=exp kDo body=scopeExpr kOd {
+      fun (a) {
+        assertVoid(
+          a,
+          case init(Void) of
+            Scope(defs, init) -> Scope(defs, Seq (init, While (cond (Val), Seq (body (Void), step (Void))))) 
+          esac,
+          loc
+        )
+      }
+    } |
+    name=lident args=inbr[s("("), list0(exp), s(")")] {fun (a) {assertValue(a, Call (name, map(fun (e) {e (Val)}, args)), loc)}} |
+    inbr[s("("), exp, s(")")] |
+    inbr[s("{"), scopeExpr, s("}")] |
+    loc=pos e=primary s["."] kLength {fun (a) {assertValue(a, Call("length", singleton(e(Val))), loc)}} |
+    loc=pos e=primary i=inbr[s("["), exp, s("]")] {fun (a) {
+        if compare(a, Ref) == 0 then
+          ElemRef (e (Val), i (Val))
+        else
+          assertValue(a, Elem (e (Val), i (Val)), loc)
+        fi
+      }}
+    )
+  ,
+  elseBranch = memo $ eta syntax (
+      loc=pos kFi {fun (a) {assertVoid (a, Skip, loc)}} |
+      -kElse exp -kFi |
+      kElif cond=exp kThen s1=exp s2=elseBranch {
+        fun (a) {If (cond (Val), s1 (a), s2 (a))}
+      }
+    ),
+  varDef = memo $ eta syntax(
+      name=lident {[name, None]} |
+      name=lident s["="] value=basic {[name, Some (value(Val))]}
+    ),
+  definition = memo $ eta syntax(
+      kLocal l=list[varDef] s[";"] {Local (l)} |
+      kFun name=lident args=inbr[s("("), list0(lident), s(")")] body=inbr[s("{"), scopeExpr, s("}")] {
+        Fun (name, args, body(Weak))
+      }
+    ),
+  scopeExpr = memo $ eta syntax (
+      defs=rep0[definition] e=exp {fun (a) {expandScope (defs, e (a))}} |
+      defs=rep0[definition] {fun (a) {expandScope (defs, assertVoid(a, Skip, loc))}}
+    ),
+  basic = memo $ eta (expr ({
+      [Right, singleton ([s (":="), fun (l, loc, r) {
+          fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
+        }])],
+      [Left , map (binop, singleton ("!!"))],
+      [Left , map (binop, singleton ("&&"))],
+      [Nona , map (binop, {"==", "!=", "<", ">", "<=", ">="})],
+      [Left , map (binop, {"+", "-"})],
+      [Left , map (binop, {"*", "/", "%"})]
+    }, primary)),
+  exp = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
 
 -- Public top-level parser
 public parse = syntax (s=scopeExpr {s (Void)});
