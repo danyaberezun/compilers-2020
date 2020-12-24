@@ -354,7 +354,7 @@ fun znzene (znz) {
   esac
 }
 
-funoperationTypes (op) {
+fun operationTypes (op) {
   case op of
       "+" -> 1 | "-" -> 1 | "*" -> 1
       | _ -> 0
