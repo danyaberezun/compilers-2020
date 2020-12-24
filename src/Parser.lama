@@ -1,5 +1,4 @@
 -- Parser 
-
 import Ostap;
 import Lexer;
 import List;
@@ -12,14 +11,48 @@ fun inbr (l, p, r) {
   syntax (-l p -r)
 }
 
+
+fun opHelper(op) {
+  [s (op), fun (l, op, r) {Binop (op, l, r)}]
+}
+
+local oprts = {
+  [Left, opHelper("!!") : {}],
+  [Left, opHelper("&&") : {}],
+  [Nona, {opHelper("=="), opHelper("!="), opHelper("<"), opHelper("<="), opHelper(">"), opHelper(">=") }],
+  [Left, {opHelper("+"), opHelper("-") }],
+  [Left, {opHelper("*"), opHelper("/"), opHelper("%") }]
+  };
+
 -- Primary expression
-local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
+local primary = memo $ eta (
+                            decimal @ fun (x) {Const (stringInt (x))} |
                             lident  @ fun (x) {Var (x)} |
                             inbr (s ("("), exp, s (")"))),
-      exp = memo $ eta (failure ("expression parsing not implemented\n"));
+      exp = memo $ eta expr (oprts, primary);
 
-local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
-   
+local elsePart = memo $ eta syntax (
+				kElse statement=stmt kFi {statement} |
+				kElif condition=exp kThen statement1=stmt statement2=elsePart {If (condition, statement1, statement2)}
+				);
+
+local simple_stmt = memo $ eta syntax (
+                            kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
+                            kWrite x=inbr[s("("), exp, s(")")] {Write (x)} | 
+                            kSkip {Skip} |
+  			                kIf condition=exp kThen statement1=stmt kFi {If (condition, statement1, Skip)} |
+			                kIf condition=exp kThen statement1=stmt statement2=elsePart {If (condition, statement1, statement2)} |
+			                kWhile condition=exp kDo statement=stmt kOd {While (condition, statement)} |
+			                kRepeat statement=stmt kUntil condition=exp {Repeat (statement, condition)} |
+		                	kFor declaration=stmt s[","] condition=exp s[","] change=stmt kDo statement=stmt kOd {Seq (declaration, While (condition, Seq (statement, change)))} |
+                            x=lident s[":="] e=exp {Assn (x, e)} 
+                            );
+
+local stmt = memo $ eta syntax ( 
+                            simple_stmt |                            
+                            s1=simple_stmt s[";"] s2=stmt {Seq (s1, s2)}
+                            );
+
 
 -- Public top-level parser
 public parse = stmt;
