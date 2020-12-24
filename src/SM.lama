@@ -65,4 +65,5 @@ public fun compileSM (stmt) {
     | Seq(stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2)
     | Skip        -> {}
   esac
+  
 }
