@@ -23,22 +23,24 @@ local oprts = {
   };
 
 -- Primary expression
-local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
+local primary = memo $ eta (
+                            decimal @ fun (x) {Const (stringInt (x))} |
                             lident  @ fun (x) {Var (x)} |
                             inbr (s ("("), exp, s (")"))),
       exp = memo $ eta expr (oprts, primary);
 
-lacal simple_stmt = memo $ eta syntax (
+local simple_stmt = memo $ eta syntax (
                             x=lident s[":="] e=exp {Assn (x, e)} |
                             kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
                             kWrite x=inbr[s("("), exp, s(")")] {Write (x)} | 
-                            x=kSkip {Skip} 
+                            kSkip {Skip} 
                             );
 
 local stmt = memo $ eta syntax ( 
                             simple_stmt |                            
-                            s1=stmt s[";"] s2=stmt end {Seq (s1, s2)});
+                            s1=simple_stmt s[";"] s2=stmt {Seq (s1, s2)}
                             );
-
+                           
 
 -- Public top-level parser
+public parse = stmt;
