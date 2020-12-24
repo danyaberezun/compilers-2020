@@ -16,26 +16,22 @@ import World;
 --        if     (expr, stmt, stmt) |
 --        While  (expr, stmt)       |
 --        Repeat (stmt, expr)
-
-
-fun eval (c, stmt) {
-case c of [st, [in, out]] ->
-        case stmt of
-             Skip -> c
-            |Read(elem) -> case in of elemo : i -> [st <- [elem, elemo], [i, out]] esac
-            |Write(expr) -> [st, [in, evalExpr(st, expr) : out]]
-            |Assn(elem, expr) -> [st <- [elem, evalExpr(st, expr)], [in, out]]
-            |Seq(s1, s2) -> eval(eval(c, s1), s2)
-            | If(e, s1, s2) ->  if evalExpr(c[0], e) != 0 then eval(c, s1) else eval(c, s2) fi
-            | While(e, s) ->    if evalExpr(c[0], e) == 0 then c else eval(eval(c, s), stmt) fi
-            | Repeat(s, e)->    local new_c = eval(c, s);
-                            if evalExpr(new_c[0], e) then eval(new_c, Skip) else eval(new_c, Repeat(s, e)) fi
-
-        esac
-    esac      
+fun eval (c@[st, [i,o]], stmt) {
+ case stmt of
+       Skip -> c
+     | Read(x) -> local result = readWorld(c[1]);
+     [c[0] <- [x, result[0]], result[1]]
+     | Write(expr) -> [c[0], writeWorld(evalExpr(c[0], expr), c[1])]
+     | Seq(s1, s2) -> eval(eval(c, s1), s2)
+     | Assn(x, expr) -> [(st <- [x, evalExpr(st, expr)]), [i,o]]
+     | If (expr, s1, s2) -> if (evalExpr(c[0], expr)) then eval (c, s1) else eval (c, s2) fi
+     | While (expr, s) -> if (evalExpr(c[0], expr)) then eval (c, Seq(s, stmt)) else eval (c, Skip) fi
+     | Repeat (s, expr) -> local c1 = eval (c, s);
+     if (evalExpr(c1[0], expr)) then eval (c1, Skip) else eval (c1, Repeat(s, expr)) fi
+ esac
 }
 
 -- Evaluates a program with a given input and returns an output
 public fun evalStmt (input, stmt) {
   eval ([emptyState, createWorld (input)], stmt).snd.getOutput
-  }
+}
