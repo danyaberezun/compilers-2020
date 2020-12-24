@@ -1,5 +1,6 @@
 -- Builtins
 import World;
+import Array;
 
 public fun evalBuiltin (name, args, w) {
   case [name, args] of
@@ -8,6 +9,7 @@ public fun evalBuiltin (name, args, w) {
   | ["length"   , {a@#string}]  -> [a.length, w]
   | ["read"     , {}]           -> readWorld (w) 
   | ["write"    , {x@#unboxed}] -> [0, writeWorld (x, w)]
+  | ["array"    , _ : l]            -> [listArray(l), w]
   | _ ->
      failure ("no builtin ""%s"" or it can not be applied to %s\n", name, args.string)
   esac

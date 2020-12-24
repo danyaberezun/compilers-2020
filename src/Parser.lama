@@ -114,10 +114,6 @@ local primary  = memo $ eta syntax (
     
     -- character literal
     loc=pos x=chrlit {fun (a) {assertValue (a, Const (x), loc)}} |
-    
-    -- decimal constant
-    loc=pos x=decimal {fun (a) {assertValue (a, Const (stringInt (x)), loc)}} |
-
 
     -- decimal constant
     loc=pos x=decimal {fun (a) {assertValue (a, Const (stringInt (x)), loc)}} |
@@ -132,10 +128,6 @@ local primary  = memo $ eta syntax (
       }
     } |
     loc=pos kSkip {fun (a) {assertVoid (a, Skip, loc)}} |
-    loc=pos kRead x=inbr[s("("), lident, s(")")] {fun (a) {assertVoid(a, Read (x), loc)}} |
-    loc=pos kWrite x=inbr[s("("), exp, s(")")] {
-      fun (a) {assertVoid(a, Write (x (Val)), loc)}
-    } |
     loc=pos kWhile cond=exp kDo st=scopeExpr kOd {
       fun (a) {assertVoid(a, While (cond (Val), st (Void)), loc)}
     } |
@@ -158,7 +150,16 @@ local primary  = memo $ eta syntax (
     } |
     name=lident args=inbr[s("("), list0(exp), s(")")] {fun (a) {assertValue(a, Call (name, map(fun (e) {e (Val)}, args)), loc)}} |
     inbr[s("("), exp, s(")")] |
-    inbr[s("{"), scopeExpr, s("}")])
+    inbr[s("{"), scopeExpr, s("}")] |
+    loc=pos e=primary s["."] kLength {fun (a) {assertValue(a, Call("length", singleton(e(Val))), loc)}} |
+    loc=pos e=primary i=inbr[s("["), exp, s("]")] {fun (a) {
+        if compare(a, Ref) == 0 then
+          ElemRef (e (Val), i (Val))
+        else
+          assertValue(a, Elem (e (Val), i (Val)), loc)
+        fi
+      }}
+    )
   ,
   elseBranch = memo $ eta syntax (
       loc=pos kFi {fun (a) {assertVoid (a, Skip, loc)}} |

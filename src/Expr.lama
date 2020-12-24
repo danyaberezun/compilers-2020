@@ -103,20 +103,20 @@ fun evalList (c, exprs) {
 fun eval (c@[s, w], expr) {
   case expr of
     Assn (dest, exp) -> case evalList(c, {exp, dest}) of
-      [[s, w], val:ref:_] -> [[s <- [ref, val], w], val]
+      [[s, w], val:ref:_] -> case ref of
+        ElemRef(a, i) -> a[i] := val; [c, val] |
+        _ -> [[s <- [ref, val], w], val]
+      esac
     esac |
     Seq (exp1, exp2) -> case evalList(c, {exp1, exp2}) of
       [c, _:res:_] -> [c, res]
     esac |
     Skip -> [c, Void] |
-    Read (name) -> case readWorld(w) of
-      [val, w] -> [[s <- [name, val], w], Void]
-    esac |
-    Write (exp) -> case eval(c, exp) of
-      [[s, w], val] -> [[s, writeWorld(val, w)], Void]
-    esac |
     If (cond, exp1, exp2) -> case eval(c, cond) of
-      [c, val] -> if val then eval(c, exp1) else eval(c, exp2) fi
+      [c, val] -> case if val then eval(c, exp1) else eval(c, exp2) fi of
+        [_, ElemRef(_, _)] -> failure("reference to arrays element in wrong context") |
+        res -> res
+      esac
     esac |
     While (cond, body) -> case eval(c, cond) of
       [c, val] -> if val then eval(eval(c, body)[0], expr) else [c, Void] fi
@@ -144,24 +144,45 @@ fun eval (c@[s, w], expr) {
     esac |
     Call (name, args) -> case evalList(c, args) of
       [[s, w], vals] -> case lookup(s, name) of
-        Fun (args, body) -> case 
-          foldl(fun (s, [name, value]) {
-              addName(s, name, value)
-            }, enterFunction(s), zip(args, vals))
-        of
-          fs -> case eval([fs, w], body) of
-            [[fs, w], res] -> [[leaveFunction(s, getGlobal(fs)), w], res]
+        Fun (args, body) -> case body of
+          External -> case evalBuiltin(name, vals, w) of
+            [v, w] -> [[s, w], v]
+          esac |
+          _ -> case 
+            foldl(fun (s, [name, value]) {
+                addName(s, name, value)
+              }, enterFunction(s), zip(args, vals))
+          of
+            fs -> case eval([fs, w], body) of
+              [[fs, w], res] -> [[leaveFunction(s, getGlobal(fs)), w], res]
+            esac
           esac
         esac
       esac
     esac |
-    Ignore (exp) -> [eval(c, exp)[0], Void]
+    Ignore (exp) -> [eval(c, exp)[0], Void] |
+    String (str) -> [c, str] |
+    Array (exprs) -> case evalList(c, exprs) of
+      [c, vals] -> [c, listArray(vals)]
+    esac |
+    Elem (a, i) -> case evalList(c, {a, i}) of
+      [c, {a, i}] -> [c, a[i]]
+    esac |
+    ElemRef (a, i) -> case evalList(c, {a, i}) of
+      [c, {a, i}] -> [c, ElemRef(a, i)]
+    esac
   esac
 }
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
-  case eval ([emptyState ().enterScope.addName ("read", Fun ({}, External)).addName ("write", Fun (singleton ("a"), External)) , createWorld (input)], expr) of
+  -- printf("%s\n", expr.string);
+  case eval ([
+    emptyState().enterScope.addName("read", Fun ({}, External))
+      .addName("write", Fun (singleton("a"), External))
+      .addName("length", Fun (singleton("a"), External)) , createWorld (input)
+    ], expr)
+  of
     [c, _] -> c.snd.getOutput
   esac
 }

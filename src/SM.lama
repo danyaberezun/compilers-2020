@@ -67,7 +67,7 @@ fun initEvalEnv (insns) {
         }) $ [emptyMap (compare), insns];
   
   [fun (l) {
-     case findMap (map, l) of Some (insns) -> insns | _ -> failure("No lable %s\n", l) esac
+     case findMap (map, l) of Some (insns) -> insns | _ -> failure("No label %s\n", l) esac
   }]
 }
 
@@ -79,6 +79,7 @@ fun fromLabel (env, lab) {
 -- Stack machine interpreter. Takes an environment, a world and a program,
 -- returns a final output
 fun eval (env, w, insns) {
+
   -- Global state maps names of global variables to values
   local globalState = ref (fun (x) {error (sprintf ("name ""%s"" is undefined", x), getLoc (x))});
   
@@ -124,21 +125,13 @@ fun eval (env, w, insns) {
   fun eval (c@[stack, cst, s, world], insns) {
     while compare(insns, {}) do
       local i = hd(insns);
+      -- printf("%s %s\n", i.string, stack.string);
       insns := tl(insns);
       case [i, stack] of
         [BINOP(op), arg2:arg1:tl] ->
           stack := evalOp(op, arg1, arg2):tl |
-        [READ, _] -> case readWorld(world) of [x, nw] ->
-            stack := x:stack;
-            world := nw
-          esac |
-        [WRITE, arg:tl] -> 
-          stack := tl;
-          world := writeWorld(arg, world) |
         [LD (x), _] ->
           stack := lookup(s, x):stack |
-        [ST (x), arg:tl] ->
-          assign(s, x, arg) |
         [CONST (x), _] -> 
           stack := x:stack |
         [LABEL (l), _] -> skip |
@@ -175,12 +168,29 @@ fun eval (env, w, insns) {
                 insns := newInsns;
                 s := newState
             esac
-          fi
+          fi |
+        [STRING (str), _] ->
+          stack := str : stack |
+        [ARRAY (n), _] -> case take(stack, n) of
+          [rest, arr] ->
+            stack := listArray(arr) : rest
+        esac |
+        [BUILTIN (name, n), _] -> case take(stack, n) of
+          [rest, args] -> case evalBuiltin(name, args, world) of
+            [v, w] ->
+              stack := v : rest;
+              world := w
+          esac
+        esac |
+        [STA, i : a : v : rest] ->
+          a[i] := v;
+          stack := v : rest |
+        [ELEM, i : a : rest] ->
+          stack := a[i] : rest
       esac
     od;
     [stack, cst, s, world]
   }
-  
   eval ([{}, {}, makeState (0, 0), w], insns) [3].getOutput
 }
 
@@ -297,7 +307,7 @@ fun makeCompEnv (nLabels, scopeDepth, state, nLocals, nArgs, functions) {
 
 -- Initialize a new compilation environment
 fun initCompEnv () {
-  makeCompEnv (0, 0, emptyState (), 0, 0, {})
+  beginScope(makeCompEnv (0, 0, emptyState (), 0, 0, {}))
 }
 
 -- Accessor functions
@@ -407,6 +417,7 @@ fun addVars (env, names) {
 --    (use env.addArg).
 
 public fun compileSM (expr) {
+  local builtins = {"read", "write", "length"};
   fun inner(stmt, env) {
     case stmt of
       Binop (op, e1, e2) -> case inner(e1, env) of
@@ -422,7 +433,10 @@ public fun compileSM (expr) {
       esac |
       Assn (dest, exp) -> case inner(exp, env) of
         [instr1, env] -> case inner(dest, env) of
-          [instr2, env] -> [instr1 +++ instr2 +++ singleton(STI), env]
+          [instr2, env] -> case instr2 of
+            ElemRef(instr2) -> [instr1 +++ instr2 +++ singleton(STA), env] |
+            instr2 -> [instr1 +++ instr2 +++ singleton(STI), env]
+          esac
         esac
       esac |
       Seq (s1, s2) -> case inner(s1, env) of
@@ -431,10 +445,6 @@ public fun compileSM (expr) {
         esac
       esac |
       Skip -> [{}, env] |
-      Read (x) -> [{READ, ST (lookupVar(env, x)), DROP}, env] |
-      Write (exp) -> case inner(exp, env) of
-        [instr, env] -> [instr +++ singleton(WRITE), env]
-      esac |
       If (cond, s1, s2) -> case env.genLabels(2) of
         [l1, l2, env] -> case inner(cond, env) of
           [condInstr, env] -> case inner(s1, env) of
@@ -496,14 +506,37 @@ public fun compileSM (expr) {
           esac
       esac |
       Call (f, args) -> case
-          foldl(fun ([instr, env], arg) {
-            case inner(arg, env) of
-              [instr2, env] -> [instr +++ instr2, env]
-            esac
-          }, [{}, env], args)
-        of [instr, env] ->
-          [instr +++ singleton(CALL (lookupFun (env, f)[0], size(args))), env]
+        foldl(fun ([instr, env], arg) {
+          case inner(arg, env) of
+            [instr2, env] -> [instr +++ instr2, env]
+          esac
+        }, [{}, env], args)
+      of [instr, env] ->
+        case find(fun (x) { compare(x, f) == 0 }, builtins) of
+          Some (_) -> [instr +++ singleton(BUILTIN (f, size(args))), env] |
+          None -> [instr +++ singleton(CALL (lookupFun(env, f)[0], size(args))), env]
         esac
+      esac |
+      String (str) -> [singleton(STRING (str)), env] |
+      Array (exprs) -> case 
+        foldl(fun ([instr, env], arg) {
+          case inner(arg, env) of
+            [instr2, env] -> [instr +++ instr2, env]
+          esac
+        }, [{}, env], exprs)
+      of [instr, env] ->
+        [singleton(CONST (size(exprs))) +++ instr +++ singleton(BUILTIN ("array", size(exprs) + 1)), env]
+      esac |
+      Elem (a, i) -> case inner(a, env) of
+        [instr1, env] -> case inner(i, env) of
+          [instr2, env] -> [instr1 +++ instr2 +++ singleton(ELEM), env]
+        esac
+      esac |
+      ElemRef (a, i) -> case inner(a, env) of
+        [instr1, env] -> case inner(i, env) of
+          [instr2, env] -> [ElemRef(instr1 +++ instr2), env]
+        esac
+      esac
     esac
   }
   fun reduceJumps(env, i) {
