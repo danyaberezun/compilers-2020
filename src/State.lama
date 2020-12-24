@@ -6,7 +6,7 @@ public fun emptyState (x) {
 }
 
 -- Putting a binding into a state
-public infix <- before : (st, [x, v]) {
+public infix <- before : (st, [x, v]) { -- процесс мапинга
   fun (y) {
     if compare (x, y) == 0 then v else st (y) fi
   }
