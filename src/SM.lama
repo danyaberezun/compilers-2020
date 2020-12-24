@@ -84,7 +84,7 @@ fun eval (env, configuration@[stack, st, world@[i, o]], insns) {
 				    esac
       | CONST (n) 	  : tail -> eval (env, [n : stack, st, world], tail)
       | LABEL (lbl)       : tail -> eval (env, configuration, tail)
-      | JMP   (lbl)       : tail -> eval (env, configuration, env.fromLabel(env, lbl))
+      | JMP   (lbl)       : tail -> eval (env, configuration, env.fromLabel(lbl))
       | DUP               : tail -> eval (env, configuration, tail)
       | CJMP  (znz, lbl)  : tail -> case stack of x : ss ->
                                       if compznz (x, znz) 
