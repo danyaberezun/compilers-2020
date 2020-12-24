@@ -20,10 +20,8 @@ public fun showSMInsn (i) {
 public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
 }
-
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
--- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (configuration , insns) {
    local st;
    local env;
@@ -31,11 +29,9 @@ fun eval (configuration , insns) {
    st := configuration [0];
    env := configuration [1];
    wrld := configuration [2];
-
     case insns of
        {} -> configuration
    | x:xs -> {
-
         configuration :=
          case x of
            BINOP (op) -> case st of
@@ -47,7 +43,6 @@ fun eval (configuration , insns) {
          |    LD (x)  -> [env(x):st, env, wrld]
          | CONST (n)  -> [n:st, env, wrld]
          esac;
-
         eval (configuration, xs)
      }
    esac
@@ -60,8 +55,13 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
-}
+case expr of
+   Var (x)          -> return singleton(LD(x))
+ | Const (n)        -> return singleton(CONST(n))
+ | Binop (op, l, r) -> return compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+ esac
+ }
+
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
