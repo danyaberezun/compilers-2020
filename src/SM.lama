@@ -55,8 +55,35 @@ fun fromLabel (env, lab) {
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
-}
+ case c of
+    [stack, st, w@[i, o]] -> case insns of
+       BINOP (b) : other -> case stack of x : y : nstack -> eval (env, [eval_Binop (b, y, x) : nstack, st, w], other) esac
+      | CONST (n) : other -> eval (env, [n : stack, st, w], other)
+      | READ      : other -> case i of x : ni -> eval (env, [x : stack, st, [ni, o]], other) esac
+      | WRITE     : other -> case stack of x : nstack -> eval (env, [nstack, st, [i, x : o]], other) esac
+      | LD    (x) : other -> eval (env, [st (x) : stack, st, w], other)
+      | ST    (x) : other -> case stack of y : nstack -> eval (env, [nstack, (st <- [x, y]), w], other) esac
+      |{} -> c   
+      | LABEL (nm): other -> eval(env, c, other)
+      | JMP (lb)  : other -> eval(env, c, fromLabel(env, lb)) 
+      | CJMP (cond,lb) : other -> 
+                             case stack of cmp : nstack ->
+                             case cond of 
+                             "z"  -> case cmp of 
+		              0 -> eval (env, c, fromLabel (env, lb))
+			      | _ -> eval (env, c, other)
+		              esac
+                                     | "nz" -> case cmp of
+		                      0 -> eval (env, c, other)
+			             | _ -> eval (env, c, fromLabel (env, lb))
+				      esac
+                             esac          
+                             esac
+    esac
+  esac
+  
+  
+  }
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
@@ -97,12 +124,50 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  case expr of 
+    Var   (x)         -> singleton (LD (x))
+  | Const (n)         -> singleton (CONST (n))
+  | Binop (b, e1, e2) -> compileExpr (e1) +++ compileExpr (e2) +++ singleton (BINOP (b))
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+    fun compileEnv (env, stmt) {
+        case stmt of
+            Assn (x, expr) -> [env, compileExpr (expr) +++ singleton (ST (x))]
+          | Read (x)       -> [env, {READ, ST (x)}]
+          | Write (expr)   -> [env, compileExpr (expr) +++ singleton (WRITE)]
+
+          | Skip           -> [env, {}]
+          | Seq (s1, s2)   -> case compileEnv (env, s1) of
+					                            [env1, stmt1] -> case compileEnv (env1, s2) of
+								                                                  [env2, stmt2] -> [env2, stmt1 +++ stmt2]
+							                                         esac
+				                      esac
+
+          | While (expr, s)   -> case genLabels(env, 2) of [lb1, lb2, env1] ->
+									case compileEnv(env1, s) of [env2, insns] ->
+										[env2, {JMP (lb2), LABEL (lb1)} +++ insns +++ singleton(LABEL (lb2)) +++ compileExpr(expr) +++ singleton(CJMP ("nz", lb1))]
+									esac
+								              esac
+
+          | Repeat (s, expr)  -> case genLabels(env, 1) of [lb, env1] ->
+									case compileEnv(env1, s) of [env2, insns] ->
+										[env2, singleton(LABEL (lb)) +++ insns +++ compileExpr(expr) +++ singleton(CJMP ("z", lb))]
+									esac
+								              esac
+
+          | If (expr, s1, s2) -> case genLabels(env, 2) of 
+					  [lb_else, lb_fi, env1] -> case compileEnv (env1, s1) of
+								[env2, stmt1] -> case compileEnv (env2, s2) of
+										[env3, stmt2] -> [env3, compileExpr (expr) +++ singleton(CJMP ("z", lb_else)) +++ stmt1 +++ singleton(JMP (lb_fi)) +++ singleton(LABEL (lb_else)) +++ stmt2 +++ singleton(LABEL (lb_fi))]
+										             esac
+							                    esac
+				                      esac
+        esac
+                              } 
+              compileEnv (initCompEnv (), stmt)[1]
 }
