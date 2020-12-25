@@ -41,7 +41,7 @@ binOps = fun(l, op, r) {Binop(op, l, r)},
 		},
 
       exp = memo $ eta expr (ops, primary) ;    
- 
+
 local stmt = memo $ eta syntax (
 			kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
 			kWrite e=inbr[s("("), exp, s(")")] {Write(expr)} |
