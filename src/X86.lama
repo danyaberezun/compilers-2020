@@ -275,15 +275,18 @@ fun suffix (op) {
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
+-- code list of instructions for stack machine
+-- foldl - свёртка списка
+- scode asm code    i - (code) primary buffer
 fun compile (env, code) {
-  fun compile (env, code) { -- code список инструкций стековой машины
-    foldl ( -- свёртка списка
-      fun ([env, scode], i) { -- scode ассемблер код    i - (code) исходный буффер
-        local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n"); -- пишется комментарий к асм коду
+  fun compile (env, code) { 
+    foldl ( 
+      fun ([env, scode], i) { -
+        local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n"); -- comment 
         case i of
           READ ->
             case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)] -- s - место для результата финального  mov - положить из eax в s
+              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)] -- s - place for final rez
             esac             
         | WRITE ->
             case env.pop of
