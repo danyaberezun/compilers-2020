@@ -3,6 +3,24 @@
 import List;
 import State;
 
+	public fun binopParser (str, x, y) {
+  case str of
+      "+"  -> x + y
+    | "-"  -> x - y
+    | "*" -> x * y
+    | "/" -> x / y
+    | "%" -> x % y
+    | "==" -> x == y
+    | "!=" -> x != y
+    | "<" -> x  < y
+    | "<=" -> x <= y
+    | ">" -> x > y
+    | ">=" -> x >= y
+    | "&&" -> x && y
+    | "!!" -> x !! y
+  esac
+}
+
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
