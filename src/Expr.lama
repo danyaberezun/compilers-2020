@@ -63,8 +63,50 @@ fun evalList (c, exprs) {
   esac
 }
 
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+fun eval (c@[s, w@[in, out]], expression) {
+  -- printf("expr %s\n", expression.string);
+  case expression of
+      Assn (expr1, expr2) -> case evalList(c, {expr2, expr1}) of
+                               [[s, nw], v : ref : _] -> [[s <- [ref, v], nw], v]
+                             esac
+    | Seq (expr1, expr2) -> case evalList(c, {expr1, expr2}) of
+                              [c, _ : r : _] -> [c, r]
+                            esac
+    | Read (str) -> case readWorld(w) of
+                      [v, nw] -> [[s <- [str, v], nw], Void]
+                    esac
+    | Write (expr) -> case eval(c, expr) of
+                        [[s, nw], v] ->  [[s, writeWorld (v, nw)], Void]
+                      esac
+    | If (expr, expr1, expr2) -> case eval(c, expr) of
+                                   [nc, v] -> if v then eval(nc, expr1) else eval(nc, expr2) fi 
+                                  esac
+    | While  (expr, exprb) -> case eval(c, expr) of [nc, v] -> 
+        if v then
+          case eval(nc, exprb) of [nc, _] -> eval(nc, expression) esac 
+        else 
+          [c, Void] 
+        fi 
+      esac
+    | Repeat (exprb, expr) -> case evalList(c, {exprb, expr}) of
+                                [c, _ : v : _] -> if v then [c, Void] else eval(c, expression) fi
+                              esac
+    | Var (str) -> [c, s(str)]
+    | Ref (str) -> [c, str]
+    | Const (v) -> [c, v]
+    | Binop (str, expr1, expr2)  -> case evalList(c, {expr1, expr2}) of
+                                      [c, lhs : rhs : _] -> [c, evalOp(str, lhs, rhs)]
+                                    esac
+    | Ignore (expr) -> [eval(c, expr)[0], Void]
+    | Skip -> [c, Void]
+  esac
+}
+
+public fun showExpr(expr) {
+  case expr of
+    Seq (s1, s2) -> showExpr(s1) ++ showExpr(s2)
+    | _ -> sprintf("%s\n", expr.string)
+  esac
 }
 
 
