@@ -422,12 +422,27 @@ fun compile (env, code) {
               esac
             esac
           esac
-        | LABEL(label)-> [env, code <+ Label(label)]
+        -- | LABEL(label)-> [env, code <+ Label(label)]
+        | DUP-> [env.setBarrier, code]
+        | LABEL(label)-> if env.isBarrier then
+                             [env.retrieveStack(label), code<+Label(label)]
+                           else
+                             [env, code<+Label(label)]
+                         fi
         | JMP(label)-> [env, code <+ Jmp(label)]
         | CJMP(znz, label)->
           case env.pop of
-            [s, environment]-> [env, code <+ Mov(s, eax) <+ Binop("cmp", L(0), eax) <+ CJmp(znzene(znz), label)]
+            [s, environment]-> [env.setStack(label), code <+ Mov(s, eax) <+ Binop("cmp", L(0), eax) <+ CJmp(znzene(znz), label)]
           esac
+        | DROP-> [env.pop[1], code]
+        | LDA(x)->case env.addGlobal(x).allocate of
+                    [s, env]->[env, code<+Lea(env.loc(x), eax)<+Mov(eax, s)]
+                  esac
+        | STI->case env.pop2 of
+                 [s1, s2, env]->case env.allocate of
+                                  [s, env]->[env, code<+Mov(s2,eax)<+Mov(s1,I(0,eax))<+>move(s1,s)]
+                                esac
+               esac
         esac
       }, [env, emptyBuffer ()], code) 
   }
@@ -461,3 +476,22 @@ public fun compileX86 (args, code) {
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }
+
+
+(*public fun compileX86 (code) {
+  case compile (initEnv (), code) of
+    [env, code] ->
+       map (insnString, 
+            getBuffer $
+              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
+              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
+              codeSection (
+                singletonBuffer (Meta ("main:\n")) <+>
+                prologue (getStackSize (env)) <+>
+                code <+>
+                epilogue ()
+              )
+           ).stringcat
+  esac}*)
+
+
