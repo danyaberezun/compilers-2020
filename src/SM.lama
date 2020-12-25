@@ -126,9 +126,9 @@ fun eval (environment, condition@[stack, state, world@[in, out]], instance) {
     | DUP : remaining->eval(environment, condition, remaining)
     | LDA(x) : remaining-> eval(environment, [Ref(x):stack, state, world], remaining) 
     | STI : remaining-> case stack of v:Ref(x):sstack->
-                          eval(environment, [v:sstack, st <-[x, v], world], remaining)
+                          eval(environment, [v:sstack, state<-[x, v], world], remaining)
                         esac
-    | DROP : remaining-> case stack of x: stack-> eval(environment, [stack, state, world], remaining)
+    | DROP : remaining-> case stack of x: stack-> eval(environment, [stack, state, world], remaining) esac
   esac
 }
 
@@ -208,13 +208,13 @@ public fun compileSM (statement) {
     case sstatement of
       Skip-> [{}, environment]
       | Var(x)-> [LD(x):{}, environment]
-      | Const(number)-> [CONST(number):{}, env]
+      | Const(number)-> [CONST(number):{}, environment]
       | Binop(binop, exp1, exp2)-> case wrCompileSM(exp1, environment) of
                                      [instnc1, environment]->case wrCompileSM(exp2, environment) of
-                                                               [instnc2, environment]-> [instnc1+++instnc2+++(BINOP(binop):{}), env]
+                                                               [instnc2, environment]-> [instnc1+++instnc2+++(BINOP(binop):{}), environment]
                                                              esac
                                    esac
-      | Ref(x)-> [LDA(x):{}, env]
+      | Ref(x)-> [LDA(x):{}, environment]
       | Ignor(x)-> case wrCompileSM(x, environment) of
                      [instnc, environment]-> [instnc+++(DROP:{}), environment]
                    esac 

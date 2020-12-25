@@ -2,7 +2,7 @@
 
 import List;
 import State;
-
+import World;
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
@@ -31,14 +31,7 @@ public fun parse_bin_operation(operation, left, right) {
 	esac
 }
 
-public fun evalExpr(statement, expression) {
-	case expression of
-		  Var(x) -> statement(x)
-		| Const(x) -> x
-		| Binop(op, left, right) -> parse_bin_operation(op, evalExpr(statement, left), evalExpr(statement, right))
-	esac
 
-import World;
 
 -- As association map which maps "\otimes" into "\oplus"
 local ops = {
@@ -105,7 +98,7 @@ fun evalList (c, exprs) {
 fun eval (condition@[state, world], expression) {
   case expression of
   	Const(number)-> [condition, number]
-  	| Var(x)-> [condition, statement(x)]
+  	| Var(x)-> [condition, state(x)]
   	| Ref(x)-> [condition, Ref(x)]
   	| Binop(operation, left, right)-> case evalList(condition, {left, right}) of
   										[condition, {v, w}]-> [condition, evalOp(operation, v, w)]
@@ -118,7 +111,7 @@ fun eval (condition@[state, world], expression) {
   					[[state <-[x, z], [remaining, out]], None] 
   	  			esac
   	| Write(expr)-> case eval(condition, expr) of
-  						[[state, [in, out]], v]-> [[state, [in, v:out]], None]
+  						[[state, world@[in, out]], v]-> [[state, writeWorld(v, world)], None]
   					esac
   	| Seq(s1, s2)-> eval(eval(condition, s1)[0], s2) -- гениально
   	| If(expression, s1, s2)-> case eval(condition, expression) of

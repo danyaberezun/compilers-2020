@@ -19,7 +19,6 @@ public fun getLoc (s) {
   case findHashTab (srcTab, s) of Some (loc) -> loc esac
 }
 
->>>>>>> 976192f50f3320411b50d95de61ecdba8683d2d8
 -- A set of all keywords
 local keywords =
    foldl (addSet,

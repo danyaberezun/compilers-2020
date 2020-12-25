@@ -2,13 +2,13 @@
 
 import List;
 import Ref;
+import Expr;
 import Array;
 import Fun;
 import Ostap;
 import Parser;
 import Matcher;
 import Lexer;
-import Stmt;
 import SM;
 import X86;
 import Manifest;  
@@ -89,7 +89,7 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
           
        iter (fun (x) {printf ("%d\n", x)},
              case mode of
-               Int -> evalStmt (input, program)
+               Int -> evalExpr (input, program)
              | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
              esac)
     esac
