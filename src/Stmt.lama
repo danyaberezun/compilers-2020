@@ -18,6 +18,7 @@ import World;
 --        Write  (expr)             |
 
 
+-- Досвидания.
 fun eval (condition, statement) {
 	case condition of [state, [in, out]] -> 
 		case statement of

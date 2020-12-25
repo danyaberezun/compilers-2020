@@ -112,7 +112,7 @@ fun eval (condition@[state, world], expression) {
   									  esac
   	| Skip-> [condition, None]
   	| Assn(left, right)-> case evalList(condition, {left, right}) of
-  							[condition@[state, world], {Ref(x), v}]-> [[state <-[x, v], w], v]
+  							[condition@[state, world], {Ref(x), v}]-> [[state <-[x, v], world], v]
   						  esac
   	| Read(x)-> case world of [z:remaining, out]-> 
   					[[state <-[x, z], [remaining, out]], None] 

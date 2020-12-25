@@ -85,6 +85,8 @@ fun fromLabel (env, lab) {
 -- 	esac
 -- }
 
+
+--added lda/sti sm instructions
 fun eval (environment, condition@[stack, state, world@[in, out]], instance) {
   case instance of
     {}->condition
@@ -121,6 +123,12 @@ fun eval (environment, condition@[stack, state, world@[in, out]], instance) {
           condition, 
           remaining) fi
       esac
+    | DUP : remaining->eval(environment, condition, remaining)
+    | LDA(x) : remaining-> eval(environment, [Ref(x):stack, state, world], remaining) 
+    | STI : remaining-> case stack of v:Ref(x):sstack->
+                          eval(environment, [v:sstack, st <-[x, v], world], remaining)
+                        esac
+    | DROP : remaining-> case stack of x: stack-> eval(environment, [stack, state, world], remaining)
   esac
 }
 
@@ -180,9 +188,9 @@ fun compileExpr (expression) {
 
 fun last(label) {
   case label of
-      {} -> [{}]
-    | x : {} -> [{}, x]
-    | x : y -> case last(y) of [a, b] -> [x:a, b] esac
+      {}-> [{}]
+    | x:{}-> [{}, x]
+    | x:y-> case last(y) of [a, b] -> [x:a, b] esac
   esac
 }
 
@@ -199,9 +207,26 @@ public fun compileSM (statement) {
   fun wrCompileSM(sstatement, environment){
     case sstatement of
       Skip-> [{}, environment]
-      | Assn(elem, expression) -> [compileExpr(expression) +++ singleton(ST(elem)), environment]
+      | Var(x)-> [LD(x):{}, environment]
+      | Const(number)-> [CONST(number):{}, env]
+      | Binop(binop, exp1, exp2)-> case wrCompileSM(exp1, environment) of
+                                     [instnc1, environment]->case wrCompileSM(exp2, environment) of
+                                                               [instnc2, environment]-> [instnc1+++instnc2+++(BINOP(binop):{}), env]
+                                                             esac
+                                   esac
+      | Ref(x)-> [LDA(x):{}, env]
+      | Ignor(x)-> case wrCompileSM(x, environment) of
+                     [instnc, environment]-> [instnc+++(DROP:{}), environment]
+                   esac 
+      | Assn(elem, expression)-> case wrCompileSM(elem, environment) of
+                                   [instnc1, environment]-> case wrCompileSM(expression, environment) of 
+                                                              [instnc2, environment]-> [instnc1+++instnc2+++(STI:{}), environment]
+                                                            esac
+                                 esac
       | Read(elem)-> [{READ, ST(elem)}, environment] -- singleton(READ) +++ singleton(ST(elem)) also works
-      | Write(expression)-> [compileExpr(expression)+++singleton(WRITE), environment]
+      | Write(expression)-> case wrCompileSM(expression, environment) of
+                              [instnc, environment]-> [instnc+++(WRITE:{}), environment]
+                            esac
       | Seq(s1, s2)->
         case wrCompileSM(s1, environment) of
           [instnc, environment]->
