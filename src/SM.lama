@@ -14,14 +14,14 @@ fun eval (c@[st, s, w], insns) {
 	{} -> c
 	 | insns : rest_prog -> case insns of
 					  READ -> eval ([fst (readWorld (w)) : st, s, snd (readWorld (w))], rest_prog)
-					| WRITE -> case stack of
+					| WRITE -> case st of
 								fir : st -> eval ([st, s, writeWorld (fir, w)], rest_prog)
 							   esac
-					| BINOP(op) -> case stack of 
+					| BINOP(op) -> case st of 
 								sec : fir : st -> eval ([evalOp (op, fir, sec) : st, s, w], rest_prog)
 							      esac
 					| LD(x) -> eval ([s (x) : st, s, w], rest_prog)
-					| ST(x) -> case stack of
+					| ST(x) -> case st of
 								fir : st -> eval ([st, s <- [x, fir], w], rest_prog)
 							    esac
 					| CONST(n) -> eval ([n : st, s, w], rest_prog)

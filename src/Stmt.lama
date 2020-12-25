@@ -21,7 +21,7 @@ fun eval (c@[s, w], stmt) {
     Assn(st, expr) -> [s <- [st, evalExpr(s, expr)], w]
   | Seq(stmt1, stmt2) -> eval(eval(c, stmt1), stmt2)
   | Skip -> [s, w]
-  | Read(x) -> [s <- [st, fst(readWorld(w))], snd(readWorld(w))]
+  | Read(x) -> [s <- [s, fst(readWorld(w))], snd(readWorld(w))]
   | Write(expr) -> [s, writeWorld(evalExpr(s, expr), w)] 
   
   esac
