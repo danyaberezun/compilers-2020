@@ -1,5 +1,3 @@
--- Lexical analysis using Matcher
-
 import Matcher;
 import Ostap;
 import Fun;
@@ -42,22 +40,22 @@ local keywords =
 
 -- Regular expression definitions
 public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\\)\\)*", "whitespace"),
-       rDecimal     = createRegexp ("-?[0-9]+", "decimal constant"),
-       rLident      = createRegexp ("[a-z][a-z_A-Z0-9]*", "lowercase identifier"),
-       rRead        = createRegexp ("read\\b", """read"""),
-       rWrite       = createRegexp ("write\\b", """write"""),
-       rSkip        = createRegexp ("skip\\b", """skip"""),
-       rIf          = createRegexp ("if\\b", """if"""),
-       rThen        = createRegexp ("then\\b", """then"""),
-       rElse        = createRegexp ("else\\b", """else"""),
-       rElif        = createRegexp ("elif\\b", """elif"""),
-       rFi          = createRegexp ("fi\\b", """fi"""),
-       rWhile       = createRegexp ("while\\b", """while"""),
-       rDo          = createRegexp ("do\\b", """do"""),
-       rOd          = createRegexp ("od\\b", """od"""),
-       rRepeat      = createRegexp ("repeat\\b", """repeat"""),
-       rUntil       = createRegexp ("until\\b", """until"""),
-       rFor         = createRegexp ("for\\b", """for""");
+      rDecimal     = createRegexp ("-?[0-9]+", "decimal constant"),
+      rLident      = createRegexp ("[a-z][a-z_A-Z0-9]*", "lowercase identifier"),
+      rRead        = createRegexp ("read\\b", """read"""),
+      rWrite       = createRegexp ("write\\b", """write"""),
+      rSkip        = createRegexp ("skip\\b", """skip"""),
+      rIf          = createRegexp ("if\\b", """if"""),
+      rThen        = createRegexp ("then\\b", """then"""),
+      rElse        = createRegexp ("else\\b", """else"""),
+      rElif        = createRegexp ("elif\\b", """elif"""),
+      rFi          = createRegexp ("fi\\b", """fi"""),
+      rWhile       = createRegexp ("while\\b", """while"""),
+      rDo          = createRegexp ("do\\b", """do"""),
+      rOd          = createRegexp ("od\\b", """od"""),
+      rRepeat      = createRegexp ("repeat\\b", """repeat"""),
+      rUntil       = createRegexp ("until\\b", """until"""),
+      rFor         = createRegexp ("for\\b", """for""");
       
 local whiteSpace = token (rWhiteSpace);
 

@@ -1,7 +1,6 @@
 -- Manifests a top-level environment
 import Lazy;
 import Fun;
-
 public fun getMode (args) {
   args [0] ()
 }

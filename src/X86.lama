@@ -7,6 +7,14 @@ import Buffer;
 import Fun;
 import Manifest;
 
+-- conditional flags
+fun znzene (znz) {
+  case znz of
+    "z"  -> "e"
+  | "nz" -> "ne"
+  esac
+}
+
 -- Assembler language interface
 -- The registers: 
 local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
@@ -27,26 +35,7 @@ local ebx = R (0),
 -- We need to know the word size to calculate offsets correctly
 local wordSize = 4;
 
--- We need to distinguish the following operand types: 
---    R (int)       -- hard register                    
---    S (int)       -- a position on the hardware stack 
---    M (string)    -- a named memory location          
---    L (int)       -- an immediate operand
---    I (int, opnd) -- an indirect operand with offset
 
--- Some x86 instruction (we do not need all of them):
---   Mov   (opnd, opnd)         -- copies a value from the first to the second operand  
---   Lea   (opnd, opnd)         -- loads an address of the first operand into the second
---   Binop (string, opnd, opnd) -- makes a binary operation; note, the first operand   
---                                 designates x86 operator, not the source language one
---   IDiv  (opnd)               -- x86 integer division, see instruction set reference 
---   Cltd                       -- see instruction set reference           
---   Set   (string, string)     -- sets a value from flags; the first operand is the   
---                                 suffix, which determines the value being set, the
---                                 the second --- (sub)register name
---   Jmp   (string)             -- unconditional jump to a label
---   CJmp  (string, string)     -- conditional jump to a label
---   Label (string)             -- a label
 --   Push  (opnd)               -- pushes the operand on the hardware stack
 --   Pop   (opnd)               -- pops from the hardware stack to the operand
 --   Call  (string)             -- calls a function by its name 
@@ -334,6 +323,14 @@ fun move (from, to) {
   fi
 }
 
+fun op_type (op) {
+  case op of 
+      "+" -> 1
+    | "-" -> 1
+    | "*" -> 1
+    | _ -> 0
+  esac
+}
 -- Gets a suffix for Set instruction from
 -- source language comparison operator
 fun suffix (op) {
@@ -363,9 +360,92 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        -- | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        --
+        --
+        --
+        -- THAT'S WHERE THE FUN BEGINS 
+        --
+        --
+        -- 
+        -- &&&                                     &&&&&&&&&&&            &&&& &&                              
+        --                &%%                      &&&&&&&&&&&&&&  &     & &  &&%&                             
+        --                %&   %                 &&&&&&&&%%%%%%%%%&&&&&&%& &&&#&#(%                            
+        --               &#%&%   &            &&&&&&&&&&&&%%%%%%%%%%%%&&%&&&&#%#&((%%                       %,#
+        --               &&###  /         &  &&&&&&&&&&&&&&&%%%%%%###%%%%%%%%##*%&((#                      &%(,
+        --              &&&    &*             &&  &&&&&&&&&&&&%%%%#&(#%%%%#(%%##%%#/&&&                   & %%&
+        --             &                    &&&&&&&&&&&&&%%%%%%&&#..*#%%%%%##(%%#%#/#                      &&&&
+        --                                  &&&&&&& &&&&&&%%%%%%%%%%#(##%#/,,%/%%&#((&&        &             & 
+        --             %                  &&&&     &   & &  &%%%%%#((*/##(**,##%%##,%&              &          
+        --                                 &&&&&&&&&&&&&&&&     &%##((((((,./.*%##/#%%                 &&      
+        --             &&&              &&&&&&&&&&&  && /      &&&%%%#####(*/(*#(#%%&&  %                 &&   
+        --         &   &&&&               &&&&&&&&&&&&%&&&&&&&&&&&%%#%%&&&&&%#/##%#&&&                        &
+        --                                &&&&&&&&&&&&&&&&&&&&&&&&%(.%%%&#&%#(%%%%&&&&&                        
+        --                &               &&&&&&&%%%%%%%%&&&&&&&&&%(.#%%%#(//##%%% &&&&  &&                &   
+        --                   &            &&&&&&&%%%%%%%%%%&&&&&&&%(.,..**/,##&##&&&&&      &&&               &
+        --                    &          &&&&&&&&%%%&&&&&&&&&&&&&%%%*.*.....##%              &&&&&&            
+        --                       &       &&&&&&&%&&&&&&&&& &&&&&&%%#/.%#*,.,%(&%&&          &&          &      
+        --                              &&&&&&&&&&&&&&&&&&%&&&&&&&%%*%%%#/*&%((&&%&                      &     
+        --                                 &&&&&&&   &&&&&&%%%%%%/,,,%&%#/#%&&&& &&&                           
+        --                               &   &&&&&&&&&%&%%%#%&&&&#/*%&%(/ &                                 &  
+        --                                &&&&  && &&&&&&#%&&#&/(*/%%%(&                                     & 
+        --                                  &&&&&%  %& %&&&%##/*,,*%#%                                        &
+        --                                    &&&&&&&% %%%,%%#(/,,/%&                                          
+        --                                     &&&&&&&&%#(((/**,,%%                                            
+        --                       &&&             &&&&%%%%##(/.*,%&                                             
+        --                        &&&&&&&          &&&&&%&%%#(#&                    &                 &&       
+        --                        &&&&&&&&&&&&&&&&%/,,,,.,*%%                        %&&   &        &   &      
+        --                           &&&&&&&&&&%%(//***,,,&&&%&             &&        %&&                      
+        --                              &&&&&%%#(((/****%&   &%%              &%       %                       
+        --   &                         & && %%%#((((%%&&       &#               &%%%%&& %                      
+        -- 
+        -- 
+        -- 
+
+
+        | CONST (elem) -> case allocate(env) of [s, env] -> [env, code <+ Mov(L(elem), s)] esac  -- allocate возвращает пару все что я понял
+        | LD (elem) -> case allocate(env) of [s, env] -> [env, code <+> move(loc(env, elem), s)] esac
+        | ST (elem) -> case pop(addGlobal(env, elem)) of [s, env] -> [env, code <+> move(s, loc(env, elem))] esac
+        | BINOP (op) ->
+          case pop2(env) of [s2, s1, env] -> -- note: pop2 returns stack -> [y:x:other]
+            case allocate(env) of [s, env] -> 
+              case op of 
+                "%" -> [env, code <+ Mov(s1, eax) <+ Cltd <+ IDiv(s2) <+ Mov(edx, s)]
+              | "/" -> [env, code <+ Mov(s1, eax) <+ Cltd <+ IDiv(s2) <+ Mov(eax, s)]
+              | "!!" -> [env, code <+ Mov(s1, edx) <+ Binop("!!", s2, edx) <+ Binop("cmp", L(0), edx) <+ Mov(L(0), eax) <+ Set("ne", "%al") <+ Mov(eax, s)]
+              | "&&" -> [env, code <+ Mov(s1, edx) <+ Binop("*", s2, edx)  <+ Binop("cmp", L(0), edx) <+ Mov(L(0), eax) <+ Set("ne", "%al") <+ Mov(eax, s)]
+              | op -> 
+                case op_type(op) of
+                  0 -> [env, code <+ Mov(s2, edx) <+ Binop("cmp", edx, s1) <+ Mov(L(0), eax) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                | 1 -> [env, code <+ Mov(s1, eax) <+ Binop(op, s2, eax) <+ Mov(eax, s)]
+                esac
+              esac
+            esac
+          esac
+        -- | LABEL(label)-> [env, code <+ Label(label)]
+--        | DUP-> [setBarrier(env), code]
+        | LABEL(label)-> if isBarrier(env) then
+                             [retrieveStack(env, label), code<+Label(label)]
+                           else
+                             [env, code<+Label(label)]
+                         fi
+        | JMP(label)-> [setBarrier(setStack(env, label)), code <+ Jmp(label)]
+        | CJMP(znz, label)->
+          case pop(env) of
+            [s, environment]-> [setStack(env, label), code <+ Mov(s, eax) <+ Binop("cmp", L(0), edx) <+ CJmp(znzene(znz), label)]
+          esac
+        | DROP-> [pop(env)[1], code]
+        | LDA(x)->case allocate(addGlobal(env, x)) of
+                    [s, env]->[env, code<+Lea(loc(env, x), eax)<+Mov(eax, s)]
+                  esac
+        | STI->case pop2(env) of
+                 [s1, s2, env]->case allocate(env) of
+                                  [s, env]->[env, code<+>move(s1,I(0,s2))<+>move(s1,s)]
+                                esac
+               esac
+	| DROP -> [env.pop[1], code]
         esac
-      }, [env, emptyBuffer ()], code)
+      }, [env, emptyBuffer ()], code) 
   }
 
   compile (env, code) 
@@ -393,8 +473,9 @@ public fun compileX86 (args, code) {
                         code <+>
                         epilogue ()
                       )
-                   ).stringcat);
-                    
+                   ).stringcat);                    
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }
+
+

@@ -96,9 +96,6 @@ fun assertVoid (atr, val, loc) {
 
 -- A parser of "something" in brackets; l, r are left and right
 -- brackets as parsers, p --- a parser of "something"
--- fun inbr (l, p, r) {
---   syntax (-l p -r)
--- }
 
 fun binop (op) {
   [syntax (pos -s[op]), fun (l, loc, r) {
@@ -109,24 +106,20 @@ fun binop (op) {
   ]
 }
 
-local else_exp = memo $ eta syntax (
-		 	loc=pos kElif expression=exp kThen s1=exp s2=else_exp {fun(arg){If(expression(Val), s1(arg), s2(arg))}} |
-		 	loc=pos kElse s=exp kFi {fun(arg){s(arg)}} |
-		 	loc=pos kFi {fun(arg){assertVoid(arg, Skip, loc)}}
-		 );
-
 local primary  = memo $ eta syntax (
                                     -- decimal constant
-                                    loc=pos x=decimal{fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
+                                    loc=pos x=decimal                                 {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
 
                                     -- identifier
-                                    x=lident{fun (a) {
+                                    x=lident                                          {fun (a) {
                                                                                          case a of
                                                                                            Ref  -> Ref (x)
                                                                                          | Void -> Ignore (Var (x))
                                                                                          | _    -> Var (x)
                                                                                          esac
                                                                                       }} |
+                                    -- $(failure ("the rest of primary parsing in not implemented\n"))),
+
 	    loc=pos lexpr=inbr[s("("), exp, s(")")] {fun(arg) {lexpr(arg)}} |
 	    loc=pos x=decimal {fun(arg) {assertValue(arg, Const(stringInt(x)), loc)}} |
 	 	x=lident {fun(arg) {case arg of
@@ -138,13 +131,20 @@ local primary  = memo $ eta syntax (
 	 	loc=pos kWrite x=inbr[s("("), exp, s(")")] {fun(arg) {assertVoid(arg, Write(x(Val)), loc)}} |
 	 	loc=pos kRead x=inbr[s("("), lident, s(")")] {fun(arg) {assertVoid(arg, Read(x), loc)}} |
 	 	loc=pos kWhile condition=exp kDo s1=exp kOd {fun(arg) {assertVoid(arg, While(condition(Val), s1(Void)), loc)}} |
-	 	loc=pos kIf expression=exp kThen s1=exp s2=else_exp {fun(arg){If(expression(Val), s1(arg), s2(arg))}} |
+	 	loc=pos kIf expression=exp kThen s1=exp s2= else_exp {fun(arg){If(expression(Val), s1(arg), s2(arg))}} |
 	 	loc=pos kFor s1=exp s[","] expression=exp s[","] s2=exp s3=exp kOd {
-	 	fun(arg) {assertVoid(arg, Seq(s1(Void), While(expression(Val), Seq(s3(Void), s2(Void)))), loc)}} |
+	 	fun(arg) {
+	 	assertVoid(arg, Seq(s1(Void), While(expression(Val), Seq(s3(Void), s2(Void)))), loc)
+	 }
+	 } |
 	 	loc=pos kRepeat s1=exp kUntil expression=inbr[s("("), exp, s(")")] {fun(arg){assertVoid(arg, Repeat(s1(Void), expression(Val)), loc)}}
 	 	),
 		
-		
+		else_exp= memo $ eta syntax (
+		 	loc=pos kElif expression=exp kThen s1=exp s2=else_exp {fun(arg){If(expression(Val), s1(arg), s2(arg))}} |
+		 	loc=pos kElse s=exp kFi {fun(arg){s(arg)}} |
+		 	loc=pos kFi {fun(arg){assertVoid(arg, Skip, loc)}}
+		 ),
 
 
       basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
@@ -159,10 +159,10 @@ local primary  = memo $ eta syntax (
                                    },
                                    primary)),
 
-	      exp      = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
+      exp      = memo $ eta syntax (basic | s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}});
+--      exp      = memo $ eta syntax (s1=basic s[";"] s2=exp {fun (a) {Seq (s1 (Void), s2 (a))}}|basic);
       
 
 -- Public top-level parser
 public parse = syntax (s=exp {s (Void)});
-
 

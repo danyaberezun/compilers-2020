@@ -2,16 +2,16 @@
 
 import List;
 import Ref;
+import Expr;
 import Array;
 import Fun;
 import Ostap;
 import Parser;
 import Matcher;
 import Lexer;
-import Expr;
 import SM;
 import X86;
-import Manifest;
+import Manifest;  
 
 -- Parses a command-line arguments, represented as a list, and
 -- returns an environment. The environment's interface is
@@ -86,12 +86,12 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
                             | arg      -> f (stringInt (arg) : acc) esac
                           }
                         }) ({}));
-
+          
        iter (fun (x) {printf ("%d\n", x)},
              case mode of
                Int -> evalExpr (input, program)
              | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
-             esac) 
+             esac)
     esac
 | x@Fail (err, line, col) ->   
    failure ("%s at %d:%d\n", err.hd, line, col)
