@@ -1,11 +1,18 @@
-*.o
-*.s
-*.i
-lama-impl
-test00*
-test00*.s
-test00*.log
-generated*****
-generated*****.input
-generated*****.s
-generated*****.log
+### MAKE OUTPUT ###
+/src/*.i
+/src/*.o
+/src/*.s
+/srs/*
+
+/regression/*.log
+/regression/*.run
+/regression/*.s
+/regression/*
+/regression/deep-expressions
+/regression/expressions
+/regression/orig
+
+/runtime/*.o
+
+### IDEA CONF ###
+.idea
