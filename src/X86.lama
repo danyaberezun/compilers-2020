@@ -372,23 +372,30 @@ fun compile (env, code) {
         | LD (x) -> case env.allocate of
             [s, env] -> [env, code <+> move(env.loc(x), s)]
           esac
-        | BINOP (op) -> case env.pop2 of [y, x, env] -> case env.allocate of [s, env] -> case op of
-                "+" -> [env, code <+> binaryOperation(op, x, y, s)]
-                | "-" -> [env, code <+> binaryOperation(op, x, y, s)]
-                | "*" -> [env, code <+> binaryOperation(op, x, y, s)]
-                | "==" -> [env, code <+> booleanOperation(op, x, y, s)]
-                | "!=" -> [env, code <+> booleanOperation(op, x, y, s)]
-                | "<" -> [env, code <+> booleanOperation(op, x, y, s)]
-                | "<=" -> [env, code <+> booleanOperation(op, x, y, s)]
-                | ">" -> [env, code <+> booleanOperation(op, x, y, s)]
-                | ">=" -> [env, code <+> booleanOperation(op, x, y, s)]
-                | "&&" -> [env, code <+> logicalOperation("*", x, y, s)]
-                | "!!" -> [env, code <+> logicalOperation("+", x, y, s)]
-                | "/" -> [env, code <+> div(x, y, s)]
-                | "%" -> [env, code <+> mod(x, y, s)]
-              esac
-            esac
-          esac
+        | BINOP (op) -> case env.pop2 of
+                          [y, x, env] -> 
+                            case env.allocate of
+                              [s, env] ->
+                                case op of
+                                  "/" -> [ env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(eax, s) ]
+                                | "%" -> [ env, code <+ Mov(x, eax) <+ Cltd <+ IDiv(y) <+ Mov(edx, s) ]
+                                | "+" -> [ env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s) ]
+                                | "-" -> [ env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s) ]
+                                | "*" -> [ env, code <+ Mov(x, eax) <+ Binop (op, y, eax) <+ Mov(eax, s) ]
+                                | "&&" -> [ env, code <+ Mov(x, edx) <+ Binop ("*", y, edx)<+
+                                            Binop ("cmp", L (0), edx) <+ Mov (L (0), eax) <+
+                                            Set ("ne", "%al") <+ Mov (eax, s) ]
+                                | "!!" -> [ env, code <+ Mov(x, edx) <+ Binop (op, y, edx) <+
+                                            Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+
+                                            Set ("ne", "%al") <+ Mov (eax, s) ]
+                                | "^" -> [ env, code <+ Mov(x, edx) <+ Binop (op, y, edx) <+
+                                           Binop ("cmp", L (0), edx) <+ Mov (L(0), eax) <+
+                                           Set ("ne", "%al") <+ Mov (eax, s) ]
+                                | _ -> [ env, code <+ Mov(y, eax) <+ Binop ("cmp", eax, x) <+
+                                         Mov(L(0), eax) <+ Set(suffix(op), "%al") <+ Mov(eax, s)]
+                                esac
+                            esac
+                        esac
           | SKIP -> [env, code]
           | JMP (l) -> 
             local nenv = env.setStack(l).setBarrier;
