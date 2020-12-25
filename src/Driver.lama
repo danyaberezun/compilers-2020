@@ -11,7 +11,7 @@ import Lexer;
 import Stmt;
 import SM;
 import X86;
-import Manifest;
+import Manifest;  
 
 -- Parses a command-line arguments, represented as a list, and
 -- returns an environment. The environment's interface is
