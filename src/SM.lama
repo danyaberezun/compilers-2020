@@ -59,7 +59,7 @@ fun fromLabel (env, lab) {
 
 fun compileSMList (env, exprs) {
   case foldl (fun ([env, vals], e) {
-    case compileExpr(env, e) of
+    case compileSMEnv(env, e) of
       [env, val] -> [env, val:vals]
     esac
     },
