@@ -19,9 +19,9 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))}
 		exp = memo $ eta expr ({	[Left, [s("!!"), fun(l, op, r) {Binop(op, l, r)} ]:{}],
 				                    [Left, [s("&&"), fun(l, op, r) {Binop(op, l, r)} ]:{}],
 									[Nona, { [s("=="), fun(l, op, r) {Binop(op, l, r)}],
-											 [s("!="), fun l, op, r) {Binop(op, l, r)}],
+											 [s("!="), fun(l, op, r) {Binop(op, l, r)}],
 											 [s("<="), fun(l, op, r) {Binop(op, l, r)}],
-											 [s("<"), fun l, op, r) {Binop(op, l, r)}],
+											 [s("<"), fun(l, op, r) {Binop(op, l, r)}],
 											 [s(">="), fun(l, op, r) {Binop(op, l, r)}],
 											 [s(">"), fun(l, op, r) {Binop(op, l, r)}] }],
 									[Left, { [s("+"), fun(l, op, r) {Binop(op, l, r)}],
@@ -30,25 +30,19 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))}
 					 						 [s("/"), fun(l, op, r) {Binop(op, l, r)}],
 					         				 [s("%"), fun(l, op, r) {Binop(op, l, r)}] 
 								}] }, primary);
-  
-binOps = fun(l, op, r) {Binop(op, l, r)},
-      ops = {
-			 [Left, [s("!!"), binOps] : {}],
-			 [Left, [s("&&"), binOps] : {}],
-		   	 [Nona, [s("<") | s (">") | s("<=") | s(">=") | s("==") | s("!="), binOps] : {}],
-			 [Left, [s("+") | s("-"), binOps] : {}],
-			 [Left, [s("*") | s("/") | s("%"), binOps] : {}]
-		},
+     
 
-      exp = memo $ eta expr (ops, primary) ;    
-
+local sstmt = memo $ eta syntax (
+    kRead x=inbr[s("("), lident, s(")")] {Read (x)} 
+  | kWrite e=inbr[s("("), exp, s(")")] {Write(expr)} 
+  | x=lident s[":="] e=exp {Assn(s, expr)} 
+  | kSkip {Skip}  
+);
+			
 local stmt = memo $ eta syntax (
-			kRead x=inbr[s("("), lident, s(")")] {Read (x)} |
-			kWrite e=inbr[s("("), exp, s(")")] {Write(expr)} |
-			x=lident s[":="] e=exp {Assn(st, expr)} |
-			s1=stmt s[";"] s2=stmt end {Seq(stmt1, stmt2)} |
-			kSkip {Skip}  
-			);
+    sstmt 
+  | s1=sstmt s[";"] s2=stmt {Seq (s1, s2)}
+);			
    
 
 -- Public top-level parser
