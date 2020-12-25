@@ -1,0 +1,14 @@
+### MAKE OUTPUR ###
+/src/*.i
+/src/*.o
+/src/*.s
+
+/regression/*.log
+/regression/*.run
+/regression/*.s
+/regression/*
+
+/runtime/*.o
+
+### IDEA CONF ###
+.idea
