@@ -9,11 +9,11 @@ import State;
 --
 -- An expression is represented by a data structure of the following shape:
 --
--- expr = Var   (string)             |
+-- expr = Var   (string)             | save mapping
 --        Const (int)                |
 --        Binop (string, expr, expr)
 
-public fun evalExpr (st, expr) { -- хранит мапу
+public fun evalExpr (st, expr) { 
 case expr of
 	Var (x) -> st (x)
 	| Const (n) -> n
