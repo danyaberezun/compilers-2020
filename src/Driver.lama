@@ -8,7 +8,11 @@ import Ostap;
 import Parser;
 import Matcher;
 import Lexer;
+<<<<<<< HEAD
 import Stmt;
+=======
+import Expr;
+>>>>>>> 976192f50f3320411b50d95de61ecdba8683d2d8
 import SM;
 import X86;
 import Manifest;
@@ -86,12 +90,21 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
                             | arg      -> f (stringInt (arg) : acc) esac
                           }
                         }) ({}));
+<<<<<<< HEAD
           
        iter (fun (x) {printf ("%d\n", x)},
              case mode of
                Int -> evalStmt (input, program)
              | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
              esac)
+=======
+
+       iter (fun (x) {printf ("%d\n", x)},
+             case mode of
+               Int -> evalExpr (input, program)
+             | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
+             esac) 
+>>>>>>> 976192f50f3320411b50d95de61ecdba8683d2d8
     esac
 | x@Fail (err, line, col) ->   
    failure ("%s at %d:%d\n", err.hd, line, col)

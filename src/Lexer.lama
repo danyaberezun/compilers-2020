@@ -1,10 +1,25 @@
-
 import Matcher;
 import Ostap;
 import Fun;
 import Collection;
 import List;
 
+-- A hashtable to keep a source code location information.
+-- The keys in this table is a (boxed) value, and values are
+-- pairs [line, column]
+local srcTab = emptyHashTab (1024, hash, flatCompare);
+
+-- A custom combinator to additionally add location info
+public fun located (p) {
+  loc |> fun (l) {p @ fun (x) {srcTab := addHashTab (srcTab, x, l); x}}
+}
+
+-- Retrieves location info; fail if no info found
+public fun getLoc (s) {
+  case findHashTab (srcTab, s) of Some (loc) -> loc esac
+}
+
+>>>>>>> 976192f50f3320411b50d95de61ecdba8683d2d8
 -- A set of all keywords
 local keywords =
    foldl (addSet,
@@ -65,6 +80,7 @@ public kRead    = s (rRead),
        kUntil   = s (rUntil),
        kFor     = s (rFor),
        decimal  = s (rDecimal),
+       pos      = memo $ whiteSpace |> lift (loc),
        end      = memo $ whiteSpace |> lift (eof),
        lident   = memo $       
          whiteSpace |> lift (fun (k) {
