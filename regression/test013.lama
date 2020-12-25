@@ -2,7 +2,6 @@ read (n);
 
 repeat
   
-<<<<<<< HEAD
 if n == 1 then write (0)
 elif n == 2 then write (1)
 elif n == 3 then write (2)
@@ -15,17 +14,3 @@ if n >= 5 then write (11) fi;
 n := n - 1
 
 until (n == 0)
-=======
-  if n == 1 then write (0)
-elif n == 2 then write (1)
-elif n == 3 then write (2)
-elif n == 4 then write (3)
-            else write (10)
-  fi;
-
-  if n >= 5 then write (11) fi;
-
-  n := n - 1
-
-until (n == 0)
->>>>>>> 976192f50f3320411b50d95de61ecdba8683d2d8

@@ -9818,13 +9818,13 @@ L620:
 # LD (Local (10)) / 
 
 	movl	-44(%ebp),	%edi
-# CALL ("Lparse_bin_operation", 3, false) / 
+# CALL ("LevalOp", 3, false) / 
 
 	pushl	%ebx
 	pushl	%edi
 	pushl	%esi
 	pushl	%ecx
-	call	Lparse_bin_operation
+	call	LevalOp
 	addl	$12,	%esp
 	popl	%ebx
 	movl	%eax,	%ecx

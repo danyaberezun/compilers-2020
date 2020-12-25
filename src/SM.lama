@@ -92,7 +92,7 @@ fun eval (environment, condition@[stack, state, world@[in, out]], instance) {
     {}->condition
     | BINOP(operation):remaining->
       case stack of x:y:rstack-> -- remaining stack
-        eval(environment,[parse_bin_operation(operation, y, x) : rstack, state, world], remaining)
+        eval(environment,[evalOp(operation, y, x) : rstack, state, world], remaining)
       esac
     |  CONST(number):remaining->eval(environment, [number:stack, state, world], remaining)
     |  READ : remaining ->
@@ -235,7 +235,7 @@ public fun compileSM (statement) {
           esac
         esac
       | If (expression, s1, s2)->
-        case environment.genLabels(2) of
+        case genLabels(environment, 2) of
           [s2label, outLabel, environment]->
             case wrCompileSM(s1, environment) of
               [instnc, environment]->
@@ -255,7 +255,7 @@ public fun compileSM (statement) {
             esac
         esac
       | While (expression, ssstatement)->
-        case environment.genLabels(2) of
+        case genLabels(environment, 2) of
           [label1, label2, environment]->
           case wrCompileSM(ssstatement, environment) of
             [instnc, environment]->
@@ -267,7 +267,7 @@ public fun compileSM (statement) {
           esac
         esac
       | Repeat (ssstatement, expression)->
-      case environment.genLabel of
+      case genLabel(environment) of
         [label, environment]->
         case wrCompileSM(ssstatement, environment) of
           [instnc, environment]->

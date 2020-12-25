@@ -403,12 +403,12 @@ fun compile (env, code) {
         -- 
 
 
-        | CONST (elem) -> case env.allocate of [s, env] -> [env, code <+ Mov(L(elem), s)] esac  -- allocate возвращает пару все что я понял
-        | LD (elem) -> case env.allocate of [s, env] -> [env, code <+> move(env.loc(elem), s)] esac
-        | ST (elem) -> case env.addGlobal(elem).pop of [s, env] -> [env, code <+> move(s, env.loc(elem))] esac
+        | CONST (elem) -> case allocate(env) of [s, env] -> [env, code <+ Mov(L(elem), s)] esac  -- allocate возвращает пару все что я понял
+        | LD (elem) -> case allocate(env) of [s, env] -> [env, code <+> move(loc(env, elem), s)] esac
+        | ST (elem) -> case pop(addGlobal(env, elem)) of [s, env] -> [env, code <+> move(s, loc(env, elem))] esac
         | BINOP (op) ->
-          case env.pop2 of [s2, s1, env] -> -- note: pop2 returns stack -> [y:x:other]
-            case env.allocate of [s, env] -> 
+          case pop2(env) of [s2, s1, env] -> -- note: pop2 returns stack -> [y:x:other]
+            case allocate(env) of [s, env] -> 
               case op of 
                 "%" -> [env, code <+ Mov(s1, eax) <+ Cltd <+ IDiv(s2) <+ Mov(edx, s)]
               | "/" -> [env, code <+ Mov(s1, eax) <+ Cltd <+ IDiv(s2) <+ Mov(eax, s)]
@@ -423,26 +423,27 @@ fun compile (env, code) {
             esac
           esac
         -- | LABEL(label)-> [env, code <+ Label(label)]
---        | DUP-> [env.setBarrier, code]
-        | LABEL(label)-> if env.isBarrier then
-                             [env.retrieveStack(label), code<+Label(label)]
+--        | DUP-> [setBarrier(env), code]
+        | LABEL(label)-> if isBarrier(env) then
+                             [retrieveStack(env, label), code<+Label(label)]
                            else
                              [env, code<+Label(label)]
                          fi
-        | JMP(label)-> [env, code <+ Jmp(label)]
+        | JMP(label)-> [setBarrier(setStack(env, label)), code <+ Jmp(label)]
         | CJMP(znz, label)->
-          case env.pop of
-            [s, environment]-> [env.setStack(label), code <+ Mov(s, eax) <+ Binop("cmp", L(0), eax) <+ CJmp(znzene(znz), label)]
+          case pop(env) of
+            [s, environment]-> [setStack(env, label), code <+ Mov(s, eax) <+ Binop("cmp", L(0), edx) <+ CJmp(znzene(znz), label)]
           esac
-        | DROP-> [env.pop[1], code]
-        | LDA(x)->case env.addGlobal(x).allocate of
-                    [s, env]->[env, code<+Lea(env.loc(x), eax)<+Mov(eax, s)]
+        | DROP-> [pop(env)[1], code]
+        | LDA(x)->case allocate(addGlobal(env, x)) of
+                    [s, env]->[env, code<+Lea(loc(env, x), eax)<+Mov(eax, s)]
                   esac
-        | STI->case env.pop2 of
-                 [s1, s2, env]->case env.allocate of
-                                  [s, env]->[env, code<+Mov(s2,eax)<+Mov(s1,I(0,eax))<+>move(s1,s)]
+        | STI->case pop2(env) of
+                 [s1, s2, env]->case allocate(env) of
+                                  [s, env]->[env, code<+>move(s1,I(0,s2))<+>move(s1,s)]
                                 esac
                esac
+	| DROP -> [env.pop[1], code]
         esac
       }, [env, emptyBuffer ()], code) 
   }
@@ -476,22 +477,5 @@ public fun compileX86 (args, code) {
        system ({"gcc -g -m32 -o ", args.getBaseName, " ", runtime, " ", asmFile}.stringcat)
   esac
 }
-
-
-(*public fun compileX86 (code) {
-  case compile (initEnv (), code) of
-    [env, code] ->
-       map (insnString, 
-            getBuffer $
-              singletonBuffer (Meta ("\t.global\tmain\n")) <+>
-              dataSection (listBuffer $ map (dataDef, getGlobals (env))) <+>
-              codeSection (
-                singletonBuffer (Meta ("main:\n")) <+>
-                prologue (getStackSize (env)) <+>
-                code <+>
-                epilogue ()
-              )
-           ).stringcat
-  esac}*)
 
 
