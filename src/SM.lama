@@ -71,28 +71,40 @@ fun compileSMList (env, exprs) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
+fun eval (env, c@[s, st, world@[input, output]], insns) {
    case insns of {} -> c
     | inst : irest -> case inst of
-        READ         -> case readWorld(world) of [x, newWorld] -> eval(env, [x: s, st, newWorld], irest) esac
-      | WRITE        -> case s of x : rest -> eval(env, [rest, st, writeWorld(x, world)], irest) esac
-      | BINOP (str)  -> case s of rhs : lhs : rest -> eval (env, [evalOp (str, lhs, rhs) : rest, st, world], irest) esac
-      | LD    (x)    -> eval(env, [st (x) : s, st, world], irest)
-      | LDA   (x)    -> eval(env, [Ref(x) : s, st, world], irest)
-      | ST    (x)    -> case s of v : rest -> eval (env, [rest, st <- [x, v], world], irest) esac
-      | STI          -> case s of Ref (str) : v : rest -> eval(env, [v : rest, st <- [str, v], world], irest) esac
-      | CONST (n)    -> eval (env, [n : s, st, world], irest)
-      | LABEL (s)    -> eval(env, c, irest)
-      | JMP   (l)    -> eval(env, c, fromLabel(env, l))
-      | CJMP  (cf, l) -> 
-        local program = case s of expr : other -> case cf of
+        READ -> case readWorld(world) of
+                          [x, newWorld] -> eval(env, [x: s, st, newWorld], irest)
+                        esac
+      | WRITE -> case s of
+                   x : rest -> eval(env, [rest, st, writeWorld(x, world)], irest)
+                 esac
+      | BINOP (str) -> case s of
+                         rhs : lhs : rest -> eval (env, [evalOp (str, lhs, rhs) : rest, st, world], irest)
+                       esac
+      | ST (x) -> case s of
+                    v : rest -> eval (env, [rest, st <- [x, v], world], irest)
+                  esac
+      | STI -> case s of
+                 Ref (str) : v : rest -> eval(env, [v : rest, st <- [str, v], world], irest)
+               esac
+      | LD (x) -> eval(env, [st (x) : s, st, world], irest)
+      | LDA (x) -> eval(env, [Ref(x) : s, st, world], irest)
+      | CONST (n) -> eval (env, [n : s, st, world], irest)
+      | LABEL (s) -> eval(env, c, irest)
+      | JMP (l) -> eval(env, c, fromLabel(env, l))
+      | CJMP (cf, l) -> 
+        local pr = case s of expr : other -> case cf of
           "z" -> if expr then irest else fromLabel(env, l) fi
         | "nz" -> if expr then fromLabel(env, l) else irest fi
           esac
         esac;
-        eval(env, [s.tl, st, world], program)
-      | DUP          -> case s of d : rest -> eval(env, [d : d : rest, st, world], irest) esac
-      | DROP         -> case s of 
+        eval(env, [s.tl, st, world], pr)
+      | DUP -> case s of
+                 d : rest -> eval(env, [d : d : rest, st, world], irest)
+               esac
+      | DROP -> case s of 
           _ : rest -> eval(env, [rest, st, world], irest) 
         | _ -> eval(env, c, irest)
       esac
