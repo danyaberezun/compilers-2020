@@ -32,7 +32,6 @@ public fun evalOp(op, expr1, expr2){
 }
 
 public fun evalExpr (st, expr) {
---  failure ("evalExpr not implemented\n")
 case expr of
   Var(x) -> st(x)
   | Const(n) -> n
