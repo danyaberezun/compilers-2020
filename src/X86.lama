@@ -14,7 +14,7 @@ local regs = ["%ebx", "%ecx", "%esi", "%edi", "%eax", "%edx", "%ebp", "%esp"];
 -- We can not freely operate with all register; only with 4 by now
 local nRegs = regs.length - 5;
 
--- For convenience we define the following synonyms for the registers: 
+-- For convenience we define the following synonyms for the registers: никнеймы для всех регистров
 local ebx = R (0),
       ecx = R (1),
       esi = R (2),
@@ -92,7 +92,7 @@ fun insnString (insn) {
 --    a maximal stack depth reached so far
 --    a set of global variable names
 
-fun makeEnv (stack, stackSlots, globals) {
+fun makeEnv (stack, stackSlots, globals) { -- stackSlots - множесво (самосортирующийся массив)
   -- Returns an internal name for a global variable
   fun globalName (name) {
     "global_" ++ name
@@ -131,7 +131,7 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-  -- popped items and an undated environment
+  -- popped items and an updated environment
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -275,21 +275,56 @@ fun suffix (op) {
 
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
+-- code list of instructions for stack machine
+-- foldl - свёртка списка
+- scode asm code    i - (code) primary buffer
 fun compile (env, code) {
-  fun compile (env, code) {
-    foldl (
-      fun ([env, scode], i) {
-        local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+  fun compile (env, code) { 
+    foldl ( 
+      fun ([env, scode], i) { -
+        local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n"); -- comment 
         case i of
           READ ->
             case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
+              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)] -- s - place for final rez
             esac             
         | WRITE ->
             case env.pop of
-              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
+              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)] -- <+ (Дописать в буфер)
             esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        | CONST (n) -> case env.allocate of 
+	      [s, env] -> [env, code  <+ Mov (L (n), s)]
+	    esac
+	| ST (x) -> case env.addGlobal (x).pop of -- задаёт переменную глобально
+	      [s, env] -> [env, code <+> move (s, env.loc (x))] -- <+>  конкатенация буфера
+	    esac
+	| LD (x) -> case env.addGlobal (x).allocate of -- allocate  add store
+	      [s, env] -> [env, code <+> move (env.loc (x), s)] -- env.loc - get val (name)
+	    esac
+	| BINOP (op) -> case env.pop2 of -- take 2 elements
+			[second, first, env] -> case env.allocate of -- return update env and store s
+					[s, env] -> case op of -- в code дописываем инструкции
+						"+" -> [env, code <+ Mov (first, edx) <+ Binop (op, second, edx) <+ Mov (edx, s)]
+						| "-" -> [env, code <+ Mov (first, edx) <+ Binop (op, second, edx) <+ Mov (edx, s)]
+						| "*" -> if stackOpnd (first) -- весли выполняется значит место в памяти    иначе - регистр
+							then [env, code <+ Mov (first, edx) <+ Binop (op, second, edx) <+ Mov (edx, s)]
+							else [env, code <+ Binop (op, second, first) <+ Mov (first, s)]
+							fi
+						| "/" -> [env, code <+ Mov (first, eax) <+ Cltd <+ IDiv (second) <+ Mov (eax, s)]
+						| "%" -> [env, code <+ Mov (first, eax) <+ Cltd <+ IDiv (second) <+ Mov (edx, s)]
+						| "&&" -> if stackOpnd (first)
+							then [env, code <+ Mov (first, edx) <+ Binop ("*", second, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L (0), edx) <+ 
+							Set (suffix ("!="), "%dl") <+ Mov (edx, s)] -- Set кладём результат в кусок регистра (с большими рестрами не раьботает) нудно с dl или dh отдавать
+                                                        else [env, code <+ Binop ("*", second, first) <+ Binop ("cmp", L (0), first) <+ Mov (L (0), edx) <+ 
+							Set (suffix ("!="), "%dl") <+ Mov (edx, s)]
+                                                         fi
+						| "!!" -> [env, code <+ Mov (first, edx) <+ Binop ("cmp", L (0), edx) <+ Mov (L(0), edx) <+ Set (suffix ("!="), "%dl") <+ -- edx широкий регистр dl - маленькая чать и если его не обнулить то не то значение получится
+							Mov (second, eax) <+ Binop ("cmp", L (0), eax) <+ Mov (L (0), eax) <+ Set (suffix ("!="), "%al") <+ 
+							Binop ("!!", eax, edx) <+ Mov (edx, s)]  
+						| _ -> [env, code <+ Mov (second, edx) <+ Binop ("cmp", edx, first) <+ Mov (L (0), edx) <+ Set (suffix (op), "%dl") <+ Mov (edx, s)] -- syffix асм вид операции сравнения
+						   esac
+					esac
+			esac			
         esac
       }, [env, emptyBuffer ()], code)
   }

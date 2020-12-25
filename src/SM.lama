@@ -26,8 +26,25 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
+fun eval (c@[stack, map, world@[input, output]], insns) { -- insns list of s expr
+case insns of
+	{} -> c
+	 | head : rest_prog -> case head of
+					BINOP (op) -> case stack of 
+								second : first : stack -> eval ([evalOp (op, first, second) : stack, map, world], rest_prog)
+						      esac
+					| CONST (n) -> eval ([n : stack, map, world], rest_prog)
+					| WRITE -> case stack of
+								first : stack -> eval ([stack, map, writeWorld (first, world)], rest_prog) -- writeWorld return new rorld 
+						   esac
+					| READ -> eval ([fst (readWorld (world)) : stack, map, snd (readWorld (world))], rest_prog) -- put num to stack
+					| ST (x) -> case stack of
+								first : stack -> eval ([stack, map <- [x, first], world], rest_prog)
+						    esac
+					| LD (x) -> eval ([map (x) : stack, map, world], rest_prog) -- берём 
+				esac
+esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -39,12 +56,22 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+case expr of
+	Var (x) -> (LD (x) : {})
+	| Const (n) -> (CONST (n) : {})
+	| Binop (op, l, r) -> compileExpr (l) +++ compileExpr (r) +++ (BINOP (op) : {})
+esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
--- instructions.
-public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
-}
+-- instructions.             READ -> {READ}
+public fun compileSM (stmt) { -- translates to s expressions on the stack machine
+case stmt of 
+	 Read (x) -> (READ : {}) +++ (ST (x) : {}) 
+	| Write (e) -> compileExpr (e) +++ (WRITE : {})
+	| Seq (s1, s2) -> compileSM (s1) +++ compileSM (s2)
+	| Assn (x, e) -> compileExpr (e) +++ (ST (x) : {})
+	| Skip -> {}
+esac
+} 
