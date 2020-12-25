@@ -99,8 +99,39 @@ fun evalList (c, exprs) {
   esac
 }
 
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+
+-- this is the old eval, but
+-- now all statements are expressions
+fun eval (condition@[state, world], expression) {
+  case expression of
+  	Const(number)-> [condition, number]
+  	| Var(x)-> [condition, statement(x)]
+  	| Ref(x)-> [condition, Ref(x)]
+  	| Binop(operation, left, right)-> case evalList(condition, {left, right}) of
+  										[condition, {v, w}]-> [condition, evalOp(operation, v, w)]
+  									  esac
+  	| Skip-> [condition, None]
+  	| Assn(left, right)-> case evalList(condition, {left, right}) of
+  							[condition@[state, world], {Ref(x), v}]-> [[state <-[x, v], w], v]
+  						  esac
+  	| Read(x)-> case world of [z:remaining, out]-> 
+  					[[state <-[x, z], [remaining, out]], None] 
+  	  			esac
+  	| Write(expr)-> case eval(condition, expr) of
+  						[[state, [in, out]], v]-> [[state, [in, v:out]], None]
+  					esac
+  	| Seq(s1, s2)-> eval(eval(condition, s1)[0], s2) -- гениально
+  	| If(expression, s1, s2)-> case eval(condition, expression) of
+  								 [condition, v]-> eval(condition, if v then s1 else s2 fi) -- Pour some synax sugar on me!
+  							   esac
+  	| While(expression, statement)-> case eval(condition, expression) of
+  									   [condition, v]-> if v then eval(eval(condition, statement)[0], While(expression, statement)) else [condition, None] fi
+  									 esac
+  	| Repeat(statement, expression)-> case eval(eval(condition, statement)[0], expression) of
+  										[condition, v]-> if v then [condition,  None] else eval(condition, Repeat(statement, expression)) fi
+  									  esac 
+  	| Ignor(expression)-> [eval(condition, expression)[0], None]
+  esac
 }
 
 
