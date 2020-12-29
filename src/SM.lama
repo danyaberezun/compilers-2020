@@ -4,7 +4,6 @@ import List;
 import World;
 import State;
 import Expr;
-<<<<<<< HEAD
 import Buffer;
 import Fun;
 
@@ -27,47 +26,19 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
--- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-
-fun getBinop(str) {
-  case str of "+"  -> infix +
-    | "-"  -> infix -
-    | "*"  -> infix *
-    | "/"  -> infix /
-    | "%"  -> infix %
-    | "==" -> infix ==
-    | "!=" -> infix !=
-    | "<"  -> infix <
-    | "<=" -> infix <=
-    | ">"  -> infix >
-    | ">=" -> infix >=
-    | "&&" -> infix &&
-    | "!!" -> infix !!
-  esac
-}
-
-
--- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
-
-fun eval (c, insns) {
-
+fun eval (c@[st, state, w], insns) {
   case insns of
-    {}     -> c
-    | ins : insns_ -> case c of [ stack, state, world ] ->
-    eval(case ins of
-    CONST (n)  -> [ n : stack, state, world ]
-    | BINOP (op) -> case stack of a : b : rest -> [ getBinop (op) (a, b) : rest, state, world ] esac
-    | LD    (x)  -> [ state (x) : stack, state, world ]
-    | ST    (x)  -> case stack of a : rest -> [ rest, state <- [ x, a ], world ] esac
-    | Read       -> case readWorld (world) of [ a, world_ ] -> [ a : stack, state, world_ ] esac
-    | Write      -> case stack of a : rest -> [ rest, state, writeWorld (a, world) ] esac
-      esac, insns_)
-    esac
+      READ : p -> local world = readWorld(w); eval([world[0] : st, state, world[1]], p)
+    | WRITE : p -> eval([st[1], state, writeWorld(st[0], w)], p)
+    | BINOP(op) : p -> eval([getBinop(op, st[1][0], st[0]) : st[1][1], state, w], p)
+    | CONST(n) : p -> eval([n : st, state, w], p)
+    | LD(x) : p -> eval([state(x) : st, state, w], p)
+    | ST(x) : p -> eval([st[1], state <- [x, st[0]], w], p)
+    | {} -> [st, state, w]
   esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
-
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
@@ -75,27 +46,23 @@ public fun evalSM (input, insns) {
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
-
 fun compileExpr (expr) {
-  -- failure ("compileExpr not implemented\n")
-  case (expr) of
-    Var   (x) -> LD (x) : {}
-    | Const (n)        -> CONST (n) : {}
-    | Binop (op, l, r) -> deepFlatten ({ compileExpr (r), compileExpr (l), BINOP (op) })
-  esac
+     case expr of
+        Const(n) -> singleton(CONST(n))
+        | Var(elem) -> singleton(LD(elem))
+        | Binop(op, l, r) -> compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+    esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
-
 public fun compileSM (stmt) {
-  -- failure ("compileSM not implemented\n")
     case stmt of
-    Assn (str1, str2) -> compileExpr(str2) +++ singleton(ST (str1))
-      | Seq (stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2)
-      | Skip -> {}
-      | Read (str) -> { Read, ST(str) }
-      | Write (str) -> compileExpr(str) +++ singleton(Write)
+      Assn(x, e) -> compileExpr(e) +++ singleton(ST(x))
+    | Write(x) -> compileExpr(x) +++ singleton(WRITE)
+    | Read(x) -> singleton(READ) +++ singleton(ST(x))
+    | Seq(s1, s2) -> compileSM(s1) +++ compileSM(s2)
+    | Skip -> {}
   esac
 }
