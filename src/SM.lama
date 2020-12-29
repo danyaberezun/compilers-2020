@@ -4,6 +4,7 @@ import List;
 import World;
 import State;
 import Expr;
+<<<<<<< HEAD
 import Buffer;
 import Fun;
 
@@ -26,11 +27,47 @@ public fun showSM (prg) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
+
+fun getBinop(str) {
+  case str of "+"  -> infix +
+    | "-"  -> infix -
+    | "*"  -> infix *
+    | "/"  -> infix /
+    | "%"  -> infix %
+    | "==" -> infix ==
+    | "!=" -> infix !=
+    | "<"  -> infix <
+    | "<=" -> infix <=
+    | ">"  -> infix >
+    | ">=" -> infix >=
+    | "&&" -> infix &&
+    | "!!" -> infix !!
+  esac
+}
+
+
+-- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
+
 fun eval (c, insns) {
-  failure ("SM eval not implemented\n")
+
+  case insns of
+    {}     -> c
+    | ins : insns_ -> case c of [ stack, state, world ] ->
+    eval(case ins of
+    CONST (n)  -> [ n : stack, state, world ]
+    | BINOP (op) -> case stack of a : b : rest -> [ getBinop (op) (a, b) : rest, state, world ] esac
+    | LD    (x)  -> [ state (x) : stack, state, world ]
+    | ST    (x)  -> case stack of a : rest -> [ rest, state <- [ x, a ], world ] esac
+    | Read       -> case readWorld (world) of [ a, world_ ] -> [ a : stack, state, world_ ] esac
+    | Write      -> case stack of a : rest -> [ rest, state, writeWorld (a, world) ] esac
+      esac, insns_)
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
+
 public fun evalSM (input, insns) {
   eval ([{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
@@ -38,13 +75,27 @@ public fun evalSM (input, insns) {
 -- Compiles an expression into a stack machine code.
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
+
 fun compileExpr (expr) {
-  failure ("compileExpr not implemented\n")
+  -- failure ("compileExpr not implemented\n")
+  case (expr) of
+    Var   (x) -> LD (x) : {}
+    | Const (n)        -> CONST (n) : {}
+    | Binop (op, l, r) -> deepFlatten ({ compileExpr (r), compileExpr (l), BINOP (op) })
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
+
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  -- failure ("compileSM not implemented\n")
+    case stmt of
+    Assn (str1, str2) -> compileExpr(str2) +++ singleton(ST (str1))
+      | Seq (stmt1, stmt2) -> compileSM(stmt1) +++ compileSM(stmt2)
+      | Skip -> {}
+      | Read (str) -> { Read, ST(str) }
+      | Write (str) -> compileExpr(str) +++ singleton(Write)
+  esac
 }
