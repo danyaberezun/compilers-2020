@@ -18,10 +18,10 @@ import World;
 
 fun eval (c@[s, w], stmt) {
   case stmt of
-    Assn ( st, expr )     -> [s <- [st, evalExpr(s, expr)], w]
-  | Seq ( stmt1, stmt2 ) -> eval (eval (c, stmt1), stmt2)
-  | Read (s)             -> fun(s, x, [n, w]) { [s <- [x, n], w] } (s, x, readWorld(w))
-  | Write (expr)         -> [s, writeWorld(evalExpr(s, expr), w)]
+    Assn (st, expr) -> [s <- [st, evalExpr(s, expr)], w]
+  | Seq (stmt1, stmt2) -> eval (eval (c, stmt1), stmt2)
+  | Read (s) -> fun(s, x, [n, w]) { [s <- [x, n], w] } (s, x, readWorld(w))
+  | Write (expr) -> [s, writeWorld(evalExpr(s, expr), w)]
   esac
 }
 
