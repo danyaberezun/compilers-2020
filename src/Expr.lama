@@ -1,7 +1,26 @@
+
 -- Expression evaluator
 
 import List;
 import State;
+
+public fun evalBinop(op, a, b) {
+  case op of
+    "+" -> a + b
+  | "-" -> a - b
+  | "*" -> a * b
+  | "/" -> a / b
+  | "%" -> a % b
+  | "<" -> a < b
+  | ">" -> a > b
+  | "==" -> a == b
+  | "!=" -> a != b
+  | "<=" -> a <= b
+  | ">=" -> a >= b
+  | "&&" -> a && b
+  | "!!" -> a !! b
+  esac
+}
 
 
 -- The evaluator itself: takes a state and an expression,
@@ -13,5 +32,9 @@ import State;
 --        Const (int)                |
 --        Binop (string, expr, expr)
 public fun evalExpr (st, expr) {
-  failure ("evalExpr not implemented\n")
+  case expr of
+  	Var (str) -> st (str)
+  | Const (val) -> val
+  | Binop (str, expr1, expr2) -> evalBinop(str, evalExpr (st, expr1), evalExpr (st, expr2))
+  esac
 }
