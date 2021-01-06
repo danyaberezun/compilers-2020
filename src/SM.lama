@@ -4,7 +4,6 @@ import List;
 import World;
 import State;
 import Expr;
-import Array;
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
@@ -16,14 +15,14 @@ fun eval (c, insns) {
   fi;
   case insns.hd of
     READ -> 
-      local v_w = readWorld(w);
+      local v_w = readWorld (w);
   	  eval ([v_w[0]:stack, s, v_w[1]], insns.tl)
   | WRITE -> 
       local v = stack.hd, tale = stack.tl;
       return eval ([tale, s, writeWorld (v, w)], insns.tl)
   | BINOP (str) -> 
   	  local y = stack.hd, x = stack.tl.hd, tale = stack.tl.tl;
-      eval ([evalBinop(str, x, y):tale, s, w], insns.tl)
+      eval ([evalBinop (str, x, y):tale, s, w], insns.tl)
   | LD (x) -> eval ([s (x):stack, s, w], insns.tl)
   | ST (x) -> 
       local v = stack.hd, tale = stack.tl;
@@ -43,9 +42,9 @@ public fun evalSM (input, insns) {
 -- of stack machine instructions
 fun compileExpr (expr) {
   case expr of
-    Var (str) -> singleton(LD (str))
-  | Const (val) -> singleton(CONST (val))
-  | Binop (str, expr1, expr2) -> compileExpr (expr1) +++ compileExpr (expr2) +++ singleton(BINOP (str))
+    Var (str) -> singleton (LD (str))
+  | Const (val) -> singleton (CONST (val))
+  | Binop (str, expr1, expr2) -> compileExpr (expr1) +++ compileExpr (expr2) +++ singleton (BINOP (str))
   esac
 }
 
@@ -54,9 +53,9 @@ fun compileExpr (expr) {
 -- instructions.
 public fun compileSM (stmt) {
   case stmt of
-    Assn (str, expr) -> compileExpr (expr) +++ singleton(ST (str))
-  | Read (str) -> singleton(READ) +++ singleton(ST (str))
-  | Write (expr) -> compileExpr (expr) +++ singleton(WRITE)
+    Assn (str, expr) -> compileExpr (expr) +++ singleton (ST (str))
+  | Read (str) -> singleton (READ) +++ singleton (ST (str))
+  | Write (expr) -> compileExpr (expr) +++ singleton (WRITE)
   | Seq (stmt1, stmt2) -> compileSM (stmt1) +++ compileSM (stmt2)
   esac
 }
