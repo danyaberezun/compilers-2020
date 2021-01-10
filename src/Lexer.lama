@@ -43,7 +43,7 @@ public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*
       rRepeat      = createRegexp ("repeat\\b", """repeat"""),
       rUntil       = createRegexp ("until\\b", """until"""),
       rFor         = createRegexp ("for\\b", """for""");
-      
+
 local whiteSpace = token (rWhiteSpace);
 
 -- Public parsers for concrete tokens
@@ -67,7 +67,7 @@ public kRead    = s (rRead),
        kFor     = s (rFor),
        decimal  = s (rDecimal),
        end      = memo $ whiteSpace |> lift (eof),
-       lident   = memo $       
+       lident   = memo $
          whiteSpace |> lift (fun (k) {
                                 fun (s) {
                                   k (case s.matchRegexp (rLident) of
