@@ -415,12 +415,27 @@ fun compile (env, code) {
                 esac
               esac
             esac
-        | LABEL (x) -> [env, code <+ Label(x)]
-        | JMP (x) -> [env, code <+ Jmp(x)]
+        | LABEL (x) -> [if env.isBarrier then env.retrieveStack(x) else env fi, code <+ Label(x)]
+        | JMP (x) -> [setBarrier(setStack(env, x)), code <+ Jmp(x)]
         | CJMP (c, x) -> case env.pop of [s, env] ->
-            [env, code <+ Mov (L (0), eax)
-                       <+ Binop ("cmp", eax, s)
-                       <+ CJmp (c, x)]
+            [env.setStack(x), code <+ Mov (L (0), eax)
+                                   <+ Binop ("cmp", eax, s)
+                                   <+ CJmp (c, x)]
+          esac
+        | DROP ->
+          case env.pop of [s, env] ->
+            [env, code]
+          esac
+        | LDA (x) ->
+          case env.addGlobal(x).allocate of [s, env] ->
+            [env, code <+ Lea (env.loc(x), s)]
+          esac
+        | STI ->
+          case env.pop of [s, env] ->
+            case env.peek of x -> 
+              [env, code <+> move (s, I (0, x))
+                         <+  Mov (s, x)]
+            esac
           esac
         esac
       }, [env, emptyBuffer ()], code)
