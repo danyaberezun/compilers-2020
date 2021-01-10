@@ -55,18 +55,26 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
-fun eval (c, insns) {
+fun eval (env, c, insns) {
   case insns of
     {}     -> c
   | ins : insns_ -> case c of [ stack, state, world ] ->
-      eval(case ins of
+      eval(env, case ins of
         CONST (n)  -> [ n : stack, state, world ]
       | BINOP (op) -> case stack of a : b : rest -> [ opFromStr (op) (a, b) : rest, state, world ] esac
       | LD    (x)  -> [ state (x) : stack, state, world ]
       | ST    (x)  -> case stack of a : rest -> [ rest, state <- [ x, a ], world ] esac
       | READ       -> case readWorld (world) of [ a, world_ ] -> [ a : stack, state, world_ ] esac
       | WRITE      -> case stack of a : rest -> [ rest, state, writeWorld (a, world) ] esac
-      esac, insns_)
+      | CJMP (cond, where) -> case stack of a : rest -> 
+          if (a == (case cond of "z" -> 0 | _ -> 1 esac)) then [ rest, state, world ] else c fi esac
+      | _          -> c
+      esac, case ins of
+          JMP (where) -> fromLabel (env, where)
+        | CJMP (cond, where) -> case stack of a : rest -> 
+          if (a == (case cond of "z" -> 0 | _ -> 1 esac)) then fromLabel (env, where) else insns_ fi esac
+        | _ -> insns_
+      esac)
     esac
   esac
 }
@@ -112,18 +120,68 @@ fun genLabels (env, n) {
 fun compileExpr (expr) {
   case (expr) of Var   (x)        -> LD    (x) : {}
                | Const (n)        -> CONST (n) : {}
-               | Binop (op, l, r) -> deepFlatten ({ compileExpr (r), compileExpr (l), BINOP (op) })
+               | Binop (op, l, r) -> { compileExpr (r), compileExpr (l), BINOP (op) }
                esac
+}
+
+fun compileSMEnv (env, stmt) {
+  case stmt of
+      Read  (x)    -> [env, { READ, ST (x) }]
+    | Write (a)    -> [env, { compileExpr (a), WRITE }]
+    | Assn  (x, a) -> [env, { compileExpr (a), ST (x) }]
+    | Seq   (a, b) -> 
+      case compileSMEnv (env, a) of [env, sm1] -> 
+        case compileSMEnv (env, b) of [env, sm2] ->
+          [env, { sm1, sm2 }]
+        esac
+      esac
+    | Skip         -> [env, {}]
+    | If (cond, body1, body2) -> 
+      case genLabels(env, 2) of [lElse, lEnd, env] -> 
+        case compileSMEnv (env, body1) of [env, sm1] ->
+          case compileSMEnv (env, body2) of [env, sm2] ->
+            [env, {
+              compileExpr (cond),
+              CJMP ("z", lElse),
+              sm1,
+              JMP (lEnd),
+              LABEL (lElse),
+              sm2,
+              LABEL (lEnd)
+            }]
+          esac
+        esac
+      esac
+    | While (cond, body) ->
+      case genLabels(env, 2) of [lBegin, lEnd, env] ->
+        case compileSMEnv (env, body) of [env, sm] ->
+          [env, {
+            LABEL (lBegin),
+            compileExpr (cond),
+            CJMP ("z", lEnd),
+            sm,
+            JMP (lBegin),
+            LABEL (lEnd)
+          }]
+        esac
+      esac
+    | Repeat (body, cond) ->
+      case genLabels(env, 1) of [lBegin, env] ->
+        case compileSMEnv (env, body) of [env, sm] ->
+          [env, {
+            LABEL (lBegin),
+            sm,
+            compileExpr (cond),
+            CJMP ("z", lBegin)
+          }]
+        esac
+      esac
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  deepFlatten(
-    case stmt of Read  (x)    -> { READ           , ST        (x) }
-               | Write (a)    -> { compileExpr (a), WRITE         }
-               | Assn  (x, a) -> { compileExpr (a), ST        (x) }
-               | Seq   (a, b) -> { compileSM   (a), compileSM (b) }
-    esac)
+  deepFlatten(compileSMEnv(initCompEnv(), stmt)[1])
 }
