@@ -50,10 +50,10 @@ fun inbr (l, p, r) {
 -- A helper function to be used with super-combinator "expr"
 fun binop (op) {
   [syntax (pos -s[op]), fun (l, loc, r) {
-                          fun (a) {
-                            assertValue (a, Binop (op, l (Val), r (Val)), loc)
-                          }
-                        }
+      fun (a) {
+        assertValue (a, Binop (op, l (Val), r (Val)), loc)
+      }
+    }
   ]
 }
 
@@ -121,8 +121,65 @@ local primary    = memo $ eta syntax (
                                                                                                             esac
                                                                                                          }} |
 (* Assignment *)
-                                      $(failure ("the rest of primary parsing in not implemented\n"))),
-      scopeExpr = memo $ eta (syntax ($(failure ("scope expression parsing is not implemented\n")))),
+  inbr[s("("), exp, s(")")] |
+  explicitScope |
+  loc=pos kRead x=inbr[s("("), lident, s(")")] { fun (a) {
+    assertVoid (a, Read(x), loc)
+  }} |
+  loc=pos kWrite x=inbr[s("("), exp, s(")")] { fun (a) {
+    assertVoid (a, Write (x (Val)), loc)
+  }} |
+  loc=pos kSkip { fun (a) {
+    assertVoid (a, Skip, loc)
+  }} |
+  loc=pos kWhile x=basic kDo y=scopeExpr kOd { fun (a) {
+    assertVoid (a, While (x (Val), y (Void)), loc)
+  }} |
+  loc=pos kFor init=scopeExpr s[","] cond=basic s[","] incr=basic kDo body=scopeExpr kOd { fun (a) {
+    distributeScope(init (Void), fun (init) {
+      assertVoid (a, Seq (init, While (cond (Val), Seq (body (Void), incr (Void)))), loc)
+    })
+  }} |
+  loc=pos kRepeat body=scopeExpr kUntil cond=basic { fun (a) {
+    distributeScope(body (Void), fun (body) {
+      assertVoid (a, Repeat (body, cond (Val)), loc)
+    })
+  }} |
+  loc=pos kIf cond=basic kThen body=exp kFi { fun (a) {
+    assertVoid (a, If (cond (Val), body (a), Skip), loc)
+  }} |
+  loc=pos kIf cond=basic kThen body=exp alt=ifElif kFi { fun (a) {
+    If (cond (Val), body (a), alt (a))
+  }}
+),
+
+  ifElif = memo $ eta syntax (
+    -kElse exp |
+    kElif cond=basic kThen body=exp alt=ifElif { fun (a) {
+      If (cond (Val), body (a), alt (a))
+    }}
+  ),
+
+  scopeExpr = memo $ eta syntax (
+    defs=rep0[def] body=exp { fun (a) {
+      expandScope(defs, body (a))
+    }}
+  ),
+
+  explicitScope = memo $ eta syntax (
+    -s["{"] scopeExpr -s["}"]
+  ),
+
+  def = memo $ eta syntax (
+    loc=pos kLocal x=list[initializer] s[";"] { Local (x) }
+  | loc=pos kFun name=lident params=inbr[s("("), list0(lident), s(")")]
+      body=explicitScope { Fun (name, params, body (Weak)) }
+  ),
+
+  initializer = memo $ eta syntax (
+    name=lident { [name, None] }
+  | name=lident s["="] value=basic { [name, Some (value (Val))] }
+  ),
 (* End *)
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {

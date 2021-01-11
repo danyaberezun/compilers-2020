@@ -363,9 +363,80 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-        (* Assignment *)
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
-        (* End *)
+        | CONST (n) ->
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (L (n), s)]
+            esac
+        | LD (x) ->
+            case env.allocate of
+              [s, env] -> [env, code <+> move (env.loc(x), s)]
+            esac
+        | ST (x) ->
+            case env.addGlobal(x).pop of
+              [s, env] -> [env, code <+> move (s, env.loc(x))]
+            esac
+        | BINOP (op) ->
+            case env.pop2 of
+              [x, y, env] -> case env.allocate of
+                [s, env] -> case op of
+                  "/" -> [env, code <+ Mov (x, eax)
+                                    <+ Cltd
+                                    <+ IDiv (y)
+                                    <+ Mov (eax, s)]
+
+                | "%" -> [env, code <+ Mov (x, eax)
+                                    <+ Cltd
+                                    <+ IDiv (y)
+                                    <+ Mov (edx, s)]
+
+                | "+" -> [env, code <+ Mov (x, eax) <+ Binop("+", y, eax) <+ Mov (eax, s)]
+                | "-" -> [env, code <+ Mov (x, eax) <+ Binop("-", y, eax) <+ Mov (eax, s)]
+                | "*" -> [env, code <+ Mov (x, eax) <+ Binop("*", y, eax) <+ Mov (eax, s)]
+                | "&&" -> [env, code <+ Binop ("cmp", L (0), x)
+                                     <+ Mov (L (0), eax)
+                                     <+ Set ("ne", "%al")
+                                     <+ Binop ("cmp", L (0), y)
+                                     <+ Mov (L (0), edx)
+                                     <+ Set ("ne", "%dl")
+                                     <+ Binop ("&&", eax, edx)
+                                     <+ Mov (edx, s)]
+                | "!!" -> [env, code <+ Mov (x, edx)
+                                     <+ Binop("!!", y, edx)
+                                     <+ Binop ("cmp", L (0), edx)
+                                     <+ Mov (L (0), eax)
+                                     <+ Set ("ne", "%al")
+                                     <+ Mov (eax, s)]
+
+                | _ -> [env, code <+ Mov (y, eax)
+                                  <+ Binop ("cmp", eax, x)
+                                  <+ Mov (L (0), eax)
+                                  <+ Set (suffix (op), "%al")
+                                  <+ Mov (eax, s)]
+                esac
+              esac
+            esac
+        | LABEL (x) -> [if env.isBarrier then env.retrieveStack(x) else env fi, code <+ Label(x)]
+        | JMP (x) -> [setBarrier(setStack(env, x)), code <+ Jmp(x)]
+        | CJMP (c, x) -> case env.pop of [s, env] ->
+            [env.setStack(x), code <+ Mov (L (0), eax)
+                                   <+ Binop ("cmp", eax, s)
+                                   <+ CJmp (c, x)]
+          esac
+        | DROP ->
+          case env.pop of [s, env] ->
+            [env, code]
+          esac
+        | LDA (x) ->
+          case env.addGlobal(x).allocate of [s, env] ->
+            [env, code <+ Lea (env.loc(x), s)]
+          esac
+        | STI ->
+          case env.pop of [s, env] ->
+            case env.peek of x ->
+              [env, code <+> move (s, I (0, x))
+                         <+  Mov (s, x)]
+            esac
+          esac
         esac
       }, [env, emptyBuffer ()], code)
   }
