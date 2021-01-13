@@ -74,3 +74,38 @@ public fun evalExpr (input, expr) {
     [c, _] -> c.snd.getOutput
   esac
 }
+
+public fun calc(op, lefto, righto) {
+  case op of "+" -> lefto + righto
+           | "-" -> lefto - righto
+           | "*" -> lefto * righto
+           | "/" -> lefto / righto
+           | "%" -> lefto % righto
+           | "<" -> lefto < righto
+           | "<=" -> lefto <= righto
+           | "==" -> lefto == righto
+           | "!=" -> lefto != righto
+           | ">=" -> lefto >= righto
+           | ">" -> lefto > righto
+           | "&&" -> lefto && righto
+           | "!!" -> lefto !! righto
+  esac
+}
+
+
+-- The evaluator itself: takes a state and an expression,
+-- returns integer value
+--
+-- An expression is represented by a data structure of the following shape:
+--
+-- expr = Var   (string)             |
+--        Const (int)                |
+--        Binop (string, expr, expr)
+
+public fun evalExpr (st, expr) {
+  case expr of 
+    Const(n) -> n
+    | Var(x) -> st(x)
+    | Binop(op, lefto, righto) -> calc(op, evalExpr(st, lefto), evalExpr(st, righto))
+  esac
+}

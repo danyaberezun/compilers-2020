@@ -347,6 +347,20 @@ fun suffix (op) {
   esac
 }
 
+public fun eq(a, b) {
+  if (compare(a, b) == 0) then 1 else 0 fi
+}
+
+
+public fun contains(l, a) {
+    case l of (x:xs) -> 
+        if (eq(x, a)) then true
+        else contains(xs, a)
+        fi
+      | {} -> false
+    esac
+}
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
 fun compile (env, code) {
@@ -362,6 +376,48 @@ fun compile (env, code) {
         | WRITE ->
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
+            esac
+        | CONST(n) -> 
+            case env.allocate of
+               [s, env] -> [env, code <+> move(L(n), s)]
+            esac
+        | ST(x) ->
+            case env.addGlobal(x).allocate of
+               [s, env] -> [env, code <+> move(env.loc(x), s)]
+            esac
+        | LD(x) ->
+            case env.addGlobal(x).pop of 
+                [s, env] -> [env, code <+> move(s, env.loc(x))]
+            esac
+        | LABEL(l) -> [env, code <+ Label(l)]
+        | JMP(l) -> [env, code <+ Jmp(l)]
+        | CJMP(cond, l) -> 
+            case env.pop of 
+                [s, env] ->
+                    [env,
+                      code <+ Binop("cmp", L(0), s) <+ CJmp(cond, l)
+                    ]
+            esac
+        | BINOP(op) ->
+            case env.pop2 of
+                [a, b, env] -> case env.allocate of [n, newEnv] ->
+                    if ({"==", ">", "<", "!=", ">=", "<="}.contains(op)) then
+                        [newEnv, code <+> move(b, eax) <+ Binop("cmp", a, eax) <+> move(L(0), eax) <+ Set(suffix(op), "%al") <+> move(eax, n)]
+                    elif (eq(op, "/")) then
+                        [newEnv, code <+> move(b, eax) <+ Cltd <+ IDiv(a) <+> move(eax, n)]
+                    elif (eq(op, "%")) then
+                        [newEnv, code <+> move(b, eax) <+ Cltd <+ IDiv(a) <+> move(edx, n)]
+                    elif (eq(op, "!!")) then 
+                        [newEnv, code <+> move(b, eax) <+ Binop(op, a, eax) <+> move(L(0), edx) <+ Binop("cmp", eax, edx) <+> move(L(0), eax) <+ Set("ne", "%al") <+> move(eax, n) ]
+                    elif (eq(op, "&&")) then
+                        [newEnv, 
+                        code <+> move(L(0), eax) <+> move(L(0), edx) <+ Binop("cmp", a, eax)
+                          <+ Set("ne", "%al") <+ Binop("cmp", b, edx) <+ Set("ne", "%dl") <+ Binop(op, eax, edx) <+> move(edx, n)
+                        ]
+                    else
+                        [newEnv, code <+> move(b, eax) <+ Binop(op, a, eax) <+> move(eax, n)]
+                    fi
+                 esac
             esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
