@@ -17,10 +17,50 @@ import World;
 --        Write  (expr)             |
 --        if     (expr, stmt, stmt) |
 --        While  (expr, stmt)       |
---        Repeat (stmt, expr)
+--        Rep (stmt, expr)
 
 fun eval (c, stmt) {
-  failure ("Stmt eval not implemented\n")
+  case c of [state, world] ->
+      case stmt of 
+        Read(x) -> case readWorld(world) of [val, nworld] ->
+            [
+              state<-[x, val],
+              nworld
+            ]
+            esac
+        | Write(expr) ->
+            [
+              state, 
+              writeWorld(evalExpr(state, expr), world)
+            ]
+        | Assn(x, expr) -> 
+          [
+            state<-[x, evalExpr(state, expr)],
+            world
+          ]
+        | Seq(stmt1, stmt2) -> 
+          eval(
+            eval(c, stmt1),
+            stmt2
+          )
+        | If(cond, stmt, estmt) -> case evalExpr(state, cond) of 
+            0 -> case estmt of Some(wstmt) -> eval(c, wstmt) | _ -> c esac |
+            _ -> eval(c, stmt)
+          esac
+        | While(cond, stmt) -> case evalExpr(state, cond) of 
+            0 -> [state, world] |
+            _ -> eval(eval(c, stmt), While(cond, stmt))
+          esac
+        | Rep(stmt, cond) -> 
+            case eval(c, stmt) of newConf@[newState, newWorld] ->
+                case evalExpr(newState, cond) of 
+                    0 -> eval(newConf, Rep(stmt, cond)) |
+                    _ -> newConf
+                esac
+            esac
+        | Skip -> c
+      esac
+  esac
 }
 
 -- Evaluates a program with a given input and returns an output
