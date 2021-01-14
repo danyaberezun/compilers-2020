@@ -49,7 +49,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
     }
     ]
   }, primary
-)(id);
+);
 
 local elifStmt = syntax (
   kElif e=exp kThen s=stmt ot=elifStmt? {If(e, s, ot)} |
