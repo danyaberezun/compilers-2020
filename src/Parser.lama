@@ -48,7 +48,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
     }
     ]
   }, primary
-)(id);
+);
 
 local stmt = memo $ eta syntax (
   kRead x=inbr[s("("), lident, s(")")] { Read(x) } |
