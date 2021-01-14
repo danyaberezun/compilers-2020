@@ -9,7 +9,6 @@ import Parser;
 import Matcher;
 import Lexer;
 import Expr;
-import Stmt;
 import SM;
 import X86;
 import Manifest;

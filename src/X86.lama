@@ -381,20 +381,34 @@ fun compile (env, code) {
             case env.allocate of
                [s, env] -> [env, code <+> move(L(n), s)]
             esac
-        | ST(x) ->
+        | LD(x) ->
             case env.addGlobal(x).allocate of
                [s, env] -> [env, code <+> move(env.loc(x), s)]
             esac
-        | LD(x) ->
-            case env.addGlobal(x).pop of 
-                [s, env] -> [env, code <+> move(s, env.loc(x))]
+        | ST(x) ->
+            case env.addGlobal(x) of 
+                env -> [env, code <+> move(env.peek, env.loc(x))]
             esac
-        | LABEL(l) -> [env, code <+ Label(l)]
-        | JMP(l) -> [env, code <+ Jmp(l)]
+        | DROP ->
+            case env.pop of [_, env] -> [env, code]
+            esac
+        | LDA(x) -> 
+            case env.addGlobal(x).allocate of [s, env] ->
+            [env, code <+ Lea(env.loc(x), s)]
+            esac
+        | STI ->
+            case env.pop of [val, env] -> case env.peek of addr ->
+                [env, code <+ move(val, I(0, addr)) <+ move(val, addr)]
+            esac esac
+             
+        | LABEL(l) -> [
+               if env.isBarrier() then env.retrieveStack(l) else env fi, code <+ Label(l)
+                ]
+        | JMP(l) -> [env.setStack(l).setBarrier, code <+ Jmp(l)]
         | CJMP(cond, l) -> 
             case env.pop of 
                 [s, env] ->
-                    [env,
+                    [env.setStack(l),
                       code <+ Binop("cmp", L(0), s) <+ CJmp(cond, l)
                     ]
             esac

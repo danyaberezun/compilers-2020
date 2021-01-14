@@ -68,10 +68,10 @@ local primary  = memo $ eta syntax (
                                       loc=pos kWrite e=inbr[s("("), exp, s(")")] { fun(a) { assertVoid(a, Write(e(Val)), loc) } } |
                                       loc=pos kSkip {fun(a) {assertVoid(a, Skip, loc)} } |
                                       
-                                      kIf c=exp kThen s=stmt ot=elifStmt kFi {fun(a) {If(c(Val), s(a), ot(a))} } |
-                                      loc=pos kIf c=exp kthen s = stmt kFi {fun(a) {assertVoid(a, If(c(Val), s(Void), None), loc)}} |
-                                      loc=pos kWhile c=exp kDo s=stmt kOd {fun(a) { assertVoid(a, While(c(Val), s(Void)), loc)} }|
-                                      loc=pos kFor i=stmt s[","] c=exp s[","] s=stmt kDo ot=stmt kOd 
+                                      kIf c=exp kThen s=exp ot=elifStmt kFi {fun(a) {If(c(Val), s(a), ot(a))} } |
+                                      loc=pos kIf c=exp kThen s = exp kFi {fun(a) {assertVoid(a, If(c(Val), s(Void), None), loc)}} |
+                                      loc=pos kWhile c=exp kDo s=exp kOd {fun(a) { assertVoid(a, While(c(Val), s(Void)), loc)} }|
+                                      loc=pos kFor i=exp s[","] c=exp s[","] s=exp kDo ot=exp kOd 
                                           {fun(a) { assertVoid(
                                                               a, 
                                                               Seq(i(Void), While(c(Val), Seq(ot(Void), s(Void)))), 
@@ -79,7 +79,7 @@ local primary  = memo $ eta syntax (
                                                               ) 
                                                   } 
                                           }|
-                                      loc=pos kRepeat s=stmt kUntil c=exp { fun(a) { assertVoid(a, Rep(s(Void), c(Val)), loc) } }
+                                      loc=pos kRepeat s=exp kUntil c=exp { fun(a) { assertVoid(a, Rep(s(Void), c(Val)), loc) } }
       ),
       basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                         fun (l, loc, r) {
@@ -98,7 +98,7 @@ local primary  = memo $ eta syntax (
 public parse = syntax (s=exp {s (Void)});
 
 local elifStmt = syntax (
-  kElif e=exp kThen s=stmt ot=elifStmt {fun(a) { If(e(Val), s(a), ot(a))} } |
-  loc=pos kElfi e=exp kThen s=stmt {fun(a) { assertVoid(a, If(e(Val), s(Void), e(Void)), loc) }} |
-  kElse s=stmt { fun(a) {s(a)} }
+  kElif e=exp kThen s=exp ot=elifStmt {fun(a) { If(e(Val), s(a), ot(a))} } |
+  loc=pos kElif e=exp kThen s=exp {fun(a) { assertVoid(a, If(e(Val), s(Void), e(Void)), loc) }} |
+  kElse s=exp { fun(a) {s(a)} }
 );
