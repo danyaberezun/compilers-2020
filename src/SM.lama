@@ -97,12 +97,12 @@ fun eval (env, c, insns) {
                     }
                     esac
                   | STI -> case stack of (res:var:rest) -> 
-                    [rest, state<-[var, res], world]
+                    [(res:rest), state<-[var, res], world]
                     esac
                   | LDA(x) -> 
-                     [(x:LDA), state, world]
+                     [(x:stack), state, world]
                   | DROP -> case stack of (_:rest) ->
-                     [rest, state, world]
+                     [rest, state, world] | _ -> failure(insns.string)
                     esac
               esac;
             eval(env, nconf, tail)
@@ -114,6 +114,7 @@ fun eval (env, c, insns) {
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
+  --failure(insns.string);
   eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
@@ -159,10 +160,10 @@ fun compileSmWithEnv(stmt, env) {
 }
 
 fun compileSmWithEnvAndLbl(stmt, env, shouldJump, lblToJump) {
-    local additional = if shouldJump then {JMP(lblToJump)} else {} fi;
+    local additional = if shouldJump then singleton(JMP(lblToJump)) else {} fi;
     case stmt of 
       Read(x) -> [{READ, ST(x)} +++ additional, env]
-    | Write(expr) -> case compileSmWithEnv(expr) of [ins1, env1] -> [ins1 +++ singleton(WRITE) +++ additional, env1] esac
+    | Write(expr) -> case compileSmWithEnv(expr, env) of [ins1, env1] -> [ins1 +++ singleton(WRITE) +++ additional, env1] esac
     | Assn(x, expr) -> case compileSmWithEnv(x, env) of [ins1, env1] -> case compileSmWithEnv(expr, env1) of [ins2, env2] ->
         [ins1 +++ ins2 +++ singleton(STI) +++ additional, env2]
       esac esac
@@ -183,7 +184,7 @@ fun compileSmWithEnvAndLbl(stmt, env, shouldJump, lblToJump) {
         
         local res2, env2;
         case estmt of 
-            None -> res2 := {}; env2 := env
+            None -> res2 := {}; env2 := env1
             | _ -> case compileSmWithEnv(estmt, env1) of [res3, env3] -> res2 := res3; env2 := env3 esac
         esac;
         [
@@ -258,8 +259,9 @@ fun compileSmWithEnvAndLbl(stmt, env, shouldJump, lblToJump) {
        [
          ins1 +++
          ins2 +++
-         singleton(Binop(op)) +++
-         additional
+         singleton(BINOP(op)) +++
+         additional,
+         env2
        ]
        esac esac
     | Ref(x) -> 

@@ -64,7 +64,8 @@ local primary  = memo $ eta syntax (
                                                                                          | _    -> Var (x)
                                                                                          esac
                                                                                       }} |
-                                      loc=pos kRead x=inbr[s("("), lident, s(")")] { fun (a) {assertVoid(a, Read(x(Ref)), loc)} } |
+                                      bexp=inbr[s("("), exp, s(")")] {fun(a) {bexp(a)} }|
+                                      loc=pos kRead x=inbr[s("("), lident, s(")")] { fun (a) {assertVoid(a, Read(x), loc)} } |
                                       loc=pos kWrite e=inbr[s("("), exp, s(")")] { fun(a) { assertVoid(a, Write(e(Val)), loc) } } |
                                       loc=pos kSkip {fun(a) {assertVoid(a, Skip, loc)} } |
                                       
@@ -78,8 +79,8 @@ local primary  = memo $ eta syntax (
                                                               loc
                                                               ) 
                                                   } 
-                                          }|
-                                      loc=pos kRepeat s=exp kUntil c=exp { fun(a) { assertVoid(a, Rep(s(Void), c(Val)), loc) } }
+                                          } |
+                                      loc=pos kRepeat b=exp kUntil c=inbr[s("("), exp, s(")")] { fun(a) { assertVoid(a, Rep(b(Void), c(Val)), loc) } }
       ),
       basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                         fun (l, loc, r) {

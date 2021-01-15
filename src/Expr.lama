@@ -74,14 +74,14 @@ fun eval (c@[state, world], expr) {
           ]
           esac
       | Write(expr) ->
-          case evalExpr(c, expr) of [newConf, res] ->
+          case eval(c, expr) of [[state, world], res] ->
           [[
             state, 
             writeWorld(res, world)
           ],
           Void]
           esac
-      | Assn(x, expr) -> case evalList(c, {x, expr}) of [newConf, var:res:_] ->
+      | Assn(x, expr) -> case evalList(c, {x, expr}) of [[state, world], var:res:_] ->
         [
         [
           state<-[var, res],
