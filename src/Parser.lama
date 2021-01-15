@@ -64,7 +64,24 @@ local primary  = memo $ eta syntax (
                                                                                          | _    -> Var (x)
                                                                                          esac
                                                                                       }} |
-                                    $(failure ("the rest of primary parsing in not implemented\n"))),
+                                      bexp=inbr[s("("), exp, s(")")] {fun(a) {bexp(a)} }|
+                                      loc=pos kRead x=inbr[s("("), lident, s(")")] { fun (a) {assertVoid(a, Read(x), loc)} } |
+                                      loc=pos kWrite e=inbr[s("("), exp, s(")")] { fun(a) { assertVoid(a, Write(e(Val)), loc) } } |
+                                      loc=pos kSkip {fun(a) {assertVoid(a, Skip, loc)} } |
+                                      
+                                      kIf c=exp kThen s=exp ot=elifStmt kFi {fun(a) {If(c(Val), s(a), ot(a))} } |
+                                      loc=pos kIf c=exp kThen s = exp kFi {fun(a) {assertVoid(a, If(c(Val), s(Void), None), loc)}} |
+                                      loc=pos kWhile c=exp kDo s=exp kOd {fun(a) { assertVoid(a, While(c(Val), s(Void)), loc)} }|
+                                      loc=pos kFor i=exp s[","] c=exp s[","] s=exp kDo ot=exp kOd 
+                                          {fun(a) { assertVoid(
+                                                              a, 
+                                                              Seq(i(Void), While(c(Val), Seq(ot(Void), s(Void)))), 
+                                                              loc
+                                                              ) 
+                                                  } 
+                                          } |
+                                      loc=pos kRepeat b=exp kUntil c=inbr[s("("), exp, s(")")] { fun(a) { assertVoid(a, Rep(b(Void), c(Val)), loc) } }
+      ),
       basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                         fun (l, loc, r) {
                                                           fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
@@ -80,3 +97,9 @@ local primary  = memo $ eta syntax (
 
 -- Public top-level parser
 public parse = syntax (s=exp {s (Void)});
+
+local elifStmt = syntax (
+  kElif e=exp kThen s=exp ot=elifStmt {fun(a) { If(e(Val), s(a), ot(a))} } |
+  loc=pos kElif e=exp kThen s=exp {fun(a) { assertVoid(a, If(e(Val), s(Void), e(Void)), loc) }} |
+  kElse s=exp { fun(a) {s(a)} }
+);
