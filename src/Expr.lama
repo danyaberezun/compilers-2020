@@ -101,14 +101,69 @@ fun evalList (c, exprs) {
   esac
 }
 
-(* Assignment *)
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+fun eval (c@[state, world], expr) {
+    case expr of 
+      Read(x) -> case readWorld(world) of [val, nworld] ->
+          [[
+            state<-[x, val],
+            nworld
+          ],
+          Void
+          ]
+          esac
+      | Write(expr) ->
+          case eval(c, expr) of [[state, world], res] ->
+          [[
+            state, 
+            writeWorld(res, world)
+          ],
+          Void]
+          esac
+      | Assn(x, expr) -> case evalList(c, {x, expr}) of [[state, world], var:res:_] ->
+        [
+        [
+          state<-[var, res],
+          world
+        ],
+        res
+        ]
+        esac
+      | Seq(stmt1, stmt2) -> 
+        eval(
+          eval(c, stmt1).fst,
+          stmt2
+        )
+      | If(cond, stmt, estmt) -> case eval(c, cond) of 
+          [newConf, 0] -> case estmt of None -> [newConf, Void] | _ -> eval(newConf, estmt) esac |
+          [newConf, _] -> eval(newConf, stmt)
+        esac
+      | While(cond, stmt) -> case eval(c, cond) of 
+          [newConf, 0] -> [newConf, Void] |
+          [newConf, _] -> eval(eval(newConf, stmt).fst, While(cond, stmt))
+        esac
+      | Rep(stmt, cond) -> 
+          case eval(c, stmt).fst of newConf ->
+              case eval(newConf, cond) of 
+                  [newConf1, 0] -> eval(newConf1, Rep(stmt, cond)) |
+                  [newConf1, _] -> [newConf1, Void]
+              esac
+          esac
+      | Skip -> [c, Void]
+      | Const(n) -> [c, n]
+      | Var(x) -> [c, state(x)]
+      | Binop(op, lefto, righto) -> case evalList(c, {lefto, righto}) of [c, a:b:_] ->
+                                    [c, evalOp(op, a, b)]
+                                    esac
+      | Ref(x) -> [c, x]
+      | Ignore(expr) -> [eval(c, expr).fst, Void]
+                                    
+    esac
 }
+
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
-  case eval ([emptyState (), createWorld (input)], expr) of
+  case eval ([emptyState, createWorld (input)], expr) of
     [c, _] -> c.snd.getOutput
   esac
 }
