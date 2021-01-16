@@ -121,27 +121,38 @@ fun eval (env, w, insns) {
   fun eval (c@[st, cst, s, w], insns) {
     case insns of
     {}     -> c
-  | ins : insns_ -> case c of [ stack, state, world ] ->
-      eval(env, case ins of
-        CONST (n)  -> [ n : stack, state, world ]
-      | BINOP (op) -> case stack of a : b : rest -> [ evalOp (op, a, b) : rest, state, world ] esac
-      | LD    (x)  -> [ state (x) : stack, state, world ]
-      | LDA   (x)  -> [ Ref (x) : stack, state, world ]
-      | ST    (x)  -> case stack of a : rest -> [ rest, state <- [ x, a ], world ] esac
-      | STI        -> case stack of a : Ref (x) : rest -> [ a : rest, state <- [ x, a ], world ] esac
-      | DUP        -> case stack of a : rest -> [ a : a : rest, state, world ] esac
-      | DROP       -> case stack of a : rest -> [ rest, state, world ] esac
-      | READ       -> case readWorld (world) of [ a, world_ ] -> [ a : stack, state, world_ ] esac
-      | WRITE      -> case stack of a : rest -> [ rest, state, writeWorld (a, world) ] esac
-      | CJMP (cond, where) -> case stack of a : rest -> [ rest, state, world ] esac
+  | ins : insns_ ->
+      eval(case ins of
+        CONST (n)  -> [ n : st, cst, s, w ]
+      | BINOP (op) -> case st of a : b : rest -> [ evalOp (op, a, b) : rest, cst, s, w ] esac
+      | LD    (x)  -> [ lookup(s, x) : st, cst, s, w ]
+      | LDA   (x)  -> [ Ref (x) : st, cst, s, w ]
+      | ST    (x)  -> case st of a : rest -> assign(s, x, a); [ rest, cst, s, w ] esac
+      | STI        -> case st of a : Ref (x) : rest -> assign (s, x, a); [ a : rest, cst, s, w ] esac
+      | DUP        -> case st of a : rest -> [ a : a : rest, cst, s, w ] esac
+      | DROP       -> case st of a : rest -> [ rest, cst, s, w ] esac
+      | READ       -> case readWorld (w) of [ a, w ] -> [ a : st, cst, s, w ] esac
+      | WRITE      -> case st of a : rest -> [ rest, cst, s, writeWorld (a, w) ] esac
+      | CJMP (cond, where) -> case st of a : rest -> [ rest, cst, s, w ] esac
+      | CALL (func, argc) -> [st, [s, insns_] : cst, s, w]
+      | GLOBAL (x) -> assign (s, Glb (x), 0); [st, cst, s, w]
+      | BEGIN (func, argc, varc) ->
+        case take (st, argc) of [st, argv] ->
+          [st, cst, foldl (fun ([s, i], arg) {
+            assign (s, Arg (i), arg);
+            [s, i + 1]
+          }, [makeState (argc, varc), 0], argv)[0], w]
+        esac
+      | END -> case cst of [s, _] : cst -> [st, cst, s, w] | _ -> c esac
       | _          -> c
       esac, case ins of
           JMP (where) -> fromLabel (env, where)
-        | CJMP (cond, where) -> case stack of a : rest ->
+        | CALL (func, argc) -> fromLabel (env, func)
+        | CJMP (cond, where) -> case st of a : rest ->
           if (a == (case cond of "z" -> 0 | _ -> 1 esac)) then fromLabel (env, where) else insns_ fi esac
+        | END -> case cst of [_, ret] : cst -> ret | _ -> {} esac
         | _ -> insns_
       esac)
-    esac
   esac
   }
   (* End *)
@@ -345,10 +356,38 @@ fun addVars (env, names) {
   foldl (fun (env, name) {addVar (env, name)}, env, names)
 }
 
+
+-- Compiles an expression into a stack machine code.
+-- Takes an expression, returns a list of stack machine
+-- instructions.
+
+(* Assignment *)
+
+-- Some guidelines for compiling functions and scopes.
+--
+-- 1. use env.beginScope/env.endScope properly;
+-- 2. in each scope traverse the definitions twice:
+--    a. first, add all bindings into symbolic state,
+--       using end.addVar/env.addFun;
+--    b. do not forget to generate GLOBAL instructions for
+--       top-level variable declarations;
+--    c. on the secord traversal add functions themselves for
+--       future code generation (use env.rememberFun).
+-- 3. the overall flow for codegeneration:
+--    a. generate the code for thetopmost expression (the progrman itself);
+--    b. take list of nested functions definitions via env.getFuns and
+--       generate the code for each function;
+--    c. repeat b. until no function definitions appear.
+-- 4. when compiling functions, do not forget to create proper
+--    environment (use env.beginFun) and register arguments
+--    (use env.addArg).
+
+
+
 -- Compiles an expression into a stack machine code.
 fun compileSMEnv (env, stmt) {
   case stmt of
-      Read  (x) -> [env, { READ, ST (x) }]
+      Read  (x) -> [env, { READ, ST (lookupVar(env, x)) }]
     | Write (a) ->
       case compileSMEnv (env, a) of [env, t] ->
         [env, { t, WRITE }]
@@ -418,43 +457,81 @@ fun compileSMEnv (env, stmt) {
           esac
         esac
       esac
-    | Var (x) -> [env, LD (x) : {}]
-    | Ref (x) -> [env, LDA (x) : {}]
+    | Var (x) -> [env, LD (lookupVar(env, x)) : {}]
+    | Ref (x) -> [env, LDA (lookupVar(env, x)) : {}]
     | Const (x) -> [env, CONST (x) : {}]
     | Ignore (x) ->
       case compileSMEnv (env, x) of [env, t] ->
         [env, {t, DROP}]
       esac
+    | Scope (defs, x) ->
+      case foldl (fun ([env, globals], def) {
+        case def of
+          Local (names) -> [addVars (env, names),
+            if isGlobal (env) then
+              map(fun (x) { GLOBAL (x) }, names) +++ globals
+            else globals fi
+          ] |
+          Fun (name, params, body) ->
+            case genFunLabel (env, name) of [label, env] ->
+              [addFun (env, name, label, params.size), globals]
+            esac
+        esac
+      }, [beginScope(env), {}], defs) of [env, globals] ->
+        case foldl (fun (env, def) {
+          case def of Fun (name, params, body) -> 
+            rememberFun (env, lookupFun (env, name)[0], params, body)
+            | _ -> env
+          esac
+        }, env, defs) of env ->
+          case compileSMEnv (env, x) of [env, t] ->
+            [endScope (env), { globals, t }]
+          esac
+        esac
+      esac
+    | Call (name, args) ->
+      case lookupFun (env, name) of Fun (label, n) ->
+        case foldl (fun ([env, res], arg) {
+          case compileSMEnv (env, arg) of [env, t] ->
+            [env, {res, t}]
+          esac
+        }, [env, {}], args) of [env, res] ->
+          [env, {res, CALL (label, n)}]
+        esac
+      esac
   esac
 }
 
-
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list of stack machine
--- instructions.
-
-(* Assignment *)
-
--- Some guidelines for compiling functions and scopes.
---
--- 1. use env.beginScope/env.endScope properly;
--- 2. in each scope traverse the definitions twice:
---    a. first, add all bindings into symbolic state,
---       using end.addVar/env.addFun;
---    b. do not forget to generate GLOBAL instructions for
---       top-level variable declarations;
---    c. on the secord traversal add functions themselves for
---       future code generation (use env.rememberFun).
--- 3. the overall flow for codegeneration:
---    a. generate the code for thetopmost expression (the progrman itself);
---    b. take list of nested functions definitions via env.getFuns and
---       generate the code for each function;
---    c. repeat b. until no function definitions appear.
--- 4. when compiling functions, do not forget to create proper
---    environment (use env.beginFun) and register arguments
---    (use env.addArg).
+fun compileSMFuns (env, sm) {
+  case getFuns (env) of [funs, env] ->
+    case funs of {} -> [env, sm] | _ ->
+      case foldl (fun ([env, sm], Fun (name, params, body, st)) {
+        case addArgs(beginFun (env, st), params) of env ->
+          case compileSMEnv(env, body) of [env, bodySM] ->
+            [env, {
+              sm,
+              LABEL (name),
+              BEGIN (name, params.size, getLocals (env)),
+              bodySM,
+              END
+            }]
+          esac
+        esac
+      }, [env, sm], funs) of [env, sm] ->
+        compileSMFuns (env, sm)
+      esac
+    esac
+  esac
+}
 
 public fun compileSM (stmt) {
-  deepFlatten(compileSMEnv(initCompEnv(), stmt)[1])
+  case compileSMEnv (initCompEnv (), stmt) of [env, sm] ->
+    deepFlatten(compileSMFuns (env, {
+      LABEL ("main"),
+      BEGIN ("main", 0, getLocals (env)),
+      sm,
+      END
+    })[1])
+  esac
 }
 (* End *)

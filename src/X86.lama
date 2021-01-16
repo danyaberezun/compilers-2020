@@ -465,7 +465,7 @@ fun compile (env, code) {
               [s, env] -> [env, code <+> move (env.loc(x), s)]
             esac
         | ST (x) ->
-            case env.addGlobal(x).pop of
+            case env.pop of
               [s, env] -> [env, code <+> move (s, env.loc(x))]
             esac
         | BINOP (op) ->
@@ -520,8 +520,10 @@ fun compile (env, code) {
             [env, code]
           esac
         | LDA (x) ->
-          case env.addGlobal(x).allocate of [s, env] ->
-            [env, code <+ Lea (env.loc(x), s)]
+          case env.allocate of [s, env] ->
+            [env, code <+ Lea (env.loc(x), eax)
+                       <+ Mov (eax, s)
+            ]
           esac
         | STI ->
           case env.pop of [s, env] ->
@@ -547,8 +549,23 @@ fun compile (env, code) {
          -- 1. generate proper prologue for BEGIN instruction (use "prologue" helper); use
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
-               
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        
+        | BEGIN (name, argc, varc) -> [
+          enterFunction (env, name, varc),
+          code <+> prologue(name)
+        ]
+        | END -> 
+          case epilogue(env) of [env, x] ->
+            [env, code <+> x]
+          esac
+        | GLOBAL (x) -> [
+          addGlobal (env, x),
+          code
+        ]
+        | CALL (func, argc) ->
+          case call (env, func, argc) of [env, x] ->
+            [env, code <+> x]
+          esac
         (* End *)
         esac
       }, [env, emptyBuffer ()], code)
