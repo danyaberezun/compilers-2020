@@ -101,7 +101,64 @@ fun evalList (c, exprs) {
 
 (* Assignment *)
 fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+  case expr of
+    Assn (lhs, rhs) ->
+      case evalList (c, {lhs, rhs}) of [[s, w], {Ref (lhs), rhs}] ->
+        [[s <- [lhs, rhs], w], rhs]
+      esac
+  | Seq (x, y) -> eval (eval (c, x)[0], y)
+  | Skip -> [c, Bot]
+  | Read (x) ->
+    case readWorld(w) of [y, w] ->
+      [[s <- [x, y], w], Bot]
+    esac
+  | Write (x) ->
+    case eval (c, x) of [[s, w], x] ->
+      [[s, writeWorld (x, w)], Bot]
+    esac
+  | If (cond, body1, body2) ->
+    case eval (c, cond) of
+      [c, true] -> eval (c, body1) |
+      [c, false] -> eval (c, body2)
+    esac
+  | While (cond, body) ->
+    case eval (c, cond) of
+      [c, true] -> eval (eval (c, body)[0], expr) |
+      [c, false] -> [c, Bot]
+    esac
+  | Repeat (body, cond) ->
+    case eval (eval (c, body)[0], cond) of
+      [c, true] -> [ c, Bot ] |
+      [c, false] -> eval (c, expr)
+    esac
+  | Var (x) -> [c, lookup(s, x)]
+  | Ref (x) -> [c, expr]
+  | Const (x) -> [c, x]
+  | Binop (op, lhs, rhs) ->
+    case evalList (c, {lhs, rhs}) of [c, {lhs, rhs}] ->
+      [c, evalOp(op, lhs, rhs)]
+    esac
+  | Ignore (x) -> [eval (c, x)[0], Bot]
+  | Scope (defs, x) ->
+    case eval ([foldl(fun (s, def) {
+      case def of
+        Local (names) -> addNames(s, names)
+      | Fun (name, params, body) -> addFunction(s, name, params, body)
+      esac
+    }, enterScope(s), defs), w], x) of [[s, w], x] ->
+      [[leaveScope(s), w], x]
+    esac
+  | Call (name, args) ->
+    case lookup (s, name) of Fun (params, body) ->
+      case evalList (c, args) of [[s, w], args] ->
+        case eval ([foldl (fun (s, [name, value]) {
+          addName(s, name, value)
+        }, enterFunction(s), zip(params, args)), w], body) of [[s_, w], retval] ->
+          [[leaveFunction(s, getGlobal(s_)), w], retval]
+        esac
+      esac
+    esac
+  esac
 }
 (* End *)
 
