@@ -130,7 +130,43 @@ local primary    = memo $ eta syntax (
                                                                                                             esac
                                                                                                          }} |
 (* Assignment *)
-                                      $(failure ("the rest of primary parsing in not implemented\n"))),
+  inbr[s("("), exp, s(")")] |
+  explicitScope |
+  loc=pos kSkip { fun (a) {
+    assertVoid (a, Skip, loc)
+  }} |
+  loc=pos kWhile x=basic kDo y=scopeExpr kOd { fun (a) {
+    assertVoid (a, While (x (Val), y (Void)), loc)
+  }} |
+  loc=pos kFor init=scopeExpr s[","] cond=basic s[","] incr=basic kDo body=scopeExpr kOd { fun (a) {
+    distributeScope(init (Void), fun (init) {
+      assertVoid (a, Seq (init, While (cond (Val), Seq (body (Void), incr (Void)))), loc)
+    })
+  }} |
+  loc=pos kRepeat body=scopeExpr kUntil cond=basic { fun (a) {
+    distributeScope(body (Void), fun (body) {
+      assertVoid (a, Repeat (body, cond (Val)), loc)
+    })
+  }} |
+  loc=pos kIf cond=basic kThen body=exp kFi { fun (a) {
+    assertVoid (a, If (cond (Val), body (a), Skip), loc)
+  }} |
+  loc=pos kIf cond=basic kThen body=exp alt=ifElif kFi { fun (a) {
+    If (cond (Val), body (a), alt (a))
+  }}
+),
+
+  ifElif = memo $ eta syntax (
+    -kElse exp |
+    kElif cond=basic kThen body=exp alt=ifElif { fun (a) {
+      If (cond (Val), body (a), alt (a))
+    }}
+  ),
+
+  explicitScope = memo $ eta syntax (
+    -s["{"] scopeExpr -s["}"]
+  ),
+
 (* End *)
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
