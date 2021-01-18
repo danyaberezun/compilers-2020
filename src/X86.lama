@@ -488,19 +488,32 @@ fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
+
+        fun callRuntime(name, argc) {
+          case call (env, name, argc) of [env, x] ->
+            [env, code <+> x]
+          esac
+        }
+
         case i of
-          READ ->
-            case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
-        | WRITE ->
-            case env.pop of
-              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
-            esac
-        | CONST (n) ->
+        (* Assignment *)
+          CONST (n) ->
             case env.allocate of
               [s, env] -> [env, code <+ Mov (L (n), s)]
             esac
+        | STRING (s) ->
+            case env.addString (s) of [env, name] ->
+              case env.allocate of [y, env] ->
+                case call (env, "Bstring", 1) of [env, x] ->
+                  [env, code <+> move (M ("$" ++ name), y) <+> x]
+                esac
+              esac
+            esac
+        | ARRAY (n) -> callRuntime ("Barray", n)
+        | STA -> callRuntime ("Bsta", 2)
+        | ELEM -> callRuntime ("Belem", 2)
+        | BUILTIN (name, argc) -> callRuntime (sprintf("B%s", name), argc)
+        | CALL (name, argc) -> callRuntime (name, argc)
         | LD (x) ->
             case env.allocate of
               [s, env] -> [env, code <+> move (env.loc(x), s)]
@@ -573,24 +586,6 @@ fun compile (env, code) {
                          <+  Mov (s, x)]
             esac
           esac
-        (* Assignment *)
-        
-         -- Some guidelines for generating function calls:
-         --
-         -- 1. generate instructions to save live registers on the X86 stack (use
-         --    env.liveRegisters (number of arguments);
-         -- 2. generate instructions to move actual parameters from the symbolic
-         --    stack to the hardware one;
-         -- 3. generate the call itself;
-         -- 4. discard the actual parameters from the stack;
-         -- 5. restore saved live registers.
-         --
-         -- Some guidelines for generating functions:
-         --
-         -- 1. generate proper prologue for BEGIN instruction (use "prologue" helper); use
-         --    env.enterFunction to create a proper environment;
-         -- 2. generate epilogue for END instruction.
-
         | BEGIN (name, argc, varc) -> [
           enterFunction (env, name, varc),
           code <+> prologue(name)
@@ -603,10 +598,6 @@ fun compile (env, code) {
           addGlobal (env, x),
           code
         ]
-        | CALL (func, argc) ->
-          case call (env, func, argc) of [env, x] ->
-            [env, code <+> x]
-          esac
         (* End *)
         esac
       }, [env, emptyBuffer ()], code)

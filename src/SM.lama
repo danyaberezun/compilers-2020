@@ -127,18 +127,26 @@ fun eval (env, w, insns) {
     {}     -> c
   | ins : insns_ ->
       eval(case ins of
-        CONST (n)  -> [ n : st, cst, s, w ]
+        CONST (x)  -> [ x : st, cst, s, w ]
+      | STRING (x) -> [ x : st, cst, s, w ]
+      | ARRAY (n)  -> case take (st, n) of [st, arr] -> [listArray (arr) : st, cst, s, w] esac
       | BINOP (op) -> case st of a : b : rest -> [ evalOp (op, a, b) : rest, cst, s, w ] esac
       | LD    (x)  -> [ lookup(s, x) : st, cst, s, w ]
       | LDA   (x)  -> [ Ref (x) : st, cst, s, w ]
       | ST    (x)  -> case st of a : rest -> assign(s, x, a); [ rest, cst, s, w ] esac
       | STI        -> case st of a : Ref (x) : rest -> assign (s, x, a); [ a : rest, cst, s, w ] esac
+      | STA        -> case st of a : idx : arr : rest -> arr[idx] := a; [ a : rest, cst, s, w ] esac
+      | ELEM       -> case st of idx : arr : rest -> [ arr[idx] : rest, cst, s, w ] esac
       | DUP        -> case st of a : rest -> [ a : a : rest, cst, s, w ] esac
       | DROP       -> case st of a : rest -> [ rest, cst, s, w ] esac
-      | READ       -> case readWorld (w) of [ a, w ] -> [ a : st, cst, s, w ] esac
-      | WRITE      -> case st of a : rest -> [ rest, cst, s, writeWorld (a, w) ] esac
       | CJMP (cond, where) -> case st of a : rest -> [ rest, cst, s, w ] esac
       | CALL (func, argc) -> [st, [s, insns_] : cst, s, w]
+      | BUILTIN (name, argc) ->
+        case take (st, argc) of [st, argv] ->
+          case evalBuiltin (name, argv, w) of [retval, w] ->
+            [ retval : st, cst, s, w ]
+          esac
+        esac
       | GLOBAL (x) -> assign (s, Glb (x), 0); [st, cst, s, w]
       | BEGIN (func, argc, varc) ->
         case take (st, argc) of [st, argv] ->
@@ -234,9 +242,14 @@ fun makeCompEnv (nLabels, scopeDepth, state, nLocals, nArgs, functions) {
 
   -- Lookups a name of a function
   fun lookupFun (name) {
-    case lookup (state, name) of
-      x@Fun (_, _) -> x
-    | _            -> error (sprintf ("the name ""%s"" does not designate a function", name), getLoc (name))
+    case name of
+      "read" -> Builtin
+    | "write" -> Builtin
+    | _ ->
+      case lookup (state, name) of
+        x@Fun (_, _) -> x
+      | _            -> error (sprintf ("the name ""%s"" does not designate a function", name), getLoc (name))
+      esac
     esac
   }
 
@@ -390,21 +403,25 @@ fun addVars (env, names) {
 -- Compiles an expression into a stack machine code.
 fun compileSMEnv (env, stmt) {
   case stmt of
-      Read  (x) -> [env, { READ, ST (lookupVar(env, x)) }]
-    | Write (a) ->
-      case compileSMEnv (env, a) of [env, t] ->
-        [env, { t, WRITE }]
-      esac
-    | Binop (op, lhs, rhs) ->
+      Binop (op, lhs, rhs) ->
       case compileSMEnv (env, lhs) of [env, lhs] ->
         case compileSMEnv (env, rhs) of [env, rhs] ->
           [env, { rhs, lhs, BINOP(op) }]
         esac
       esac
-    | Assn (x, a) ->
-      case compileSMEnv (env, x) of [env, t1] ->
-        case compileSMEnv (env, a) of [env, t2] ->
-          [env, { t1, t2, STI }]
+    | Assn (lhs, a) ->
+      case compileSMEnv (env, a) of [env, rhs] ->
+        case lhs of
+        ElemRef (arr, idx) ->
+          case compileSMEnv (env, arr) of [env, arr] ->
+            case compileSMEnv (env, idx) of [env, idx] ->
+              [env, { arr, idx, rhs, STA }]
+            esac
+          esac
+        | _ -> 
+          case compileSMEnv (env, lhs) of [env, lhs] ->
+            [env, { lhs, rhs, STI }]
+          esac
         esac
       esac
     | Seq (a, b) ->
@@ -463,6 +480,21 @@ fun compileSMEnv (env, stmt) {
     | Var (x) -> [env, LD (lookupVar(env, x)) : {}]
     | Ref (x) -> [env, LDA (lookupVar(env, x)) : {}]
     | Const (x) -> [env, CONST (x) : {}]
+    | String (x) -> [env, STRING (x) : {}]
+    | Array (xs) ->
+      case foldl (fun ([env, xs], x) {
+        case compileSMEnv (env, x) of [env, t] ->
+          [env, {xs, t}]
+        esac
+      }, [env, {}], xs) of [env, ts] ->
+        [env, {ts, ARRAY (size(xs))}]
+      esac
+    | Elem (arr, idx) ->
+      case compileSMEnv (env, arr) of [env, arr] ->
+        case compileSMEnv (env, idx) of [env, idx] ->
+          [env, {arr, idx, ELEM}]
+        esac
+      esac
     | Ignore (x) ->
       case compileSMEnv (env, x) of [env, t] ->
         [env, {t, DROP}]
@@ -493,14 +525,23 @@ fun compileSMEnv (env, stmt) {
         esac
       esac
     | Call (name, args) ->
-      case lookupFun (env, name) of Fun (label, n) ->
         case foldl (fun ([env, res], arg) {
           case compileSMEnv (env, arg) of [env, t] ->
             [env, {res, t}]
           esac
         }, [env, {}], args) of [env, res] ->
+        case lookupFun (env, name) of Fun (label, n) ->
           [env, {res, CALL (label, n)}]
+        | Builtin -> [env, {res, BUILTIN (name, size(args))}]
         esac
+      esac
+    | Builtin (name, args) ->
+      case foldl (fun ([env, res], arg) {
+        case compileSMEnv (env, arg) of [env, t] ->
+          [env, {res, t}]
+        esac
+      }, [env, {}], args) of [env, res] ->
+        [env, {res, BUILTIN (name, size(args))}]
       esac
   esac
 }
@@ -528,7 +569,7 @@ fun compileSMFuns (env, sm) {
 }
 
 public fun compileSM (stmt) {
-  case compileSMEnv (initCompEnv (), stmt) of [env, sm] ->
+  case compileSMEnv (beginScope(initCompEnv()), stmt) of [env, sm] ->
     deepFlatten(compileSMFuns (env, {
       LABEL ("main"),
       BEGIN ("main", 0, getLocals (env)),

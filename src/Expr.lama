@@ -103,19 +103,14 @@ fun evalList (c, exprs) {
 fun eval (c@[s, w], expr) {
   case expr of
     Assn (lhs, rhs) ->
-      case evalList (c, {lhs, rhs}) of [[s, w], {Ref (lhs), rhs}] ->
-        [[s <- [lhs, rhs], w], rhs]
+      case evalList (c, {lhs, rhs}) of [[s, w], {lhs, rhs}] ->
+        case lhs of 
+          Ref (lhs) -> [[s <- [lhs, rhs], w], rhs]
+        | ElemRef (arr, idx) -> arr[idx] := rhs; [[s, w], rhs]
+        esac
       esac
   | Seq (x, y) -> eval (eval (c, x)[0], y)
   | Skip -> [c, Bot]
-  | Read (x) ->
-    case readWorld(w) of [y, w] ->
-      [[s <- [x, y], w], Bot]
-    esac
-  | Write (x) ->
-    case eval (c, x) of [[s, w], x] ->
-      [[s, writeWorld (x, w)], Bot]
-    esac
   | If (cond, body1, body2) ->
     case eval (c, cond) of
       [c, true] -> eval (c, body1) |
@@ -134,6 +129,19 @@ fun eval (c@[s, w], expr) {
   | Var (x) -> [c, lookup(s, x)]
   | Ref (x) -> [c, expr]
   | Const (x) -> [c, x]
+  | String (x) -> [c, x]
+  | Array (xs) ->
+    case evalList (c, xs) of [c, xs] ->
+      [c, listArray(xs)]
+    esac
+  | Elem (arr, idx) ->
+    case evalList (c, {arr, idx}) of [c, {arr, idx}] ->
+      [c, arr[idx]]
+    esac
+  | ElemRef (arr, idx) ->
+    case evalList (c, {arr, idx}) of [c, {arr, idx}] ->
+      [c, ElemRef (arr, idx)]
+    esac
   | Binop (op, lhs, rhs) ->
     case evalList (c, {lhs, rhs}) of [c, {lhs, rhs}] ->
       [c, evalOp(op, lhs, rhs)]
@@ -151,11 +159,23 @@ fun eval (c@[s, w], expr) {
   | Call (name, args) ->
     case lookup (s, name) of Fun (params, body) ->
       case evalList (c, args) of [[s, w], args] ->
-        case eval ([foldl (fun (s, [name, value]) {
-          addName(s, name, value)
-        }, enterFunction(s), zip(params, args)), w], body) of [[s_, w], retval] ->
-          [[leaveFunction(s, getGlobal(s_)), w], retval]
+        case body of
+          External ->
+            case evalBuiltin(name, args, w) of [retval, w] ->
+              [[s, w], retval]
+            esac
+        |  _ -> case eval ([foldl (fun (s, [name, value]) {
+            addName(s, name, value)
+          }, enterFunction(s), zip(params, args)), w], body) of [[s_, w], retval] ->
+            [[leaveFunction(s, getGlobal(s_)), w], retval]
+          esac
         esac
+      esac
+    esac
+  | Builtin (name, args) ->
+    case evalList (c, args) of [[s, w], args] ->
+      case evalBuiltin(name, args, w) of [retval, w] ->
+        [[s, w], retval]
       esac
     esac
   esac
