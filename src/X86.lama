@@ -69,6 +69,7 @@ fun insnString (insn) {
     | S (i) -> sprintf ("-%d(%%ebp)", (i+1) * wordSize)
     | M (x) -> x
     | L (i) -> sprintf ("$%d", i)
+
     esac
   }
   
@@ -289,7 +290,36 @@ fun compile (env, code) {
             case env.pop of
               [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
             esac
-        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
+        | BINOP (str) -> 
+          case env.pop2 of
+            [y, x, env] -> 
+              case env.allocate of
+                [s, env] ->
+                  case str of 
+                    "/" -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (eax, s)]
+                  | "%" -> [env, code <+ Mov (x, eax) <+ Cltd <+ IDiv (y) <+ Mov (edx, s)]
+                  | "+" -> [env, code <+ Mov (x, s) <+ Binop (str, y, s)]
+                  | "-" -> [env, code <+ Mov (x, s) <+ Binop (str, y, s)]
+                  | "*" -> [env, code <+ Mov (x, s) <+ Binop (str, y, s)]
+                  | "&&" -> [env, code <+ Mov (x, s) <+ Binop (str, y, s)]
+                  | "!!" -> [env, code <+ Mov (x, s) <+ Binop (str, y, s)]
+                  | _ -> [env, code <+ Binop ("cmp", y, x) <+ Mov (L (0), eax) <+ 
+                                       Set (suffix (str), "%al") <+ Mov (eax, s)]      
+                  esac
+              esac
+          esac
+        | LD (x) -> 
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (env.loc (x), s)]
+            esac
+        | ST (x) -> 
+            case env.addGlobal (x).pop of
+              [s, env] -> [env, code <+ Mov (s, env.loc (x))]
+            esac
+        | CONST (n) -> 
+            case env.allocate of
+              [s, env] -> [env, code <+ Mov (L (n), s)]
+            esac
         esac
       }, [env, emptyBuffer ()], code)
   }
