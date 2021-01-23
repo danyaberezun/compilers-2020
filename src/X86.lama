@@ -375,6 +375,15 @@ fun compile (env, code) {
             case env.addGlobal(x).pop of
               [s, env] -> [env, code <+> move (s, env.loc (x))]
             esac
+        | LABEL (s) -> [if isBarrier (env) then retrieveStack (env, s) else env fi, code <+ Label (s)]
+        | JMP (l) -> [setBarrier (setStack (env, l)), code <+ Jmp (l)] 
+        | CJMP (c, l) -> 
+            case env.pop of [s, env] ->
+              [setStack (env, l), code 
+                <+ Binop ("cmp", L (0), s) 
+                <+ CJmp (c, l)
+              ]
+            esac
         | BINOP (op) ->
             case env.pop2 of
               [l, r, env] ->
@@ -426,12 +435,27 @@ fun compile (env, code) {
                   }
                 esac
             esac
+        | LDA (x) ->
+            case env.addGlobal(x).allocate of [s, env] ->
+              [env, code <+ Lea (env.loc (x), s)]
+            esac
+        | STI ->
+            case env.pop of [s, env] ->
+              case env.peek of ref ->
+                -- perform an indirect store and reuse the top of the stack to retain the value
+                [env, code <+> move (s, I (0, ref)) <+> move (s, ref)]
+              esac
+            esac
+        | DROP ->
+            case env.pop of [_, env] ->
+              [env, code]
+            esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
-      }, [env, {}], code)
+      }, [env, emptyBuffer ()], code)
   }
 
-  compile (env, code) 
+  compile (env, code)
 }
 
 -- A top-level codegeneration function. Takes a driver's environment and a stack machine program,

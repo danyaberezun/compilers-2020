@@ -63,8 +63,56 @@ fun evalList (c, exprs) {
   esac
 }
 
+fun evalSeq(c, exprs) {
+  foldl (fun ([c, _], e) { eval (c, e) }, [c, Error], exprs)
+}
+
 fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+  case expr of
+    Assn (tgt, val) -> 
+      case evalList(c, {tgt, val}) of
+        [[s, w], {Ref (tgt), val}] -> [[s <- [tgt, val], w], val]
+      esac
+  | Seq (e1, e2) -> evalSeq (c, {e1, e2})
+  | Skip -> [c, Unit]
+  | Read (id) -> 
+      case readWorld (w) of
+        [val, w] -> [[s <- [id, val], w], Unit]
+      esac
+  | Write (e) ->
+      case eval (c, e) of
+        [[s, w], val] -> [[s, writeWorld (val, w)], Unit]
+      esac
+  | If (cond, thn, els) ->
+      case eval (c, cond) of
+        [c, 0] -> eval (c, els)
+      | [c, _] -> eval (c, thn)
+      esac
+  | whl@While (cond, body) ->
+      case eval (c, cond) of
+        [c, 0] -> [c, Unit]
+      | [c, _] ->
+        case evalList (c, {body, whl}) of
+          [c, _] -> [c, Unit]
+        esac
+      esac
+  | rpt@Repeat (body, cond) ->
+      case evalSeq (c, {body, cond}) of
+        [c, 0] -> eval (c, rpt)
+      | [c, _] -> [c, Unit]
+      esac
+  | Var (id) -> [c, s (id)]
+  | Ref (id) -> [c, Ref (id)]
+  | Const (val) -> [c, val]
+  | Binop (op, lhs, rhs) ->
+      case evalList (c, {lhs, rhs}) of
+        [c, {lhs, rhs}] -> [c, evalOp (op, lhs, rhs)]
+      esac
+  | Ignore (e) ->
+      case eval (c, e) of
+        [c, _] -> [c, Unit]
+      esac
+  esac
 }
 
 
