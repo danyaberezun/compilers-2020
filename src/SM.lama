@@ -4,22 +4,22 @@ import List;
 import World;
 import State;
 import Expr;
+import Util;
 
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
--- Instruction = READ | WRITE | BINOP String | LD X | ST X | CONST N
 fun eval (c, insns) {
   case insns of
     {}             -> c
-  | ins : insns    -> case c of [stack, state, world] ->
-      case ins of
-        CONST (n)  -> [n : stack, state, world]
-      | BINOP (op) -> case stack of v1 : v2 : vs -> [opFun (op) (v1, v2) : vs, state, world] esac
-      | LD (x)     -> [state (x) : stack, state, world]
-      | ST (x)     -> case stack of v : vs -> [vs, state <- [x, v], world] esac
-      | READ       -> case readWorld (world) of [v, world1] -> [v : stack, state, world1] esac
-      | WRITE      -> case stack of v : vs -> [vs, state, writeWorld (v, world)] esac
-      esac.eval (insns)
+  | i : is         -> case c of [stack, state, w] ->
+      case i of
+        CONST (n)  -> [n : stack, state, w]
+      | BINOP (op) -> case stack of v1 : v2 : vs -> [opFun (op) (v1, v2) : vs, state, w] esac
+      | LD (x)     -> [state (x) : stack, state, w]
+      | ST (x)     -> case stack of v : vs -> [vs, state <- [x, v], w] esac
+      | READ       -> case readWorld (w) of [v, w1] -> [v : stack, state, w1] esac
+      | WRITE      -> case stack of v : vs -> [vs, state, writeWorld (v, w)] esac
+      esac.eval (is)
     esac
   esac
 }
@@ -33,22 +33,24 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-    case (expr) of 
-      Var   (x)          -> LD    (x)
-    | Const (n)        -> CONST (n)
-    | Binop (op, l, r) -> { compileExpr (r), compileExpr (l), BINOP (op) }
-    esac
+  case expr of
+    Var (x)          -> LD (x)
+  | Const (n)        -> CONST (n)
+  | Binop (op, l, r) -> {compileExpr (r), compileExpr (l), BINOP (op)}
+  esac
 }
 
 -- Compiles a statement into a stack machine code.
 -- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  deepFlatten (    
+  fun compileImpl (stmt) { 
     case stmt of
-      Read (v)         -> {READ, ST (v)}
-    | Write (expr)     -> {compileExpr (expr), WRITE}
-    | Assn (v, expr)   -> {compileExpr (expr), ST (v)}
-    | Seq (seq1, seq2) -> {compileImpl (seq1), compileImpl (seq2)}
-    esac)
+      Read (x)     -> {READ, ST (x)}
+    | Write (e)    -> {compileExpr (e), WRITE}
+    | Assn (x, e)  -> {compileExpr (e), ST (x)}
+    | Seq (s1, s2) -> {compileImpl (s1), compileImpl (s2)}
+    esac
+  }
+  flatten (compileImpl (stmt))
 }
