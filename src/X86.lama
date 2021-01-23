@@ -487,7 +487,7 @@ fun call (env, fLabel, nA) {
         [env, pushArgs] ->
            case env.allocate of
              [y, env] ->
-               [env, listBuffer (flatten $ {pushRegs,
+               [env, listBuffer (deepFlatten $ {pushRegs,
                                  reverse (pushArgs),
                                  case extraArg of Some (n) -> Push (L (box $ n)) | _ -> {} esac,
                                  Call (fLabel),
@@ -519,7 +519,7 @@ fun compile (env, code) {
         (* Assignment *)
           CONST (n) ->
             case env.allocate of
-              [s, env] -> [env, code <+ Mov (L (n), s)]
+              [s, env] -> [env, code <+ Mov (L (box(n)), s)]
             esac
         | STRING (s) ->
             case env.addString (s) of [env, name] ->
@@ -546,38 +546,72 @@ fun compile (env, code) {
             case env.pop2 of
               [x, y, env] -> case env.allocate of
                 [s, env] -> case op of
-                  "/" -> [env, code <+ Mov (x, eax)
+                  "/" -> [env, code <+ Sar1(x)
+                                    <+ Sar1(y)
+                                    <+ Mov (x, eax)
                                     <+ Cltd
                                     <+ IDiv (y)
+                                    <+ Sal1 (eax)
+                                    <+ Or1 (eax)
                                     <+ Mov (eax, s)]
 
-                | "%" -> [env, code <+ Mov (x, eax)
+                | "%" -> [env, code <+ Sar1(x)
+                                    <+ Sar1(y)
+                                    <+ Mov (x, eax)
                                     <+ Cltd
                                     <+ IDiv (y)
+                                    <+ Sal1 (edx)
+                                    <+ Or1 (edx)
                                     <+ Mov (edx, s)]
 
-                | "+" -> [env, code <+ Mov (x, eax) <+ Binop("+", y, eax) <+ Mov (eax, s)]
-                | "-" -> [env, code <+ Mov (x, eax) <+ Binop("-", y, eax) <+ Mov (eax, s)]
-                | "*" -> [env, code <+ Mov (x, eax) <+ Binop("*", y, eax) <+ Mov (eax, s)]
-                | "&&" -> [env, code <+ Binop ("cmp", L (0), x)
+                | "+" -> [env, code <+ Dec (x)
+                                    <+ Mov (x, eax)
+                                    <+ Binop("+", y, eax)
+                                    <+ Mov (eax, s)]
+
+                | "-" -> [env, code <+ Dec (y)
+                                    <+ Mov (x, eax)
+                                    <+ Binop("-", y, eax)
+                                    <+ Mov (eax, s)]
+
+                | "*" -> [env, code <+ Sar1 (x)
+                                    <+ Sar1 (y)
+                                    <+ Mov (x, eax)
+                                    <+ Binop("*", y, eax)
+                                    <+ Sal1 (eax)
+                                    <+ Or1 (eax)
+                                    <+ Mov (eax, s)]
+
+                | "&&" -> [env, code <+ Sar1 (x)
+                                     <+ Sar1 (y)
+                                     <+ Binop ("cmp", L (0), x)
                                      <+ Mov (L (0), eax)
                                      <+ Set ("ne", "%al")
                                      <+ Binop ("cmp", L (0), y)
                                      <+ Mov (L (0), edx)
                                      <+ Set ("ne", "%dl")
                                      <+ Binop ("&&", eax, edx)
+                                     <+ Sal1 (edx)
+                                     <+ Or1 (edx)
                                      <+ Mov (edx, s)]
-                | "!!" -> [env, code <+ Mov (x, edx)
+
+                | "!!" -> [env, code <+ Sar1 (x)
+                                     <+ Sar1 (y)
+                                     <+ Mov (x, edx)
                                      <+ Binop("!!", y, edx)
                                      <+ Binop ("cmp", L (0), edx)
                                      <+ Mov (L (0), eax)
                                      <+ Set ("ne", "%al")
+                                     <+ Sal1 (eax)
+                                     <+ Or1 (eax)
                                      <+ Mov (eax, s)]
 
                 | _ -> [env, code <+ Mov (y, eax)
                                   <+ Binop ("cmp", eax, x)
                                   <+ Mov (L (0), eax)
                                   <+ Set (suffix (op), "%al")
+                                  <+ Sal1 (eax)
+                                  <+ Or1 (eax)
                                   <+ Mov (eax, s)]
                 esac
               esac
@@ -585,7 +619,7 @@ fun compile (env, code) {
         | LABEL (x) -> [if env.isBarrier then env.retrieveStack(x) else env fi, code <+ Label(x)]
         | JMP (x) -> [setBarrier(setStack(env, x)), code <+ Jmp(x)]
         | CJMP (c, x) -> case env.pop of [s, env] ->
-            [env.setStack(x), code <+ Mov (L (0), eax)
+            [env.setStack(x), code <+ Mov (L (box(0)), eax)
                                    <+ Binop ("cmp", eax, s)
                                    <+ CJmp (c, x)]
           esac
