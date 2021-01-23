@@ -8,16 +8,12 @@ import World;
 import State;
 import Expr;
 import Buffer;
-<<<<<<< HEAD
 import Fun;
-=======
->>>>>>> A05-control-flow-sm-x86
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
 public fun showSMInsn (i) {
   case i of
-<<<<<<< HEAD
     READ         -> "READ"
   | WRITE        -> "WRITE"
   | BINOP (s)    -> sprintf ("BINOP %s", s)
@@ -25,22 +21,12 @@ public fun showSMInsn (i) {
   | LDA   (x)    -> sprintf ("LDA %s", x)
   | ST    (x)    -> sprintf ("ST %s", x)
   | STI          -> "STI"
-=======
-    READ         -> sprintf ("READ")
-  | WRITE        -> sprintf ("WRITE")
-  | BINOP (s)    -> sprintf ("BINOP %s", s)
-  | LD    (x)    -> sprintf ("LD %s", x)
-  | ST    (x)    -> sprintf ("ST %s", x)
->>>>>>> A05-control-flow-sm-x86
   | CONST (n)    -> sprintf ("CONST %d", n)
   | LABEL (s)    -> sprintf ("LABEL %s", s)
   | JMP   (l)    -> sprintf ("JMP %s", l)
   | CJMP  (c, l) -> sprintf ("CJMP %s, %s", c, l)
-<<<<<<< HEAD
   | DUP          -> "DUP"
   | DROP         -> "DROP"  
-=======
->>>>>>> A05-control-flow-sm-x86
   esac
 }
 
@@ -73,10 +59,6 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-<<<<<<< HEAD
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
-=======
 fun eval (env, c@[stack, state, w], insns) {
   case insns of
     {}             -> c
@@ -112,7 +94,6 @@ fun eval (env, c@[stack, state, w], insns) {
         is)
     esac
   esac
->>>>>>> A05-control-flow-sm-x86
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -151,12 +132,6 @@ fun genLabels (env, n) {
 }
 
 -- Compiles an expression into a stack machine code.
-<<<<<<< HEAD
--- Takes an expression, returns a list of stack machine
--- instructions.
-public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
-=======
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
@@ -229,5 +204,4 @@ public fun compileSM (stmt) {
     esac
   }
   deepFlatten (compileImpl (initCompEnv (), stmt)[1])
->>>>>>> A05-control-flow-sm-x86
 }
