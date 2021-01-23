@@ -70,8 +70,9 @@ public rSkip        = createRegexp ("skip\\b", "skip"),
        rCase        = createRegexp ("case\\b", """case"""),
        rOf          = createRegexp ("of\\b", """of"""),
        rEsac        = createRegexp ("esac\\b", """esac"""),
-       rLength      = createRegexp ("length\\b", """length""");
-      
+       rLength      = createRegexp ("length\\b", """length"""),
+       rString      = createRegexp ("string\\b", """string""");
+
 local whiteSpace = token (rWhiteSpace);
 
 -- Public parsers for concrete tokens
@@ -97,6 +98,7 @@ public kSkip    = s (rSkip),
        kOf      = s (rOf),
        kEsac    = s (rEsac),
        kLength  = s (rLength),
+       kString  = s (rString),
        decimal  = s (rDecimal),
        chrlit   = syntax (x=s[rChar] {case substring (x, 1, x.length - 2) of
                                         "\\t" -> '\t'
@@ -111,9 +113,9 @@ public kSkip    = s (rSkip),
                                             j := j + 1
                                         do
                                           x [j] := x [i];
-                                          i := i + if x[i] == '"' then 2 else 1 fi                                          
+                                          i := i + if x[i] == '"' then 2 else 1 fi
                                         od;
-                                        substring (x, 0, j)}), 
+                                        substring (x, 0, j)}),
        pos      = memo $ syntax (-whiteSpace loc),
        end      = memo $ syntax (-whiteSpace eof),
        uident   = memo $ syntax (-whiteSpace located[token(rUident)]),

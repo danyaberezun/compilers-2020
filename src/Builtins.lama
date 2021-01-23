@@ -1,12 +1,27 @@
 -- Builtins
 import World;
+import List;
+import Data;
+
+fun stringify (e) {
+  case e of
+    Sexp (tag, args) ->
+      if size(args) == 0 then tag else
+        sprintf("%s (%s)", tag, foldl (fun (res, t) {
+          if res === "" then stringify(t)
+          else sprintf("%s, %s", res, stringify(t)) fi
+        }, "", args))
+      fi
+  | _ -> e.string
+  esac
+}
 
 public fun evalBuiltin (name, args, w) {
   case [name, args] of
-    ["stringval", {a}]          -> [a.string, w]
+    ["stringval", {a}]          -> [stringify(a), w]
   | ["length"   , {a@#array}]   -> [a.length, w]
   | ["length"   , {a@#string}]  -> [a.length, w]
-  | ["read"     , {}]           -> readWorld (w) 
+  | ["read"     , {}]           -> readWorld (w)
   | ["write"    , {x@#unboxed}] -> [0, writeWorld (x, w)]
   | _ ->
      failure ("no builtin ""%s"" or it can not be applied to %s\n", name, args.string)
