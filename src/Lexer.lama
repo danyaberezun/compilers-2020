@@ -70,7 +70,8 @@ public rSkip        = createRegexp ("skip\\b", "skip"),
        rCase        = createRegexp ("case\\b", """case"""),
        rOf          = createRegexp ("of\\b", """of"""),
        rEsac        = createRegexp ("esac\\b", """esac"""),
-       rLength      = createRegexp ("length\\b", """length""");
+       rLength      = createRegexp ("length\\b", """length"""),
+       rString      = createRegexp ("string\\b", """string""");
 
 local whiteSpace = token (rWhiteSpace);
 
@@ -97,6 +98,7 @@ public kSkip    = s (rSkip),
        kOf      = s (rOf),
        kEsac    = s (rEsac),
        kLength  = s (rLength),
+       kString  = s (rString),
        decimal  = s (rDecimal),
        chrlit   = syntax (x=s[rChar] {case substring (x, 1, x.length - 2) of
                                         "\\t" -> '\t'

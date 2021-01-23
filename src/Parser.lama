@@ -119,7 +119,7 @@ local primary    = memo $ eta syntax (
                                       loc=pos x=decimal                                              {fun (a) {assertValue (a, Const (stringInt (x)), loc)}}     |
 
                                       -- identifier
-                                      x=lident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? {fun (a) {
+                                      x=(lident | s["_"]) args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? {fun (a) {
                                                                                                             case args of
                                                                                                               None -> case a of
                                                                                                                         Ref  -> Ref (x)
@@ -153,6 +153,17 @@ local primary    = memo $ eta syntax (
   }} |
   loc=pos kIf cond=basic kThen body=exp alt=ifElif kFi { fun (a) {
     If (cond (Val), body (a), alt (a))
+  }} |
+  loc=pos tag=uident args=inbr[s("("), list0(syntax(e=exp {e(Val)})), s(")")]? { fun (a) {
+    assertValue (a, Sexp (tag, case args of
+      None -> {}
+    | Some(args) -> args
+    esac), loc)
+  }} |
+  loc=pos kCase x=basic kOf branches=list0By[syntax (pattern=primary s["->"] body=exp {[pattern(Val), body]}), s("|")] kEsac { fun (a) {
+    Case (x(Val), foldr (fun (branches, [pattern, body]) {
+      [pattern, body(a)]:branches
+    }, {}, branches))
   }}
 ),
 
@@ -180,10 +191,12 @@ local primary    = memo $ eta syntax (
                                      },
                                      postfix)),
       postfix    = memo $ eta syntax (loc=pos e=primary ps=(i=inbr[s("["), exp, s("]")] {Index (i (Val))} |
-                                                            -s["."] kLength {Length}
+                                                            -s["."] kLength {Length} |
+                                                            -s["."] kString {String}
                                                            )* {fun (a) {foldl (fun (e, p) {
                                                                                  case p of
                                                                                    Length    -> fun (a) {assertValue (a, Builtin ("length", singleton (e (Val))), loc)}
+                                                                                 | String    -> fun (a) {assertValue (a, Builtin ("stringval", singleton (e (Val))), loc)}
                                                                                  | Index (i) ->
                                                                                      fun (a) {
                                                                                        case a of

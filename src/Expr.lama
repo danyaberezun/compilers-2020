@@ -8,6 +8,7 @@ import Lexer;
 import Parser;
 import Fun;
 import Builtins;
+import Data;
 
 -- As association map which maps "\otimes" into "\oplus"
 local ops = {
@@ -99,6 +100,25 @@ fun evalList (c, exprs) {
   esac
 }
 
+fun patternMatch (c@[s, w], pattern, value) {
+  case pattern of
+    Var ("_") -> c
+  | Var (name) -> [addName (s, name, value) <- [name, value], w]
+  | Sexp (patternTag, patternArgs) ->
+    case value of
+      Sexp (valueTag, valueArgs) ->
+        if patternTag === valueTag && size(patternArgs) == size(valueArgs) then
+          foldl (fun (c, [p, v]) {
+            case c of None -> None | _ ->
+              patternMatch (c, p, v)
+            esac
+          }, c, zip(patternArgs, valueArgs))
+        else None fi
+    | _ -> None
+    esac
+  esac
+}
+
 (* Assignment *)
 fun eval (c@[s, w], expr) {
   case expr of
@@ -176,6 +196,29 @@ fun eval (c@[s, w], expr) {
     case evalList (c, args) of [[s, w], args] ->
       case evalBuiltin(name, args, w) of [retval, w] ->
         [[s, w], retval]
+      esac
+    esac
+  | Sexp (tag, args) ->
+    case evalList (c, args) of [c, args] ->
+      [c, Sexp (tag, args)]
+    esac
+  | Case (x, branches) ->
+    case eval (c, x) of [c, x] ->
+      case foldl(fun (result, [pattern, body]) {
+        case result of
+          None ->
+            case patternMatch ([enterScope (s), w], pattern, x) of
+              None -> None
+            | c ->
+              case eval(c, body) of [[s, w], value] ->
+                [[leaveScope (s), w], value]
+              esac
+            esac
+        | _ -> result
+        esac
+      }, None, branches) of
+        None -> failure ("interpreter: Match failure on %s\n", x.string)
+      | t -> t
       esac
     esac
   esac
