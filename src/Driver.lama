@@ -8,7 +8,11 @@ import Ostap;
 import Parser;
 import Matcher;
 import Lexer;
+<<<<<<< HEAD
 import Expr;
+=======
+import Stmt;
+>>>>>>> A05-control-flow-sm-x86
 import SM;
 import X86;
 import Manifest;
@@ -18,6 +22,10 @@ import Manifest;
 -- defined in the unit Manifest
 fun parseArgs (args) {
   local mode   = ref (Comp),
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> A05-control-flow-sm-x86
         infile = ref ({}),
         smDump = ref (false);
 
@@ -27,6 +35,13 @@ fun parseArgs (args) {
     esac
   }
   
+<<<<<<< HEAD
+=======
+=======
+        infile = ref ({});
+
+>>>>>>> A04-control-flow-int
+>>>>>>> A05-control-flow-sm-x86
   fun setMode (m) {
     case deref (mode) of
       Comp -> mode ::= m
@@ -47,16 +62,32 @@ fun parseArgs (args) {
               {}    -> skip
             | h : t ->
                case h of
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> A05-control-flow-sm-x86
                  "-i"  -> setMode (Int)
                | "-s"  -> setMode (SM)
                | "-ds" -> setDump (SM)
                | fn    -> setInFile (fn)
+<<<<<<< HEAD
+=======
+=======
+                 "-i" -> setMode (Int)
+               | "-s" -> setMode (SM)
+               | fn   -> setInFile (fn)
+>>>>>>> A04-control-flow-int
+>>>>>>> A05-control-flow-sm-x86
                esac;
                rec (t)
             esac
          }
       })(args);
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> A05-control-flow-sm-x86
   [fun () {deref (mode)},
    fun () {case deref(infile) of #unboxed -> failure ("input file name not set\n") | fn -> fn esac},
    fun () {deref (smDump)}
@@ -69,6 +100,17 @@ fun peepSM (args, smCode) {
   smCode
 }
 
+<<<<<<< HEAD
+=======
+=======
+
+  [fun () {deref (mode)},
+   fun () {case deref(infile) of #unboxed -> failure ("input file name not set\n") | fn -> fn esac}
+  ]        
+}
+
+>>>>>>> A04-control-flow-int
+>>>>>>> A05-control-flow-sm-x86
 local args = parseArgs (arrayList (sysargs).tl);
 
 -- The main part: parses input file, invokes interpreter/stack machine interpreter/x86
@@ -76,7 +118,15 @@ local args = parseArgs (arrayList (sysargs).tl);
 case parseString (parse |> bypass (end), fread (args.getInFile)) of
   Succ (program) ->
     case args.getMode of
+<<<<<<< HEAD
       Comp -> compileX86 (args, peepSM (args, compileSM (program)))
+=======
+<<<<<<< HEAD
+      Comp -> compileX86 (args, peepSM (args, compileSM (program)))
+=======
+      Comp -> compileX86 (args, compileSM (program))
+>>>>>>> A04-control-flow-int
+>>>>>>> A05-control-flow-sm-x86
     | mode ->
        local input =
           reverse (fix (fun (f) {
@@ -86,12 +136,25 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
                             | arg      -> f (stringInt (arg) : acc) esac
                           }
                         }) ({}));
+<<<<<<< HEAD
 
        iter (fun (x) {printf ("%d\n", x)},
              case mode of
                Int -> evalExpr (input, program)
              | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
              esac) 
+=======
+          
+       iter (fun (x) {printf ("%d\n", x)},
+             case mode of
+               Int -> evalStmt (input, program)
+<<<<<<< HEAD
+             | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
+=======
+             | SM  -> evalSM (input, compileSM (program))
+>>>>>>> A04-control-flow-int
+             esac)
+>>>>>>> A05-control-flow-sm-x86
     esac
 | x@Fail (err, line, col) ->   
    failure ("%s at %d:%d\n", err.hd, line, col)
