@@ -101,11 +101,18 @@ fun evalList (c, exprs) {
   esac
 }
 
+fun dvar(v) {
+  case v of 
+      Var(x) -> x
+      | _ -> failure("not a var")
+  esac
+}
+
 fun eval (c@[state, world], expr) {
     case expr of 
-      Read(x) -> case readWorld(world) of [val, nworld] ->
+      Read(x) -> state.checkVar(x); case readWorld(world) of [val, nworld] ->
           [[
-            state<-[x, val],
+            state<-[x, Var(val)],
             nworld
           ],
           Void
@@ -122,7 +129,7 @@ fun eval (c@[state, world], expr) {
       | Assn(x, expr) -> case evalList(c, {x, expr}) of [[state, world], var:res:_] ->
         [
         [
-          state<-[var, res],
+          state<-[var, Var(res)],
           world
         ],
         res
@@ -150,20 +157,37 @@ fun eval (c@[state, world], expr) {
           esac
       | Skip -> [c, Void]
       | Const(n) -> [c, n]
-      | Var(x) -> [c, state(x)]
+      | Var(x) -> state.checkVar(x); [c, state.lookup(x).dvar]
       | Binop(op, lefto, righto) -> case evalList(c, {lefto, righto}) of [c, a:b:_] ->
                                     [c, evalOp(op, a, b)]
                                     esac
       | Ref(x) -> [c, x]
       | Ignore(expr) -> [eval(c, expr).fst, Void]
-                                    
+      | Scope(defs, expr) -> case evalList([state.enterScope, world], defs) of [c, _] -> 
+            case eval(c, expr) of [[s, w], res] -> [[s.leaveScope, w], res] esac
+        esac
+      | Local(vars) -> [[state.addNames(vars), world], Void]
+      | Fun(name, args, body) -> [[state.addFunction(name, args, body), world], Void]
+      | Call(f, argExps) -> state.checkFun(f); case c.evalList(argExps) of [[s, w], argVals] -> case state.lookup(f) of Fun(args, body) ->
+            local news = foldl(
+                        fun (olds, [arg, val]) {olds.addName(arg, Var(val))}, 
+                        s.enterFunction, 
+                        zip(args, argVals)
+                      );
+            case eval([news, w],
+                       body
+                     ) of [[sres, w], res] ->
+                [[s.leaveFunction(sres.getGlobal), w], res]
+            esac
+        esac esac
+
     esac
 }
 
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
-  case eval ([emptyState, createWorld (input)], expr) of
+  case eval ([emptyState (), createWorld (input)], expr) of
     [c, _] -> c.snd.getOutput
   esac
 }
