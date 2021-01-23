@@ -12,20 +12,12 @@ Expr.o: State.o
 
 Stmt.o: State.o Expr.o World.o
 
-<<<<<<< HEAD
 SM.o: State.o World.o 
 
 X86.o: SM.o
-=======
-SM.o: State.o World.o Util.o
->>>>>>> A01-straight-line-int-sm
 
 %.o: %.lama
 	$(LAMAC) -I . -c $<
 
 clean:
-<<<<<<< HEAD
 	rm -Rf *.s *.o *.i *~ *.html *.sm lama-impl
-=======
-	rm -Rf *.s *.o *.i *~ *.html *.sm lama-impl
->>>>>>> A01-straight-line-int-sm

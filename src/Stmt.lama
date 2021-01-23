@@ -7,7 +7,6 @@ import World;
 -- Evaluates a statement "stmt" in a configuration "c".
 -- A configuration is a pair of a state "s" and a world "w".
 -- Returns a final configuration (if any)
-<<<<<<< HEAD
 --
 -- A statement is represented by a data structure of the following shape:
 --
@@ -17,8 +16,6 @@ import World;
 --        Read   (string)           |
 --        Write  (expr)             |
 
-=======
->>>>>>> A01-straight-line-int-sm
 fun eval (c, stmt) {
   case c of [s, w] ->
     case stmt of
