@@ -7,7 +7,6 @@ import Collection;
 import List;
 
 -- A set of all keywords
-<<<<<<< HEAD
 local keywords =
    foldl (addSet,
           emptySet (compare),
@@ -28,17 +27,10 @@ local keywords =
 
 -- Regular expression definitions
 public rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\\)\\)*", "whitespace"),
-=======
-local keywords = foldl (addSet, emptySet (compare), {"read", "write", "skip"});
-
--- Regular expression definitions
-local rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\\)\\)*", "whitespace"),
->>>>>>> A03-straight-line-parser
       rDecimal     = createRegexp ("-?[0-9]+", "decimal constant"),
       rLident      = createRegexp ("[a-z][a-z_A-Z0-9]*", "lowercase identifier"),
       rRead        = createRegexp ("read\\b", """read"""),
       rWrite       = createRegexp ("write\\b", """write"""),
-<<<<<<< HEAD
       rSkip        = createRegexp ("skip\\b", """skip"""),
       rIf          = createRegexp ("if\\b", """if"""),
       rThen        = createRegexp ("then\\b", """then"""),
@@ -52,10 +44,6 @@ local rWhiteSpace  = createRegexp ("\\(\\([ \n\r\t]*\\)\\|\\(--[^\n]*[ \n\r\t]*\
       rUntil       = createRegexp ("until\\b", """until"""),
       rFor         = createRegexp ("for\\b", """for""");
       
-=======
-      rSkip        = createRegexp ("skip\\b", """skip""");
-
->>>>>>> A03-straight-line-parser
 local whiteSpace = token (rWhiteSpace);
 
 -- Public parsers for concrete tokens
@@ -66,7 +54,6 @@ public fun s (t) {memo $ whiteSpace |> lift (token (t))}
 public kRead    = s (rRead),
        kWrite   = s (rWrite),
        kSkip    = s (rSkip),
-<<<<<<< HEAD
        kIf      = s (rIf),
        kThen    = s (rThen),
        kElse    = s (rElse),
@@ -78,22 +65,16 @@ public kRead    = s (rRead),
        kRepeat  = s (rRepeat),
        kUntil   = s (rUntil),
        kFor     = s (rFor),
-=======
->>>>>>> A03-straight-line-parser
        decimal  = s (rDecimal),
        end      = memo $ whiteSpace |> lift (eof),
        lident   = memo $       
          whiteSpace |> lift (fun (k) {
                                 fun (s) {
                                   k (case s.matchRegexp (rLident) of
-<<<<<<< HEAD
                                        a@Succ (v, _) -> if memSet (keywords, v)
                                                         then Fail ("lowercase identifier expected", s.getLine, s.getCol)
                                                         else a
                                                         fi
-=======
-                                       a@Succ (v, _) -> if memSet (keywords, v) then Fail ("lowercase identifier expected", s.getLine, s.getCol) else a fi
->>>>>>> A03-straight-line-parser
                                      | a             -> a
                                      esac)
                                 }
