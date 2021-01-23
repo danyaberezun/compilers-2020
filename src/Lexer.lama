@@ -64,7 +64,7 @@ public rSkip        = createRegexp ("skip\\b", "skip"),
        rLocal       = createRegexp ("local\\b", """for"""),
        rFun         = createRegexp ("fun\\b", """for"""),
        rLength      = createRegexp ("length\\b", """length""");
-      
+
 local whiteSpace = token (rWhiteSpace);
 
 -- Public parsers for concrete tokens
@@ -101,9 +101,9 @@ public kSkip    = s (rSkip),
                                             j := j + 1
                                         do
                                           x [j] := x [i];
-                                          i := i + if x[i] == '"' then 2 else 1 fi                                          
+                                          i := i + if x[i] == '"' then 2 else 1 fi
                                         od;
-                                        substring (x, 0, j)}), 
+                                        substring (x, 0, j)}),
        pos      = memo $ syntax (-whiteSpace loc),
        end      = memo $ syntax (-whiteSpace eof),
        lident   = memo $ syntax (-whiteSpace located[
@@ -118,7 +118,6 @@ public kSkip    = s (rSkip),
                                           esac)
                                      }
                                    }
-       
-                                ]);
 
+                                ]);
 
