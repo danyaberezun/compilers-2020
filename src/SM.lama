@@ -6,26 +6,6 @@ import State;
 import Expr;
 import Buffer;
 import Fun;
-<<<<<<< HEAD
-
--- Stack code printer. Takes a list of SM instructions, return its
--- string representation.
-public fun showSMInsn (i) {
-  case i of
-    READ      -> sprintf ("READ")
-  | WRITE     -> sprintf ("WRITE")
-  | BINOP (s) -> sprintf ("BINOP %s", s)
-  | LD    (x) -> sprintf ("LD %s", x)
-  | ST    (x) -> sprintf ("ST %s", x)
-  | CONST (n) -> sprintf ("CONST %d", n)
-  esac
-}
-
-public fun showSM (prg) {
-  map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
-}
-=======
->>>>>>> A02-straight-line-x86
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
