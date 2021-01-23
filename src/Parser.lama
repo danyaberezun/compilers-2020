@@ -7,7 +7,7 @@ import Fun;
 import Matcher;
 
 -- A parser of "something" in brackets; l, r are left and right
--- brackets as parsers, p --- a parser of "something"
+-- brackets as strings, p --- a parser of "something"
 fun inbr (l, p, r) {
   syntax (-l p -r)
 }
@@ -15,11 +15,25 @@ fun inbr (l, p, r) {
 -- Primary expression
 local primary = memo $ eta (decimal @ fun (x) {Const (stringInt (x))} |
                             lident  @ fun (x) {Var (x)} |
-                            inbr (s ("("), exp, s (")"))),
-      exp = memo $ eta (failure ("expression parsing not implemented\n"));
+                            inbr (s ("("), exp, s (")"))), 
+      binop = fun (l, op, r) {Binop (op, l, r)},                    
+      exp = memo $ eta expr ({[Left, singleton ([s ("!!"), binop])],
+                              [Left, singleton ([s ("&&"), binop])],
+                              [Nona, singleton ([s ("<") | s (">") | s ("==") | s ("!=") | s ("<=") | s (">="), binop])],
+                              [Left, singleton ([s ("+") | s ("-"), binop])],
+                              [Left, singleton ([s ("*") | s ("/") | s ("%"), binop])]}, primary);
 
-local stmt = memo $ eta (failure ("statement parsing not implemented\n"));
-   
+local stmtSingle = memo $ eta syntax (x=lident s[":="] e=exp {Assn (x, e)} | 
+                                      kSkip {Skip} |
+                                      kRead str=inbr[s ("("), lident, s (")")] {Read (str)} |
+                                      kWrite e=inbr[s ("("), exp, s (")")] {Write (e)} |
+                                      kIf e=exp kThen s=stmt ep=elsePart kFi {If (e, s, ep)} |
+                                      kWhile e=exp kDo s=stmt kOd {While (e, s)} |
+                                      kRepeat s=stmt kUntil e=exp {Repeat (s, e)} |
+                                      kFor s1=stmt s[","] e=exp s[","] s2=stmt kDo s3=stmt kOd {Seq (s1, While (e, Seq (s3, s2)))}),
+      elsePart = memo $ eta syntax (s[""] {Skip} | kElse s=stmt {s} | kElif e=exp kThen s=stmt ep=elsePart {If (e, s, ep)}),
+      stmt = memo $ eta syntax (stmtSingle | s1=stmtSingle s[";"] s2=stmt {Seq (s1, s2)});
+
 
 -- Public top-level parser
 public parse = stmt;
