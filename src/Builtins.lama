@@ -1,9 +1,24 @@
 -- Builtins
 import World;
+import List;
+
+fun exprToStr(e) {
+    case e of
+        Sexp(tag, args) -> if compare(args, {}) then
+            tag ++ " (" ++ foldl(fun(s, arg) {
+                if compare(s, "") then s ++ ", " ++ exprToStr(arg)
+                else exprToStr(arg)
+                fi
+            }, "", args) ++ ")"
+        else tag
+        fi |
+        _ -> e.string
+    esac
+}
 
 public fun evalBuiltin (name, args, w) {
   case [name, args] of
-    ["stringval", {a}]          -> [a.string, w]
+    ["stringval", {a}]          -> [exprToStr(a), w]
   | ["length"   , {a@#array}]   -> [a.length, w]
   | ["length"   , {a@#string}]  -> [a.length, w]
   | ["read"     , {}]           -> readWorld (w) 

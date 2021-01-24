@@ -130,7 +130,38 @@ local primary    = memo $ eta syntax (
                                                                                                             esac
                                                                                                          }} |
 (* Assignment *)
-                                      $(failure ("the rest of primary parsing in not implemented\n"))),
+        loc=pos kSkip {fun(a) {assertVoid(a, Skip, loc)}} |
+        loc=pos kIf cond=exp kThen s1=exp s2=elseBranch {fun (a) {If (cond(Val), s1(a), s2(a))}} |
+        loc=pos kWhile cond=exp kDo body=scopeExpr kOd {
+            fun (a) { assertVoid(a, While (cond(Val), body(Void)), loc) }
+        } |
+        loc=pos kRepeat body=scopeExpr kUntil cond=inbr[s("("), exp, s(")")] {
+            fun (a) {
+                case body(Void) of
+                    Scope(defs, e) -> assertVoid(a, Scope(defs, Repeat (e, cond(Val))), loc) 
+                esac
+            }
+        } |
+        loc=pos kFor init=scopeExpr s[","] cond=exp s[","] step=exp kDo body=scopeExpr kOd {
+            fun (a) {
+                case init(Void) of 
+                    Scope(defs, e) -> assertVoid(a, Scope(defs, Seq (e, While (cond(Val), Seq (body(Void), step(Void))))), loc)
+                esac
+            }
+        } |
+        inbr[s("("), exp, s(")")] |
+        inbr[s("{"), scopeExpr, s("}")] |
+        loc=pos x=sexpLhs    {fun (a) { assertValue  (a, Sexp(x, {}), loc)}} |
+        loc=pos x=uident y=inbr[s("("), list0(syntax (e=exp {e(Val)})), s(")")] {fun (a) {assertValue (a, Sexp(x, y), loc)}} |
+        loc=pos kCase x=exp kOf pats=list0By[caseBranch, s("|")] kEsac {fun (a) { Case(x(Val), map(fun ([p, e]) {[p(Val), e(a)]}, pats)) }}
+     ),
+     sexpLhs = memo $ eta syntax (uident|s["_"]),
+     caseBranch = memo $ eta syntax (loc=pos p=primary s["->"] e=exp {[p, e]}),
+     elseBranch = memo $ eta syntax (
+        loc=pos kFi {fun (a) { assertVoid(a, Skip, loc)}} |
+        -kElse exp -kFi|
+        kElif cond=exp kThen s1=exp s2=elseBranch {fun (a) {If (cond (Val), s1 (a), s2 (a))}}
+    ),
 (* End *)
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
@@ -143,11 +174,14 @@ local primary    = memo $ eta syntax (
                                       [Left , map (binop, {"*", "/", "%"})]
                                      },
                                      postfix)),
-      postfix    = memo $ eta syntax (loc=pos e=primary ps=(i=inbr[s("["), exp, s("]")] {Index (i (Val))} |
-                                                            -s["."] kLength {Length}
-                                                           )* {fun (a) {foldl (fun (e, p) {                                                                            
+      postfixOp = memo $ eta syntax (i=inbr[s("["), exp, s("]")] {Index (i (Val))} |
+                                                            -s["."] kLength {Length} | 
+                                                            -s["."] kString {String} 
+                                                           ),
+      postfix    = memo $ eta syntax (loc=pos e=primary ps= postfixOp* {fun (a) {foldl (fun (e, p) {                                                                            
                                                                                  case p of                                                                                   
                                                                                    Length    -> fun (a) {assertValue (a, Builtin ("length", singleton (e (Val))), loc)}
+                                                                                 | String -> fun (a) {assertValue (a, Builtin ("stringval", singleton (e (Val))), loc)}
                                                                                  | Index (i) ->
                                                                                      fun (a) {
                                                                                        case a of
@@ -161,7 +195,7 @@ local primary    = memo $ eta syntax (
                                      ),
       scopeExpr  = memo $ eta syntax (ds=definition* e=exp? {fun (a) {fun (e) {
                                                                         case ds of
-                                                                          {} -> e
+                                                                          {} -> Scope({}, e)
                                                                         | _  -> expandScope (ds, e) 
                                                                         esac
                                                                       } (case e of 
