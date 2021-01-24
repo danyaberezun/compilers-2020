@@ -125,8 +125,8 @@ local primary = memo $ eta syntax (
                                       loc=pos kWrite e=inbr[s("("), exp, s(")")] { fun(a) { assertVoid(a, Write(e(Val)), loc) } } |
                                       loc=pos kSkip {fun(a) {assertVoid(a, Skip, loc)} } |
                                       
-                                      kIf c=exp kThen s=exp ot=elifStmt kFi {fun(a) {If(c(Val), s(a), ot(a))} } |
-                                      loc=pos kIf c=exp kThen s=exp kFi {fun(a) {assertVoid(a, If(c(Val), s(Void), None), loc)}} |
+                                      kIf c=exp kThen s=scopeExpr ot=elifStmt kFi {fun(a) {If(c(Val), s(a), ot(a))} } |
+                                      loc=pos kIf c=exp kThen s=scopeExpr kFi {fun(a) {assertVoid(a, If(c(Val), s(Void), None), loc)}} |
                                       loc=pos kWhile c=exp kDo s=scopeExpr kOd {fun(a) { assertVoid(a, While(c(Val), s(Void)), loc)} }|
                                       loc=pos kFor i=scopeExpr s[","] c=exp s[","] s=exp kDo ot=scopeExpr kOd 
                                           { fun(a) {
@@ -177,7 +177,7 @@ local primary = memo $ eta syntax (
 public parse = syntax (s=scopeExpr {s (Void)});
 
 local elifStmt = syntax (
-  kElif e=exp kThen s=exp ot=elifStmt {fun(a) { If(e(Val), s(a), ot(a))} } |
-  loc=pos kElif e=exp kThen s=exp {fun(a) { assertVoid(a, If(e(Val), s(Void), e(Void)), loc) }} |
-  kElse s=exp { fun(a) {s(a)} }
+  kElif e=exp kThen s=scopeExpr ot=elifStmt {fun(a) { If(e(Val), s(a), ot(a))} } |
+  loc=pos kElif e=exp kThen s=scopeExpr {fun(a) { assertVoid(a, If(e(Val), s(Void), e(Void)), loc) }} |
+  kElse s=scopeExpr { fun(a) {s(a)} }
 );

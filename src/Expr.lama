@@ -157,7 +157,7 @@ fun eval (c@[state, world], expr) {
           esac
       | Skip -> [c, Void]
       | Const(n) -> [c, n]
-      | Var(x) -> state.checkVar(x); [c, state.lookup(x).dvar]
+      | Var(x) -> [c, state.lookup(x).dvar]
       | Binop(op, lefto, righto) -> case evalList(c, {lefto, righto}) of [c, a:b:_] ->
                                     [c, evalOp(op, a, b)]
                                     esac
