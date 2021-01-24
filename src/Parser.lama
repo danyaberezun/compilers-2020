@@ -129,9 +129,38 @@ local primary    = memo $ eta syntax (
                                                                                                             | Some (args) -> assertValue (a, Call (x, args))
                                                                                                             esac
                                                                                                          }} |
-(* Assignment *)
-                                      $(failure ("the rest of primary parsing in not implemented\n"))),
-(* End *)
+                                    inbr[s("("), exp, s(")")] |
+                                    inbr[s("{"), scopeExpr, s("}")] |
+                                    loc=pos kSkip {fun (a) { assertVoid(a, Skip, loc) }} |
+                                    -kIf ifNoKw |
+                                    loc=pos kWhile cond=exp kDo body=scopeExpr kOd {fun (a) { assertVoid(a, While (cond (Val), body (Void)), loc) }} |
+                                    loc=pos kFor init=scopeExpr s[","] cond=exp s[","] step=exp kDo body=scopeExpr kOd {fun (a) { 
+                                      local whl = distributeScope(init (Void), fun (i) {
+                                        Seq (i, While (cond (Val), Seq (body (Void), step (Void))))
+                                      });
+                                      assertVoid(a, whl, loc) 
+                                    }} |
+                                    loc=pos kRepeat body=scopeExpr kUntil cond=basic {fun (a) { 
+                                      local rpt = distributeScope(body (Void), fun (b) {
+                                        Repeat (b, cond (Val))
+                                      });
+                                      assertVoid(a, rpt, loc) 
+                                    }}
+                                    ),
+      ifNoKw     = memo $ eta syntax (
+                                    cond=exp kThen thn=scopeExpr els=(
+                                      -kElse scopeExpr -kFi     |
+                                      -kElif ifNoKw        |
+                                      loc=pos kFi {fun (a) { assertVoid(a, Skip, loc) }}
+                                    ) {fun (a) { If (cond (Val), thn (a), els (a)) }}
+                                    ),
+      defItem    = memo $ eta syntax (
+                                    kFun fname=lident params=inbr[s("("), list0(lident), s(")")]
+                                    body=inbr[s("{"), scopeExpr, s("}")] { Fun (fname, params, body (Weak)) } |
+                                    kLocal defs=list[syntax(
+                                        id=lident val=(-s["="] v=basic {v (Val)})? { [id, val] }
+                                      )] s[";"] { Local (defs) }
+                                    ),
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                           fun (l, loc, r) {
                                                             fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
@@ -142,7 +171,7 @@ local primary    = memo $ eta syntax (
                                       [Left , map (binop, {"+", "-"})],
                                       [Left , map (binop, {"*", "/", "%"})]
                                      },
-                                     postfix)(id)),
+                                     postfix)),
       postfix    = memo $ eta syntax (loc=pos e=primary ps=(i=inbr[s("["), exp, s("]")] {Index (i (Val))} |
                                                             -s["."] kLength {Length}
                                                            )* {fun (a) {foldl (fun (e, p) {                                                                            
