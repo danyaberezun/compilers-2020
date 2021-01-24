@@ -59,8 +59,44 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+fun eval (env, c@[stack, state, w], insns) {
+  case insns of
+    {}             -> c
+  | i : is         -> 
+    case i of
+      JMP (l)        -> eval (env, c, fromLabel (env, l))
+    | CJMP (cond, l) -> 
+        case stack of v : vs -> {
+          fun isCondTrue (cond, value) {
+            case cond of
+              "nz" -> value != 0
+            | "z"  -> value == 0
+            esac
+          }
+          eval (env, [vs, state, w],
+            case isCondTrue(cond, v) of
+              0 -> is
+            | _ -> fromLabel (env, l)
+            esac
+          )
+        } esac
+    | _ ->
+        eval (env,
+          case i of
+              CONST (n)  -> [n : stack, state, w]
+            | BINOP (op) -> case stack of v1 : v2 : vs -> [evalOp (op, v1, v2) : vs, state, w] esac
+            | LD (x)     -> [state (x) : stack, state, w]
+            | ST (x)     -> case stack of v : vs -> [vs, state <- [x, v], w] esac
+            | READ       -> case readWorld (w) of [v, w1] -> [v : stack, state, w1] esac
+            | WRITE      -> case stack of v : vs -> [vs, state, writeWorld (v, w)] esac
+            | LABEL (s)  -> c
+            | LDA (id)   -> [Ref (id) : stack, state, w]
+            | STI        -> case stack of v : (Ref (id)) : vs -> [v : vs, state <- [id, v], w] esac
+            | DROP       -> case stack of _ : vs -> [vs, state, w] esac
+          esac,
+        is)
+    esac
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -102,5 +138,89 @@ fun genLabels (env, n) {
 -- Takes an expression, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  fun compileImpl (env, stmt) { 
+    case stmt of
+      Assn (tgt, e)       ->
+        case compileImpl (env, tgt) of [env, smTgt] ->
+          case compileImpl (env, e) of [env, smVal] ->
+            [env, {smTgt, smVal, STI}]
+          esac
+        esac
+    | Seq (e1, e2)        -> 
+        case compileImpl (env, e1) of [env, sm1] ->
+          case compileImpl (env, e2) of [env, sm2] ->
+            [env, {sm1, sm2}]
+          esac
+        esac
+    | Skip                -> [env, {}]
+    | Read (x)            -> [env, {READ, ST (x)}]
+    | Write (e)           ->
+        case compileImpl (env, e) of [env, sm] ->
+          [env, {sm, WRITE}]
+        esac
+    | If (cond, thn, els) -> 
+        case compileImpl (env, cond) of [env, smCond] ->
+          case genLabels (env, 2) of [labelEls, labelEnd, env] ->
+            case compileImpl (env, thn) of [env, smThn] ->
+              case compileImpl (env, els) of [env, smEls] ->
+                [env,
+                  { smCond
+                  , CJMP ("z", labelEls)
+                  , smThn
+                  , JMP (labelEnd)
+                  , LABEL (labelEls)
+                  , smEls
+                  , LABEL (labelEnd)
+                  }
+                ]
+              esac
+            esac
+          esac
+        esac
+    | While (cond, body) ->
+        case compileImpl (env, cond) of [env, smCond] ->
+          case genLabels (env, 2) of [labelBody, labelCond, env] ->
+            case compileImpl (env, body) of [env, smBody] ->
+              [env,
+                { JMP (labelCond)
+                , LABEL (labelBody)
+                , smBody
+                , LABEL (labelCond)
+                , smCond
+                , CJMP ("nz", labelBody)
+                }
+              ]
+            esac
+          esac
+        esac
+    | Repeat (body, cond) ->
+        case compileImpl (env, cond) of [env, smCond] ->
+          case genLabels (env, 1) of [labelBody, env] ->
+            case compileImpl (env, body) of [env, smBody] ->
+              [env,
+                { LABEL (labelBody)
+                , smBody
+                , smCond
+                , CJMP ("z", labelBody)
+                }
+              ]
+            esac
+          esac
+        esac
+    | Var (id) -> [env, singleton (LD (id))]
+    | Ref (id) -> [env, singleton (LDA (id))]
+    | Const (n) -> [env, singleton (CONST (n))]
+    | Binop (op, lhs, rhs) ->
+        case compileImpl (env, lhs) of [env, smLhs] ->
+          case compileImpl (env, rhs) of [env, smRhs] ->
+            [env, {smRhs, smLhs, BINOP (op)}]
+          esac
+        esac
+    | Ignore (e) ->
+        case compileImpl (env, e) of [env, sm] ->
+          [env, {sm, DROP}]
+        esac
+    esac
+  }
+  deepFlatten (compileImpl (initCompEnv (), stmt)[1])
 }
