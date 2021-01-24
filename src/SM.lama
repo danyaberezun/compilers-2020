@@ -118,65 +118,78 @@ fun eval (env, w, insns) {
 
   -- Core interpreter: takes a configuration and a program, returns a configuration
   (* Assignment *)
-  fun eval (c@[st, cst, s, w], insns) {
-    failure ("SM interpreter is not implemented\n")
-  }
-  (* End *)
-  
-  eval ([{}, {}, makeState (0, 0), w], insns) [3].getOutput
--- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
--- returns a final configuration
-fun eval (env, c, insns) {
-  case insns of (x:tail) -> 
-    case c of [stack, state, world] ->
+  fun eval (c@[stack, cst, state, world], insns) {
+    case insns of (x:tail) -> 
     case x of 
-          JMP(l) -> eval(env, c, fromLabel(env, l))
+        JMP(l) -> eval(c, fromLabel(env, l))
         | CJMP(cond, l) -> case stack of (t:rest) -> 
             if (compare(cond, "z") == 0 && t == 0 !! compare(cond, "nz") == 0 && t != 0)
-            then eval(env, [rest, state, world], fromLabel(env, l))
-            else eval(env, [rest, state, world], tail)
+            then eval([rest, cst, state, world], fromLabel(env, l))
+            else eval([rest, cst, state, world], tail)
             fi
           esac
-        | LABEL(l) -> eval(env, c, tail)
+        | LABEL(l) -> eval(c, tail)
+        | CALL(f,_) -> eval([stack, [state, tail]:cst, state, world], env.fromLabel(f))
+        | END -> case cst of 
+          [ostate, oinsns]:cst -> eval([stack, cst, ostate, world], oinsns)
+          | _ -> c
+          esac
         | _ -> 
             local nconf;
             nconf :=
               case x of 
                   BINOP(op) ->
                     case stack of (a:b:rest) ->
-                        [(evalOp(op, b, a):rest), state, world]
+                        [(evalOp(op, b, a):rest), cst, state, world]
                     esac
-                  | CONST(n) -> [(n:stack), state, world]
-                  | LD(x) -> [(state(x):stack), state, world]
+                  | CONST(n) -> [(n:stack), cst, state, world]
+                  | LD(x) -> [(state.lookup(x)):stack, cst, state, world]
                   | ST(x) -> 
                     case stack of (t:rest) -> 
-                      [rest, state<-[x, t], world] 
+                      [rest, cst, state.assign(x, t); state, world] 
                     esac
                   
                   | READ -> case readWorld(world) of [n, nworld] -> 
-                        [(n:stack), state, nworld]
+                        [(n:stack), cst, state, nworld]
                     esac
                   | WRITE ->
                     case stack of (t:rest) -> {
                       local nworld;
                       nworld := writeWorld(t, world);
-                      [rest, state, nworld]
+                      [rest, cst, state, nworld]
                     }
                     esac
                   | STI -> case stack of (res:var:rest) -> 
-                    [(res:rest), state<-[var, res], world]
+                    [(res:rest), cst, state.assign(var, res); state, world]
                     esac
                   | LDA(x) -> 
-                     [(x:stack), state, world]
+                     [(x:stack), cst, state, world]
                   | DROP -> case stack of (_:rest) ->
-                     [rest, state, world] | _ -> failure(insns.string)
+                     [rest, cst, state, world] | _ -> failure(insns.string)
                     esac
+                  | BEGIN(_, nargs, nlocs) -> case stack.take(nargs) of [rest, vals] ->
+                      local nstate = foldl(
+                        fun([state1, n], val) {
+                          [
+                            state1.assign(Arg(n), val); state1,
+                            n + 1
+                          ]
+                        },
+                        [makeState(nargs, nlocs), 0],
+                        vals
+                      )[0];
+                      [rest, cst, nstate, world]
+                    esac
+                  | GLOBAL(x) -> assign(state, Glb(x), 0); [stack, cst, state, world]
               esac;
-            eval(env, nconf, tail)
-     esac
+            eval(nconf, tail)
      esac
     | _ -> c
   esac
+  }
+  (* End *)
+  
+  eval ([{}, {}, makeState (0, 0), w], insns) [3].getOutput
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -402,7 +415,43 @@ fun addVars (env, names) {
 --    (use env.addArg).
 
 public fun compileSM (stmt) {
-  compileSmWithEnv(stmt, initCompEnv())[0]
+  case compileSmWithEnv(stmt, initCompEnv()) of [insns, env] ->
+     compileFuncs(
+       singleton(LABEL("main")) +++
+       singleton(BEGIN("main", 0, env.getLocals)) +++
+       insns +++
+       singleton(END)
+       , 
+       env
+     )[0]
+  esac
+}
+
+fun compileFuncs (insns, env) {
+  case env.getFuns of 
+    [{}, env] -> [insns, env] |
+    [funcs, env] -> case foldl (
+        fun ([insns, env], Fun (name, args, body, state)) {
+          case addArgs(env.beginFun(state), args) of env ->
+            case compileSmWithEnv(body, env) of [bodyInsns, env] ->
+              [
+                insns +++
+                singleton(LABEL(name)) +++
+                singleton(BEGIN(name, args.size, env.getLocals)) +++
+                bodyInsns +++
+                singleton(END)
+              ,
+              env
+              ]
+            esac
+          esac
+        }, 
+        [insns, env], 
+        funcs
+      ) of [insns, env] ->
+      compileFuncs (insns, env)
+    esac
+  esac
 }
 
 fun compileSmWithEnv(stmt, env) {
@@ -412,7 +461,7 @@ fun compileSmWithEnv(stmt, env) {
 fun compileSmWithEnvAndLbl(stmt, env, shouldJump, lblToJump) {
     local additional = if shouldJump then singleton(JMP(lblToJump)) else {} fi;
     case stmt of 
-      Read(x) -> [{READ, ST(x)} +++ additional, env]
+      Read(x) -> [{READ, ST(lookupVar(env, x))} +++ additional, env]
     | Write(expr) -> case compileSmWithEnv(expr, env) of [ins1, env1] -> [ins1 +++ singleton(WRITE) +++ additional, env1] esac
     | Assn(x, expr) -> case compileSmWithEnv(x, env) of [ins1, env1] -> case compileSmWithEnv(expr, env1) of [ins2, env2] ->
         [ins1 +++ ins2 +++ singleton(STI) +++ additional, env2]
@@ -500,7 +549,7 @@ fun compileSmWithEnvAndLbl(stmt, env, shouldJump, lblToJump) {
       ]
     | Var(x) -> 
       [
-        singleton(LD(x), env) +++
+        singleton(LD(env.lookupVar(x))) +++
         additional,
         env
       ]
@@ -516,10 +565,37 @@ fun compileSmWithEnvAndLbl(stmt, env, shouldJump, lblToJump) {
        esac esac
     | Ref(x) -> 
         [
-          singleton(LDA(x)) +++
+          singleton(LDA(env.lookupVar(x))) +++
           additional,
           env
         ]
+    | Scope(defs, expr) -> case foldl(fun([env, funcs, glob], def) {
+        case def of
+          Local(vars) -> [env.addVars(vars), funcs, if env.isGlobal then (map(fun (var) {GLOBAL(var)}, vars)) +++ glob else glob fi] |
+          Fun (name, args, body) -> case genFunLabel(env, name) of
+              [fn, env] -> [env.addFun(name, fn, size(args)), [fn, args, body]:funcs, glob]  
+          esac
+        esac 
+    }, [env.beginScope, {}, {}], defs) of 
+    [env, funcs, glob] -> case compileSmWithEnv(
+            expr,
+            foldl(fun(env, [f, args, body]) {
+                  rememberFun(env, f, args, body)  
+                }, 
+                env, 
+                funcs
+              )
+            ) of 
+                [insns1, env1] -> [glob +++ insns1 +++ additional, env1.endScope]
+            esac
+        esac
+    |  Call (f, argExprs) -> case lookupFun(env, f) of Fun(fn, n) ->
+            case foldl(fun([insns, env], expr) {
+              case compileSmWithEnv(expr, env) of [insns1, env1] -> [insns +++ insns1, env1] esac
+            }, [{}, env], argExprs) of
+          [insns, env] -> [insns +++ singleton(CALL(fn, n)) +++ additional, env]
+          esac
+        esac
         
   esac
 }

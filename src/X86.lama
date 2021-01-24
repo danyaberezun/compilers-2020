@@ -494,18 +494,18 @@ fun compile (env, code) {
                [s, env] -> [env, code <+> move(L(n), s)]
             esac
         | LD(x) ->
-            case env.addGlobal(x).allocate of
+            case env.allocate of
                [s, env] -> [env, code <+> move(env.loc(x), s)]
             esac
         | ST(x) ->
-            case env.addGlobal(x).pop of 
+            case env.pop of 
                [c, env] -> [env, code <+> move(c, env.loc(x))]
             esac
         | DROP ->
             case env.pop of [_, env] -> [env, code]
             esac
         | LDA(x) -> 
-            case env.addGlobal(x).allocate of [s, env] ->
+            case env.allocate of [s, env] ->
             [env, code <+ Lea(env.loc(x), s)]
             esac
         | STI ->
@@ -524,6 +524,10 @@ fun compile (env, code) {
                       code <+ Binop("cmp", L(0), s) <+ CJmp(cond, l)
                     ]
             esac
+        | GLOBAL(x) -> [env.addGlobal(x), code]
+        | BEGIN(fl, nargs, nlocs) -> [env.enterFunction(fl, nlocs), code <+> prologue(fl)]
+        | END -> case env.epilogue of [env, end] -> [env, code <+> end] esac
+        | CALL(fl, nargs) -> case call(env, fl, nargs) of [env, ncode] -> [env, code <+> ncode] esac
         | BINOP(op) ->
             case env.pop2 of
                 [a, b, env] -> case env.allocate of [n, newEnv] ->
