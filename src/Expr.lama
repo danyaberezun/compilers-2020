@@ -117,6 +117,38 @@ fun eval (c@[st, w], expr) {
     foldl(lambda, enterFunction(s), zip(argNames, args))
   }
 
+  fun processPattern(c@[s, w], branches, val) {
+    fun matchPattern(c@[s, w], [pattern, val]) {
+      case pattern of 
+        Sexp ("_", {}) -> c |
+        Var (name) -> [addName (s, name) <- [name, val], w] |
+        Sexp (name, lst) -> case val of
+          Sexp (vTag, vArgs) ->
+            if compare(name, vTag) == 0 && size(lst) == size(vArgs) then
+              foldl (fun (c, [p, v]) {
+                case c of 
+                  None -> None | 
+                  _ -> matchPattern (c, [p, v])
+                esac
+              }, c, zip(lst, vArgs))
+            else None fi
+        esac
+      esac
+    }
+    local nC = None, body = None;
+		while (size(branches) > 0 && compare(nC, None) == 0) do
+			nC := matchPattern([enterScope(s), w], [branches[0][0], val]);
+			body := branches[0][1];
+			branches := branches[1]
+	  od;
+    case nC of
+      None -> failure ("Match failure on %s\n", val.string) |
+      _ -> case eval(nC, body) of [[s, w], v] -> 
+				[[leaveScope(s), w], v]
+			esac
+    esac
+  }
+
   case expr of
     Binop(op, l, r) -> case evalList(c, {l, r}) of 
       [c1, {lv, rv}] -> [c1, evalOp(op, lv, rv)] 
@@ -179,6 +211,12 @@ fun eval (c@[st, w], expr) {
       [[s, w], eArgs] -> case evalBuiltin(name, eArgs, w) of 
         [v, w] -> [[s, w], v]
       esac
+    esac |
+    Sexp (tag, lst) -> case evalList(c, lst) of
+      [c, eLst] -> [c, Sexp (tag, eLst)]
+    esac|
+    Case (val, branches) -> case eval(c, val) of 
+      [c, eVal] -> processPattern(c, branches, eVal)
     esac
   esac
 }
