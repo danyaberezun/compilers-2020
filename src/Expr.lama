@@ -94,11 +94,92 @@ fun evalList (c, exprs) {
   esac
 }
 
-(* Assignment *)
-fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+fun evalSeq(c, exprs) {
+  foldl (fun ([c, _], e) { eval (c, e) }, [c, Error], exprs)
 }
-(* End *)
+
+
+fun eval (c@[s, w], expr) {
+  case expr of
+    Assn (tgt, val) -> 
+      case evalList(c, {tgt, val}) of
+        [[s, w], {Ref (tgt), val}] -> [[s <- [tgt, val], w], val]
+      esac
+  | Seq (e1, e2) -> evalSeq (c, {e1, e2})
+  | Skip -> [c, Unit]
+  | Read (id) -> 
+      case readWorld (w) of
+        [val, w] -> [[s <- [id, val], w], Unit]
+      esac
+  | Write (e) ->
+      case eval (c, e) of
+        [[s, w], val] -> [[s, writeWorld (val, w)], Unit]
+      esac
+  | If (cond, thn, els) ->
+      case eval (c, cond) of
+        [c, 0] -> eval (c, els)
+      | [c, _] -> eval (c, thn)
+      esac
+  | whl@While (cond, body) ->
+      case eval (c, cond) of
+        [c, 0] -> [c, Unit]
+      | [c, _] ->
+        case evalList (c, {body, whl}) of
+          [c, _] -> [c, Unit]
+        esac
+      esac
+  | rpt@Repeat (body, cond) ->
+      case evalSeq (c, {body, cond}) of
+        [c, 0] -> eval (c, rpt)
+      | [c, _] -> [c, Unit]
+      esac
+  | Var (id) -> [c, lookup (s, id)]
+  | Ref (id) -> [c, Ref (id)]
+  | Const (val) -> [c, val]
+  | Binop (op, lhs, rhs) ->
+      case evalList (c, {lhs, rhs}) of
+        [c, {lhs, rhs}] -> [c, evalOp (op, lhs, rhs)]
+      esac
+  | Scope (defs, e) -> 
+      case defs of
+        {}   -> eval (c, e) -- LocalScope
+      | defs -> {
+          local ls = foldl(
+            fun (s, def) {
+              case def of
+                Fun (name, params, body) -> addFunction (s, name, params, body)
+              | Local (names) -> addNames (s, names)
+              esac
+            },
+            enterScope (s),
+            defs
+          );
+          case eval ([ls, w], e) of [[s, w], val] -> [[leaveScope (s), w], val] esac
+        }
+      esac
+  | Call (name, args) -> {
+      checkFun (s, name);
+      case lookup (s, name) of Fun (params, body) -> {
+        case evalList (c, args) of [c@[s, w], args] -> {
+          local fs = foldl(
+            fun (s, [name, val]) {
+              addName (s, name, val)
+            },
+            enterFunction (s),
+            zip (params, args)
+          );
+          case eval ([fs, w], body) of [fc@[fs, w], val] -> 
+            [[leaveFunction (s, getGlobal (fs)), w], val]
+          esac
+        } esac
+      } esac
+  }
+  | Ignore (e) ->
+      case eval (c, e) of
+        [c, _] -> [c, Unit]
+      esac
+  esac
+}
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
