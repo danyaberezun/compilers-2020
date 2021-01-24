@@ -307,6 +307,15 @@ fun compile (env, code) {
             case env.addGlobal(x).pop of
               [s, env] -> [env, code <+> move (s, env.loc (x))]
             esac
+        | LABEL (s) -> [env, code <+ Label (s)]
+        | JMP (l) -> [env, code <+ Jmp (l)] 
+        | CJMP (c, l) -> 
+            case env.pop of [s, env] ->
+              [env, code 
+                <+ Binop ("cmp", L (0), s) 
+                <+ CJmp (c, l)
+              ]
+            esac
         | BINOP (op) ->
             case env.pop2 of
               [l, r, env] ->
