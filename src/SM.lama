@@ -118,8 +118,74 @@ fun eval (env, w, insns) {
 
   -- Core interpreter: takes a configuration and a program, returns a configuration
   (* Assignment *)
-  fun eval (c@[st, cst, s, w], insns) {
-    failure ("SM interpreter is not implemented\n")
+  fun eval (c@[stack, cst, state, world], insns) {
+    case insns of (x:tail) -> 
+    case x of 
+        JMP(l) -> eval(c, fromLabel(env, l))
+        | CJMP(cond, l) -> case stack of (t:rest) -> 
+            if (compare(cond, "z") == 0 && t == 0 !! compare(cond, "nz") == 0 && t != 0)
+            then eval([rest, cst, state, world], fromLabel(env, l))
+            else eval([rest, cst, state, world], tail)
+            fi
+          esac
+        | LABEL(l) -> eval(c, tail)
+        | CALL(f,_) -> eval([stack, [state, tail]:cst, state, world], env.fromLabel(f))
+        | END -> case cst of 
+          [ostate, oinsns]:cst -> eval([stack, cst, ostate, world], oinsns)
+          | _ -> c
+          esac
+        | _ -> 
+            local nconf;
+            nconf :=
+              case x of 
+                  BINOP(op) ->
+                    case stack of (a:b:rest) ->
+                        [(evalOp(op, b, a):rest), cst, state, world]
+                    esac
+                  | CONST(n) -> [(n:stack), cst, state, world]
+                  | LD(x) -> [(state.lookup(x)):stack, cst, state, world]
+                  | ST(x) -> 
+                    case stack of (t:rest) -> 
+                      [rest, cst, state.assign(x, t); state, world] 
+                    esac
+                  
+                  | READ -> case readWorld(world) of [n, nworld] -> 
+                        [(n:stack), cst, state, nworld]
+                    esac
+                  | WRITE ->
+                    case stack of (t:rest) -> {
+                      local nworld;
+                      nworld := writeWorld(t, world);
+                      [rest, cst, state, nworld]
+                    }
+                    esac
+                  | STI -> case stack of (res:var:rest) -> 
+                    [(res:rest), cst, state.assign(var, res); state, world]
+                    esac
+                  | LDA(x) -> 
+                     [(x:stack), cst, state, world]
+                  | DROP -> case stack of (_:rest) ->
+                     [rest, cst, state, world] | _ -> failure(insns.string)
+                    esac
+                  | BEGIN(_, nargs, nlocs) -> case stack.take(nargs) of [rest, vals] ->
+                      local nstate = foldl(
+                        fun([state1, n], val) {
+                          [
+                            state1.assign(Arg(n), val); state1,
+                            n + 1
+                          ]
+                        },
+                        [makeState(nargs, nlocs), 0],
+                        vals
+                      )[0];
+                      [rest, cst, nstate, world]
+                    esac
+                  | GLOBAL(x) -> assign(state, Glb(x), 0); [stack, cst, state, world]
+              esac;
+            eval(nconf, tail)
+     esac
+    | _ -> c
+  esac
   }
   (* End *)
   
@@ -348,7 +414,189 @@ fun addVars (env, names) {
 --    environment (use env.beginFun) and register arguments
 --    (use env.addArg).
 
-public fun compileSM (expr) {
-  failure ("compileSM not implemented\n")
+public fun compileSM (stmt) {
+  case compileSmWithEnv(stmt, initCompEnv()) of [insns, env] ->
+     compileFuncs(
+       singleton(LABEL("main")) +++
+       singleton(BEGIN("main", 0, env.getLocals)) +++
+       insns +++
+       singleton(END)
+       , 
+       env
+     )[0]
+  esac
+}
+
+fun compileFuncs (insns, env) {
+  case env.getFuns of 
+    [{}, env] -> [insns, env] |
+    [funcs, env] -> case foldl (
+        fun ([insns, env], Fun (name, args, body, state)) {
+          case addArgs(env.beginFun(state), args) of env ->
+            case compileSmWithEnv(body, env) of [bodyInsns, env] ->
+              [
+                insns +++
+                singleton(LABEL(name)) +++
+                singleton(BEGIN(name, args.size, env.getLocals)) +++
+                bodyInsns +++
+                singleton(END)
+              ,
+              env
+              ]
+            esac
+          esac
+        }, 
+        [insns, env], 
+        funcs
+      ) of [insns, env] ->
+      compileFuncs (insns, env)
+    esac
+  esac
+}
+
+fun compileSmWithEnv(stmt, env) {
+  compileSmWithEnvAndLbl(stmt, env, false, "")
+}
+
+fun compileSmWithEnvAndLbl(stmt, env, shouldJump, lblToJump) {
+    local additional = if shouldJump then singleton(JMP(lblToJump)) else {} fi;
+    case stmt of 
+      Read(x) -> [{READ, ST(lookupVar(env, x))} +++ additional, env]
+    | Write(expr) -> case compileSmWithEnv(expr, env) of [ins1, env1] -> [ins1 +++ singleton(WRITE) +++ additional, env1] esac
+    | Assn(x, expr) -> case compileSmWithEnv(x, env) of [ins1, env1] -> case compileSmWithEnv(expr, env1) of [ins2, env2] ->
+        [ins1 +++ ins2 +++ singleton(STI) +++ additional, env2]
+      esac esac
+    | Seq(stmt1, stmt2) -> case compileSmWithEnv(stmt1, env) of [res1, env1] ->
+                           case compileSmWithEnvAndLbl(stmt2, env1, shouldJump, lblToJump) of [res2, env2] ->
+                           [res1 +++ res2, env2]
+                           esac
+                           esac
+    | Skip -> [{} +++ additional, env]
+    | If(cond, stmt, estmt) -> 
+        case genLabels(env, 2) of [lbl1, lbl2, nenv] ->
+        case compileSmWithEnv(cond, nenv) of [ins1, env0] ->
+        case 
+          if (shouldJump) 
+            then compileSmWithEnvAndLbl(stmt, env0, shouldJump, lblToJump) 
+            else compileSmWithEnvAndLbl(stmt, env0, true, lbl2)
+          fi of [res1, env1] ->
+        
+        local res2, env2;
+        case estmt of 
+            None -> res2 := {}; env2 := env1
+            | _ -> case compileSmWithEnv(estmt, env1) of [res3, env3] -> res2 := res3; env2 := env3 esac
+        esac;
+        [
+          ins1 +++ 
+          singleton(CJMP("z", lbl1)) +++  
+          res1 +++ 
+          singleton(LABEL(lbl1)) +++
+          res2 +++
+          if (shouldJump) then additional else singleton(LABEL(lbl2)) fi
+          ,
+          env2
+        ]
+        esac
+        esac
+        esac
+    | While(cond, stmt) ->
+        case genLabels(env, 2) of [lbl1, lbl2, nenv] ->
+        case compileSmWithEnv(cond, nenv) of [ins1, env0] ->
+        case compileSmWithEnv(stmt, env0) of [res1, env1] ->
+        [
+          singleton(JMP(lbl2)) +++
+          singleton(LABEL(lbl1)) +++
+          res1 +++
+          singleton(LABEL(lbl2)) +++
+          ins1 +++
+          singleton(CJMP("nz", lbl1)) +++
+          additional
+          ,
+          env1
+        ]
+        esac
+        esac
+        esac
+    | Rep(stmt, cond) ->
+        case genLabels(env, 1) of [lbl1, nenv] ->
+        case compileSmWithEnv(stmt, nenv) of [res1, env1] ->
+        case compileSmWithEnv(cond, env1) of [ins1, env0] ->
+        [
+          singleton(LABEL(lbl1)) +++
+          res1 +++
+          ins1 +++
+          singleton(CJMP("z", lbl1)) +++
+          additional
+          ,
+          env0
+        ]
+        esac
+        esac
+        esac
+    | Ignore(expr) -> case compileSmWithEnv(expr, env) of [ins1, env1] ->
+        [
+          ins1 +++
+          singleton(DROP) +++
+          additional,
+          env1
+        ]
+      esac
+    | Const(n) -> 
+      [
+        singleton(CONST(n)) +++
+        additional,
+        env
+      ]
+    | Var(x) -> 
+      [
+        singleton(LD(env.lookupVar(x))) +++
+        additional,
+        env
+      ]
+    | Binop(op, lefto, righto) ->
+       case compileSmWithEnv(lefto, env) of [ins1, env1] -> case compileSmWithEnv(righto, env1) of [ins2, env2] ->
+       [
+         ins1 +++
+         ins2 +++
+         singleton(BINOP(op)) +++
+         additional,
+         env2
+       ]
+       esac esac
+    | Ref(x) -> 
+        [
+          singleton(LDA(env.lookupVar(x))) +++
+          additional,
+          env
+        ]
+    | Scope(defs, expr) -> case foldl(fun([env, funcs, glob], def) {
+        case def of
+          Local(vars) -> [env.addVars(vars), funcs, if env.isGlobal then (map(fun (var) {GLOBAL(var)}, vars)) +++ glob else glob fi] |
+          Fun (name, args, body) -> case genFunLabel(env, name) of
+              [fn, env] -> [env.addFun(name, fn, size(args)), [fn, args, body]:funcs, glob]  
+          esac
+        esac 
+    }, [env.beginScope, {}, {}], defs) of 
+    [env, funcs, glob] -> case compileSmWithEnv(
+            expr,
+            foldl(fun(env, [f, args, body]) {
+                  rememberFun(env, f, args, body)  
+                }, 
+                env, 
+                funcs
+              )
+            ) of 
+                [insns1, env1] -> [glob +++ insns1 +++ additional, env1.endScope]
+            esac
+        esac
+    |  Call (f, argExprs) -> case lookupFun(env, f) of Fun(fn, n) ->
+            case foldl(fun([insns, env], expr) {
+              case compileSmWithEnv(expr, env) of [insns1, env1] -> [insns +++ insns1, env1] esac
+            }, [{}, env], argExprs) of
+          [insns, env] -> [insns +++ singleton(CALL(fn, n)) +++ additional, env]
+          esac
+        esac
+        
+  esac
 }
 (* End *)
