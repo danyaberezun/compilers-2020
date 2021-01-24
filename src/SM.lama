@@ -8,6 +8,7 @@ import World;
 import State;
 import Expr;
 import Buffer;
+import Fun;
 
 -- Stack code printer. Takes a list of SM instructions, return its
 -- string representation.
@@ -58,14 +59,62 @@ fun fromLabel (env, lab) {
 
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
-(* Assignment *)
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+  case insns of (x:tail) -> 
+    case c of [stack, state, world] ->
+    case x of 
+          JMP(l) -> eval(env, c, fromLabel(env, l))
+        | CJMP(cond, l) -> case stack of (t:rest) -> 
+            if (compare(cond, "z") == 0 && t == 0 !! compare(cond, "nz") == 0 && t != 0)
+            then eval(env, [rest, state, world], fromLabel(env, l))
+            else eval(env, [rest, state, world], tail)
+            fi
+          esac
+        | LABEL(l) -> eval(env, c, tail)
+        | _ -> 
+            local nconf;
+            nconf :=
+              case x of 
+                  BINOP(op) ->
+                    case stack of (a:b:rest) ->
+                        [(evalOp(op, b, a):rest), state, world]
+                    esac
+                  | CONST(n) -> [(n:stack), state, world]
+                  | LD(x) -> [(state(x):stack), state, world]
+                  | ST(x) -> 
+                    case stack of (t:rest) -> 
+                      [rest, state<-[x, t], world] 
+                    esac
+                  
+                  | READ -> case readWorld(world) of [n, nworld] -> 
+                        [(n:stack), state, nworld]
+                    esac
+                  | WRITE ->
+                    case stack of (t:rest) -> {
+                      local nworld;
+                      nworld := writeWorld(t, world);
+                      [rest, state, nworld]
+                    }
+                    esac
+                  | STI -> case stack of (res:var:rest) -> 
+                    [(res:rest), state<-[var, res], world]
+                    esac
+                  | LDA(x) -> 
+                     [(x:stack), state, world]
+                  | DROP -> case stack of (_:rest) ->
+                     [rest, state, world] | _ -> failure(insns.string)
+                    esac
+              esac;
+            eval(env, nconf, tail)
+     esac
+     esac
+    | _ -> c
+  esac
 }
-(* End *)
 
 -- Runs a stack machine for a given input and a given program, returns an output
 public fun evalSM (input, insns) {
+  --failure(insns.string);
   eval (initEvalEnv (insns), [{}, emptyState, createWorld (input)], insns)[2].getOutput
 }
 
@@ -99,11 +148,128 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list of stack machine
+-- Compiles a statement into a stack machine code.
+-- Takes a statement, returns a list of stack machine
 -- instructions.
-(* Assignment *)
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  compileSmWithEnv(stmt, initCompEnv())[0]
 }
-(* End *)
+
+fun compileSmWithEnv(stmt, env) {
+  compileSmWithEnvAndLbl(stmt, env, false, "")
+}
+
+fun compileSmWithEnvAndLbl(stmt, env, shouldJump, lblToJump) {
+    local additional = if shouldJump then singleton(JMP(lblToJump)) else {} fi;
+    case stmt of 
+      Read(x) -> [{READ, ST(x)} +++ additional, env]
+    | Write(expr) -> case compileSmWithEnv(expr, env) of [ins1, env1] -> [ins1 +++ singleton(WRITE) +++ additional, env1] esac
+    | Assn(x, expr) -> case compileSmWithEnv(x, env) of [ins1, env1] -> case compileSmWithEnv(expr, env1) of [ins2, env2] ->
+        [ins1 +++ ins2 +++ singleton(STI) +++ additional, env2]
+      esac esac
+    | Seq(stmt1, stmt2) -> case compileSmWithEnv(stmt1, env) of [res1, env1] ->
+                           case compileSmWithEnvAndLbl(stmt2, env1, shouldJump, lblToJump) of [res2, env2] ->
+                           [res1 +++ res2, env2]
+                           esac
+                           esac
+    | Skip -> [{} +++ additional, env]
+    | If(cond, stmt, estmt) -> 
+        case genLabels(env, 2) of [lbl1, lbl2, nenv] ->
+        case compileSmWithEnv(cond, nenv) of [ins1, env0] ->
+        case 
+          if (shouldJump) 
+            then compileSmWithEnvAndLbl(stmt, env0, shouldJump, lblToJump) 
+            else compileSmWithEnvAndLbl(stmt, env0, true, lbl2)
+          fi of [res1, env1] ->
+        
+        local res2, env2;
+        case estmt of 
+            None -> res2 := {}; env2 := env1
+            | _ -> case compileSmWithEnv(estmt, env1) of [res3, env3] -> res2 := res3; env2 := env3 esac
+        esac;
+        [
+          ins1 +++ 
+          singleton(CJMP("z", lbl1)) +++  
+          res1 +++ 
+          singleton(LABEL(lbl1)) +++
+          res2 +++
+          if (shouldJump) then additional else singleton(LABEL(lbl2)) fi
+          ,
+          env2
+        ]
+        esac
+        esac
+        esac
+    | While(cond, stmt) ->
+        case genLabels(env, 2) of [lbl1, lbl2, nenv] ->
+        case compileSmWithEnv(cond, nenv) of [ins1, env0] ->
+        case compileSmWithEnv(stmt, env0) of [res1, env1] ->
+        [
+          singleton(JMP(lbl2)) +++
+          singleton(LABEL(lbl1)) +++
+          res1 +++
+          singleton(LABEL(lbl2)) +++
+          ins1 +++
+          singleton(CJMP("nz", lbl1)) +++
+          additional
+          ,
+          env1
+        ]
+        esac
+        esac
+        esac
+    | Rep(stmt, cond) ->
+        case genLabels(env, 1) of [lbl1, nenv] ->
+        case compileSmWithEnv(stmt, nenv) of [res1, env1] ->
+        case compileSmWithEnv(cond, env1) of [ins1, env0] ->
+        [
+          singleton(LABEL(lbl1)) +++
+          res1 +++
+          ins1 +++
+          singleton(CJMP("z", lbl1)) +++
+          additional
+          ,
+          env0
+        ]
+        esac
+        esac
+        esac
+    | Ignore(expr) -> case compileSmWithEnv(expr, env) of [ins1, env1] ->
+        [
+          ins1 +++
+          singleton(DROP) +++
+          additional,
+          env1
+        ]
+      esac
+    | Const(n) -> 
+      [
+        singleton(CONST(n)) +++
+        additional,
+        env
+      ]
+    | Var(x) -> 
+      [
+        singleton(LD(x), env) +++
+        additional,
+        env
+      ]
+    | Binop(op, lefto, righto) ->
+       case compileSmWithEnv(lefto, env) of [ins1, env1] -> case compileSmWithEnv(righto, env1) of [ins2, env2] ->
+       [
+         ins1 +++
+         ins2 +++
+         singleton(BINOP(op)) +++
+         additional,
+         env2
+       ]
+       esac esac
+    | Ref(x) -> 
+        [
+          singleton(LDA(x)) +++
+          additional,
+          env
+        ]
+        
+  esac
+}
