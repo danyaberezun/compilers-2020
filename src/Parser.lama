@@ -157,7 +157,8 @@ local primary = memo $ eta syntax (
         funDef
       ),
       scopeExpr = memo $ eta syntax (
-        defs=def* e=exp? {fun(a) {expandScope(defs, case e of None -> Skip | Some(ee) -> ee(a) esac)}}
+        defs=def+ e=exp? {fun(a) {expandScope(defs, case e of None -> Skip | Some(ee) -> ee(a) esac)}} |
+        e=exp {fun (a) {e(a)}}
       ),
 (* End *)
       basic      = memo $ eta (expr ({[Right, singleton ([s (":="),
