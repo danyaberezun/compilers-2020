@@ -18,7 +18,6 @@ import Manifest;
 -- defined in the unit Manifest
 fun parseArgs (args) {
   local mode   = ref (Comp),
-<<<<<<< HEAD
         infile = ref ({}),
         smDump = ref (false);
 
@@ -28,10 +27,6 @@ fun parseArgs (args) {
     esac
   }
   
-=======
-        infile = ref ({});
-
->>>>>>> A04-control-flow-int
   fun setMode (m) {
     case deref (mode) of
       Comp -> mode ::= m
@@ -52,23 +47,16 @@ fun parseArgs (args) {
               {}    -> skip
             | h : t ->
                case h of
-<<<<<<< HEAD
                  "-i"  -> setMode (Int)
                | "-s"  -> setMode (SM)
                | "-ds" -> setDump (SM)
                | fn    -> setInFile (fn)
-=======
-                 "-i" -> setMode (Int)
-               | "-s" -> setMode (SM)
-               | fn   -> setInFile (fn)
->>>>>>> A04-control-flow-int
                esac;
                rec (t)
             esac
          }
       })(args);
 
-<<<<<<< HEAD
   [fun () {deref (mode)},
    fun () {case deref(infile) of #unboxed -> failure ("input file name not set\n") | fn -> fn esac},
    fun () {deref (smDump)}
@@ -81,14 +69,6 @@ fun peepSM (args, smCode) {
   smCode
 }
 
-=======
-
-  [fun () {deref (mode)},
-   fun () {case deref(infile) of #unboxed -> failure ("input file name not set\n") | fn -> fn esac}
-  ]        
-}
-
->>>>>>> A04-control-flow-int
 local args = parseArgs (arrayList (sysargs).tl);
 
 -- The main part: parses input file, invokes interpreter/stack machine interpreter/x86
@@ -96,11 +76,7 @@ local args = parseArgs (arrayList (sysargs).tl);
 case parseString (parse |> bypass (end), fread (args.getInFile)) of
   Succ (program) ->
     case args.getMode of
-<<<<<<< HEAD
       Comp -> compileX86 (args, peepSM (args, compileSM (program)))
-=======
-      Comp -> compileX86 (args, compileSM (program))
->>>>>>> A04-control-flow-int
     | mode ->
        local input =
           reverse (fix (fun (f) {
@@ -114,11 +90,7 @@ case parseString (parse |> bypass (end), fread (args.getInFile)) of
        iter (fun (x) {printf ("%d\n", x)},
              case mode of
                Int -> evalStmt (input, program)
-<<<<<<< HEAD
              | SM  -> evalSM   (input, peepSM (args, compileSM (program)))
-=======
-             | SM  -> evalSM (input, compileSM (program))
->>>>>>> A04-control-flow-int
              esac)
     esac
 | x@Fail (err, line, col) ->   
