@@ -130,7 +130,7 @@ fun makeEnv (stack, stackSlots, globals) {
   }
 
   -- Pops two items from the symbolic stack; returns a triple:
-  -- popped items and an updated environment
+  -- popped items and an undated environment
   fun pop2 () {
     case stack of
       x : y : stack -> [x, y, makeEnv (stack, stackSlots, globals)]
@@ -302,28 +302,56 @@ fun compile (env, code) {
             esac
         | BINOP (op) ->
             case env.pop2 of
-              [x, y, env] -> case env.allocate of
-                [s, env] -> case op of
-                  "/" -> [env, code <+ Mov (x, eax)
-                                    <+ Cltd
-                                    <+ IDiv (y)
-                                    <+ Mov (eax, s)]
-                | "%" -> [env, code <+ Mov (x, eax)
-                                    <+ Cltd
-                                    <+ IDiv (y)
-                                    <+ Mov (edx, s)]
-                | "+" -> [env, code <+ Mov (x, eax) <+ Binop("+", y, eax) <+ Mov (eax, s)]
-                | "-" -> [env, code <+ Mov (x, eax) <+ Binop("-", y, eax) <+ Mov (eax, s)]
-                | "*" -> [env, code <+ Mov (x, eax) <+ Binop("*", y, eax) <+ Mov (eax, s)]
-                | "&&" -> [env, code <+ Mov (x, eax) <+ Binop("&&", y, eax) <+ Mov (eax, s)]
-                | "!!" -> [env, code <+ Mov (x, eax) <+ Binop("!!", y, eax) <+ Mov (eax, s)]
-                | _ -> [env, code <+ Mov (y, eax)
-                                  <+ Binop ("cmp", eax, x)
-                                  <+ Set (suffix (op), "%al")
-                                  <+ Mov (eax, s)]
+              [l, r, env] ->
+                case env.allocate of
+                  [s, env] -> {
+
+                    fun oneOf (x, lst) {
+                      case find (fun (v) { compare (x, v) == 0 }, lst) of
+                        Some (_) -> true
+                      | _        -> false
+                      esac
+                    }
+
+                    if op.oneOf ({"+", "-", "*"}) then
+                      [env, code
+                        <+ Mov (l, eax)
+                        <+ Binop (op, r, eax)
+                        <+ Mov (eax, s)
+                      ]
+                    elif op.oneOf ({"/", "%"}) then
+                      [env, code
+                        <+ Mov (l, eax)
+                        <+ Cltd
+                        <+ IDiv (r)
+                        <+ Mov (case op of "/" -> eax | "%" -> edx esac, s)
+                      ]
+                    elif op.oneOf ({"==", "!=", "<", "<=", ">", ">="}) then
+                      [env, code
+                        <+ Mov (l, eax)
+                        <+ Binop ("cmp", r, eax)
+                        <+ Mov (L (0), eax)
+                        <+ Set (suffix (op), "%al")
+                        <+ Mov (eax, s)
+                      ]
+                    elif op.oneOf ({"&&", "!!"}) then
+                      [env, code
+                        <+ Mov (L (0), eax)
+                        <+ Binop ("cmp", L (0), l)
+                        <+ Set ("nz", "%al")
+                        <+ Mov (L (0), edx)
+                        <+ Binop ("cmp", L (0), r)
+                        <+ Set ("nz", "%dl")
+                        <+ Binop (op, edx, eax)
+                        <+ Mov (eax, s)
+                      ]
+                    else
+                      failure ("unexpected operator in codegeneration: %s\n", op)
+                    fi
+                  }
                 esac
-              esac
             esac
+        | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
         esac
       }, [env, emptyBuffer ()], code)
   }
