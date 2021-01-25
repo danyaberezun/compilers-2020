@@ -79,11 +79,11 @@ void* Bsta (int i0, void *v, void *x) {
   return v;
 }
 
-void Lwrite (int x) {
-  printf ("%d\n", UNBOX (x));
+void Bwrite (int x) {
+  printf ("%d\n", UNBOX(x));
 }
 
-int Lread () {
+int Bread () {
   int result;
 
   scanf  ("%d", &result);

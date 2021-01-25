@@ -87,7 +87,6 @@ fun insnString (insn) {
     | I (n, x) -> sprintf ("%d(%s)", n, opndString (x))
     esac
   }
-
   case insn of
     Cltd               -> "\tcltd\n"
   | Set   (suf, s)     -> sprintf ("\tset%s\t%s\n", suf, s)
@@ -427,6 +426,7 @@ fun memOpnd (opnd) {
   case opnd of
     S (_) -> true
   | M (_) -> true
+  | I (_, _) -> true
   | _     -> false
   esac
 }
@@ -488,7 +488,7 @@ fun call (env, fLabel, nA) {
         [env, pushArgs] ->
            case env.allocate of
              [y, env] ->
-               [env, listBuffer (flatten $ {pushRegs,
+               [env, listBuffer (deepFlatten $ {pushRegs,
                                  reverse (pushArgs),
                                  case extraArg of Some (n) -> Push (L (box $ n)) | _ -> {} esac,
                                  Call (fLabel),
@@ -502,22 +502,32 @@ fun call (env, fLabel, nA) {
 }
 (* End *)
 
+public fun eq(a, b) {
+  if (compare(a, b) == 0) then 1 else 0 fi
+}
+
+
+public fun contains(l, a) {
+    case l of (x:xs) -> 
+        if (eq(x, a)) then true
+        else contains(xs, a)
+        fi
+      | {} -> false
+    esac
+}
+
+  fun callf(env, name, narg, code) {
+    case env.call(name, narg) of [env, ncode] -> [env, code <+> ncode] esac
+  }
+
 -- Compiles stack machine code into a list of x86 instructions. Takes an environment
 -- and stack machine code, returns an updated environment and x86 code.
-fun compile (env, code) {  
+fun compile (env, code) {
   fun compile (env, code) {
     foldl (
       fun ([env, scode], i) {
         local code = scode <+ Meta ("# " ++ showSMInsn (i) ++ "\n");
         case i of
-          READ ->
-            case env.allocate of
-              [s, env] -> [env, code <+ Call ("Lread") <+ Mov (eax, s)]
-            esac             
-        | WRITE ->
-            case env.pop of
-              [s, env] -> [env, code <+ Push (s) <+ Call ("Lwrite") <+ Pop (eax)]
-            esac
         (* Assignment *)
         
          -- Some guidelines for generating function calls:
@@ -536,8 +546,98 @@ fun compile (env, code) {
          --    env.enterFunction to create a proper environment;
          -- 2. generate epilogue for END instruction.
                
+        CONST(n) -> 
+            case env.allocate of
+               [s, env] -> [env, code <+> move(L(box(n)), s)]
+            esac
+        | LD(x) ->
+            case env.allocate of
+               [s, env] -> [env, code <+> move(env.loc(x), s)]
+            esac
+        | ST(x) ->
+            case env.pop of 
+               [c, env] -> [env, code <+> move(c, env.loc(x))]
+            esac
+        | DROP ->
+            case env.pop of [_, env] -> [env, code]
+            esac
+        | LDA(x) -> 
+            case env.allocate of [s, env] ->
+            [env, code <+ Lea(env.loc(x), s)]
+            esac
+        | STI ->
+            case env.pop of [val, env] -> case env.peek of addr ->
+                [env, code <+> move(val, I(0, addr)) <+> move(val, addr)]
+            esac esac
+             
+        | LABEL(l) -> [
+               if env.isBarrier then env.retrieveStack(l) else env fi, code <+ Label(l)
+                ]
+        | JMP(l) -> [env.setStack(l).setBarrier, code <+ Jmp(l)]
+        | CJMP(cond, l) -> 
+            case env.pop of 
+                [s, env] ->
+                    [env.setStack(l),
+                      code <+ Binop("cmp", L(box(0)), s) <+ CJmp(cond, l)
+                    ]
+            esac
+        | GLOBAL(x) -> [env.addGlobal(x), code]
+        | BEGIN(fl, nargs, nlocs) -> [env.enterFunction(fl, nlocs), code <+> prologue(fl)]
+        | END -> case env.epilogue of [env, end] -> [env, code <+> end] esac
+        | CALL(fl, nargs) -> case call(env, fl, nargs) of [env, ncode] -> [env, code <+> ncode] esac
+        | ARRAY(l) -> callf(env, "Barray", l, code)
+        | ELEM -> callf(env, "Belem", 2, code)
+        | STA -> callf(env, "Bsta", 2, code)
+        | STRING(s) -> case env.addString(s) of [env, name] ->
+         case env.allocate of [s, env] -> case call(env, "Bstring", 1) of [env, ncode] ->
+        [env, code <+> move(M("$" ++ name), s) <+> ncode]
+        esac esac esac
+        | BUILTIN(name, narg) -> callf(env, "B" ++ name, narg, code)
+        | BINOP(op) ->
+            case env.pop2 of
+                [a, b, env] -> case env.allocate of [n, newEnv] ->
+                    if ({"==", ">", "<", "!=", ">=", "<="}.contains(op)) then
+                        [newEnv, code <+> move(b, eax) <+ Binop("cmp", a, eax) <+> move(L(0), eax) <+ Set(suffix(op), "%al")
+                                <+ Sal1(eax) <+ Or1(eax) <+> move(eax, n)]
+                    elif (eq(op, "/")) then
+                        [newEnv, code 
+                            <+ Sar1(a) <+ Sar1(b)
+                            <+> move(b, eax) <+ Cltd <+ IDiv(a) 
+                            <+ Sal1(eax) <+ Or1(eax)
+                            <+> move(eax, n)
+                        ]
+                    elif (eq(op, "%")) then
+                        [newEnv, code 
+                            <+ Sar1(a) <+ Sar1(b) <+> 
+                            move(b, eax) <+ Cltd <+ IDiv(a) 
+                            <+ Sal1(edx) <+ Or1(edx) <+> move(edx, n)
+                        ]
+                    elif (eq(op, "!!")) then 
+                        [newEnv, code 
+                      <+ Sar1(a) <+ Sar1(b)
+                      <+> move(b, eax) <+ Binop(op, a, eax) <+> move(L(0), edx) <+ Binop("cmp", eax, edx) 
+                      <+> move(L(0), eax) <+ Set("ne", "%al") 
+                      <+ Sal1(eax)<+ Or1(eax)
+                      <+> move(eax, n) ]
+                    elif (eq(op, "&&")) then
+                        [newEnv, 
+                        code <+ Sar1(a) <+ Sar1(b)
+                        <+>  move(L(0), eax) <+> move(L(0), edx) <+ Binop("cmp", a, eax)
+                        <+ Set("ne", "%al") <+ Binop("cmp", b, edx) <+ Set("ne", "%dl") <+ Binop(op, eax, edx) 
+                        <+ Sal1(edx) <+ Or1(edx) <+> move(edx, n)
+                        ]
+                    elif (eq(op, "+")) then
+                        [newEnv, 
+                        code <+> move(b, eax) <+ Dec(eax) <+ Binop(op, a, eax) <+> move(eax, n)]
+                    elif (eq(op, "-")) then
+                        [newEnv, 
+                        code <+> move(b, eax) <+ Binop(op, a, eax) <+ Or1(eax) <+> move(eax, n)]
+                    else
+                        [newEnv, code <+ Sar1(a) <+ Sar1(b) <+> move(b, eax) <+ Binop(op, a, eax) <+ Sal1(eax) <+ Or1(eax) <+> move(eax, n)]
+                    fi
+                 esac
+            esac
         | _ -> failure ("codegeneration for instruction %s is not yet implemented\n", i.string)
-        (* End *)
         esac
       }, [env, emptyBuffer ()], code)
   }
