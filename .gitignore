@@ -1,0 +1,14 @@
+# Ignore all
+**/*
+# Unignore all with extensions
+!**/*.*
+# Unignore all dirs
+!**/*/
+
+**/*.i
+**/*.o
+**/*.log
+**/*.run
+**/*.s
+**/*.sm
+regression/#tmp.lama#
