@@ -84,7 +84,7 @@ fun eval (env, c@[stack, state, w], insns) {
         eval (env,
           case i of
               CONST (n)  -> [n : stack, state, w]
-            | BINOP (op) -> case stack of v1 : v2 : vs -> [evalOp (op, v1, v2) : vs, state, w] esac
+            | BINOP (op) -> case stack of rhs : lhs : vs -> [evalOp (op, lhs, rhs) : vs, state, w] esac
             | LD (x)     -> [state (x) : stack, state, w]
             | ST (x)     -> case stack of v : vs -> [vs, state <- [x, v], w] esac
             | READ       -> case readWorld (w) of [v, w1] -> [v : stack, state, w1] esac
@@ -213,7 +213,7 @@ public fun compileSM (stmt) {
     | Binop (op, lhs, rhs) ->
         case compileImpl (env, lhs) of [env, smLhs] ->
           case compileImpl (env, rhs) of [env, smRhs] ->
-            [env, {smRhs, smLhs, BINOP (op)}]
+            [env, {smLhs, smRhs, BINOP (op)}]
           esac
         esac
     | Ignore (e) ->
