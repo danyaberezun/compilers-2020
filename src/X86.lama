@@ -488,7 +488,7 @@ fun call (env, fLabel, nA) {
         [env, pushArgs] ->
            case env.allocate of
              [y, env] ->
-               [env, listBuffer (flatten $ {pushRegs,
+               [env, listBuffer (deepFlatten $ {pushRegs,
                                  reverse (pushArgs),
                                  case extraArg of Some (n) -> Push (L (box $ n)) | _ -> {} esac,
                                  Call (fLabel),
@@ -512,7 +512,7 @@ fun compile (env, code) {
         case i of
         CONST (n) ->
             case env.allocate of
-              [s, env] -> [env, code <+ Mov (L (n), s)]
+              [s, env] -> [env, code <+ Mov (L (box(n)), s)]
             esac
         | STRING (s) ->
             case env.addString (s) of [env, name] ->
@@ -561,7 +561,7 @@ fun compile (env, code) {
         | CJMP (c, l) -> 
             case env.pop of [s, env] ->
               [setStack (env, l), code 
-                <+ Binop ("cmp", L (0), s) 
+                <+ Binop ("cmp", L (box(0)), s) 
                 <+ CJmp (c, l)
               ]
             esac
@@ -576,17 +576,32 @@ fun compile (env, code) {
                       | _        -> false
                       esac
                     }
-                    if op.oneOf ({"+", "-", "*"}) then
+                    if op.oneOf ({"+", "-"}) then
                       [env, code
+                        <+ Dec (case op of "+" -> l | "-" -> r esac)
                         <+ Mov (l, eax)
                         <+ Binop (op, r, eax)
                         <+ Mov (eax, s)
                       ]
+                    elif op.oneOf ({"*"}) then
+                      [env, code 
+                        <+ Sar1 (l)
+                        <+ Sar1 (r)
+                        <+ Mov (l, eax)
+                        <+ Binop(op, r, eax)
+                        <+ Sal1 (eax)
+                        <+ Or1 (eax)
+                        <+ Mov (eax, s)
+                      ] 
                     elif op.oneOf ({"/", "%"}) then
                       [env, code
+                        <+ Sar1(l)
+                        <+ Sar1(r)
                         <+ Mov (l, eax)
                         <+ Cltd
                         <+ IDiv (r)
+                        <+ Sal1 (case op of "/" -> eax | "%" -> edx esac)
+                        <+ Or1 (case op of "/" -> eax | "%" -> edx esac)
                         <+ Mov (case op of "/" -> eax | "%" -> edx esac, s)
                       ]
                     elif op.oneOf ({"==", "!=", "<", "<=", ">", ">="}) then
@@ -595,10 +610,14 @@ fun compile (env, code) {
                         <+ Binop ("cmp", r, eax)
                         <+ Mov (L (0), eax)
                         <+ Set (suffix (op), "%al")
+                        <+ Sal1 (eax)
+                        <+ Or1 (eax)
                         <+ Mov (eax, s)
                       ]
                     elif op.oneOf ({"&&", "!!"}) then
                       [env, code
+                        <+ Sar1 (l)
+                        <+ Sar1 (r)
                         <+ Mov (L (0), eax)
                         <+ Binop ("cmp", L (0), l)
                         <+ Set ("nz", "%al")
@@ -606,6 +625,8 @@ fun compile (env, code) {
                         <+ Binop ("cmp", L (0), r)
                         <+ Set ("nz", "%dl")
                         <+ Binop (op, edx, eax)
+                        <+ Sal1 (eax)
+                        <+ Or1 (eax)
                         <+ Mov (eax, s)
                       ]
                     else

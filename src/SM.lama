@@ -128,8 +128,8 @@ fun eval (env, w, insns) {
     | ins : insns_ ->
       eval (case ins of
         CONST (n)  -> [ n : st, cst, s, w ]
-      | String (x) -> [ x : st, cst, s, w ]
-      | Array (n)  -> case take (st, n) of [st, arr] -> [listArray (arr) : st, cst, s, w] esac
+      | STRING (x) -> [ x : st, cst, s, w ]
+      | ARRAY (n)  -> case take (st, n) of [st, arr] -> [listArray (arr) : st, cst, s, w] esac
       | BINOP (op) -> case st of a : b : rest -> [ evalOp (op, a, b) : rest, cst, s, w ] esac
       | LD    (x)  -> [ lookup(s, x) : st, cst, s, w ]
       | LDA   (x)  -> [ Ref (x) : st, cst, s, w ]
@@ -474,7 +474,7 @@ fun compileImpl (env, stmt) {
   | Var (id) -> [env, singleton (LD (lookupVar(env, id)))]
   | Ref (id) -> [env, singleton (LDA (lookupVar(env, id)))]
   | Const (n) -> [env, singleton (CONST (n))]
-  | String (x) -> [env, singleton (String (x))]
+  | String (x) -> [env, singleton (STRING (x))]
   | Array (xs) -> 
     case foldl (fun ([env, xs], x) {
       case compileImpl (env, x) of [env, t] ->
