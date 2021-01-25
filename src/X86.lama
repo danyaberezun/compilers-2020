@@ -488,7 +488,7 @@ fun call (env, fLabel, nA) {
         [env, pushArgs] ->
            case env.allocate of
              [y, env] ->
-               [env, listBuffer (flatten $ {pushRegs,
+               [env, listBuffer (deepFlatten $ {pushRegs,
                                  reverse (pushArgs),
                                  case extraArg of Some (n) -> Push (L (box $ n)) | _ -> {} esac,
                                  Call (fLabel),
@@ -548,7 +548,7 @@ fun compile (env, code) {
                
         CONST(n) -> 
             case env.allocate of
-               [s, env] -> [env, code <+> move(L(n), s)]
+               [s, env] -> [env, code <+> move(L(box(n)), s)]
             esac
         | LD(x) ->
             case env.allocate of
@@ -578,39 +578,55 @@ fun compile (env, code) {
             case env.pop of 
                 [s, env] ->
                     [env.setStack(l),
-                      code <+ Binop("cmp", L(0), s) <+ CJmp(cond, l)
+                      code <+ Binop("cmp", L(box(0)), s) <+ CJmp(cond, l)
                     ]
             esac
         | GLOBAL(x) -> [env.addGlobal(x), code]
         | BEGIN(fl, nargs, nlocs) -> [env.enterFunction(fl, nlocs), code <+> prologue(fl)]
         | END -> case env.epilogue of [env, end] -> [env, code <+> end] esac
         | CALL(fl, nargs) -> case call(env, fl, nargs) of [env, ncode] -> [env, code <+> ncode] esac
-        | ARRAY(l) -> env.callf("Barray", l, code)
-        | ELEM -> env.callf("Belem", 2, code)
-        | STA -> env.callf("Bsta", 2, code)
-        | STRING(s) -> case env.addString(s) of [env, name] ->
-          case env.allocate of [s, env] -> case env.call("Bstring", 1) of [env, ncode] ->
-              [env, code <+> move(M("$" ++ name), s) <+> ncode]
-          esac esac esac
         | BUILTIN(name, narg) -> env.callf("L" ++ name, narg, code)
         | BINOP(op) ->
             case env.pop2 of
                 [a, b, env] -> case env.allocate of [n, newEnv] ->
                     if ({"==", ">", "<", "!=", ">=", "<="}.contains(op)) then
-                        [newEnv, code <+> move(b, eax) <+ Binop("cmp", a, eax) <+> move(L(0), eax) <+ Set(suffix(op), "%al") <+> move(eax, n)]
+                        [newEnv, code <+> move(b, eax) <+ Binop("cmp", a, eax) <+> move(L(0), eax) <+ Set(suffix(op), "%al")
+                                <+ Sal1(eax) <+ Or1(eax) <+> move(eax, n)]
                     elif (eq(op, "/")) then
-                        [newEnv, code <+> move(b, eax) <+ Cltd <+ IDiv(a) <+> move(eax, n)]
+                        [newEnv, code 
+                            <+ Sar1(a) <+ Sar1(b)
+                            <+> move(b, eax) <+ Cltd <+ IDiv(a) 
+                            <+ Sal1(eax) <+ Or1(eax)
+                            <+> move(eax, n)
+                        ]
                     elif (eq(op, "%")) then
-                        [newEnv, code <+> move(b, eax) <+ Cltd <+ IDiv(a) <+> move(edx, n)]
+                        [newEnv, code 
+                            <+ Sar1(a) <+ Sar1(b) <+> 
+                            move(b, eax) <+ Cltd <+ IDiv(a) 
+                            <+ Sal1(edx) <+ Or1(edx) <+> move(edx, n)
+                        ]
                     elif (eq(op, "!!")) then 
-                        [newEnv, code <+> move(b, eax) <+ Binop(op, a, eax) <+> move(L(0), edx) <+ Binop("cmp", eax, edx) <+> move(L(0), eax) <+ Set("ne", "%al") <+> move(eax, n) ]
+                        [newEnv, code 
+                      <+ Sar1(a) <+ Sar1(b)
+                      <+> move(b, eax) <+ Binop(op, a, eax) <+> move(L(0), edx) <+ Binop("cmp", eax, edx) 
+                      <+> move(L(0), eax) <+ Set("ne", "%al") 
+                      <+ Sal1(eax)<+ Or1(eax)
+                      <+> move(eax, n) ]
                     elif (eq(op, "&&")) then
                         [newEnv, 
-                        code <+> move(L(0), eax) <+> move(L(0), edx) <+ Binop("cmp", a, eax)
-                          <+ Set("ne", "%al") <+ Binop("cmp", b, edx) <+ Set("ne", "%dl") <+ Binop(op, eax, edx) <+> move(edx, n)
+                        code <+ Sar1(a) <+ Sar1(b)
+                        <+>  move(L(0), eax) <+> move(L(0), edx) <+ Binop("cmp", a, eax)
+                        <+ Set("ne", "%al") <+ Binop("cmp", b, edx) <+ Set("ne", "%dl") <+ Binop(op, eax, edx) 
+                        <+ Sal1(edx) <+ Or1(edx) <+> move(edx, n)
                         ]
+                    elif (eq(op, "+")) then
+                        [newEnv, 
+                        code <+> move(b, eax) <+ Dec(eax) <+ Binop(op, a, eax) <+> move(eax, n)]
+                    elif (eq(op, "-")) then
+                        [newEnv, 
+                        code <+> move(b, eax) <+ Binop(op, a, eax) <+ Or1(eax) <+> move(eax, n)]
                     else
-                        [newEnv, code <+> move(b, eax) <+ Binop(op, a, eax) <+> move(eax, n)]
+                        [newEnv, code <+ Sar1(a) <+ Sar1(b) <+> move(b, eax) <+ Binop(op, a, eax) <+ Sal1(eax) <+ Or1(eax) <+> move(eax, n)]
                     fi
                  esac
             esac
