@@ -565,14 +565,14 @@ fun compile (env, code) {
         | BEGIN(fl, nargs, nlocs) -> [env.enterFunction(fl, nlocs), code <+> prologue(fl)]
         | END -> case env.epilogue of [env, end] -> [env, code <+> end] esac
         | CALL(fl, nargs) -> case call(env, fl, nargs) of [env, ncode] -> [env, code <+> ncode] esac
-        --| ARRAY(l) -> env.callf("Barray", l, code)
-        --| ELEM -> env.callf("Belem", 2, code)
-        --| STA -> env.callf("Bsta", 2, code)
-        --| STRING(s) -> case env.addString(s) of [env, name] ->
-        --  case env.allocate of [s, env] -> case env.call("Bstring", 1) of [env, ncode] ->
-        --      [env, code <+> move(M("$" ++ name), s) <+> ncode]
-        --  esac esac esac
-        --| BUILTIN(name, narg) -> env.callf("L" ++ name, narg, code)
+        | ARRAY(l) -> callf(env, "Barray", l, code)
+        | ELEM -> callf(env, "Belem", 2, code)
+        | STA -> callf(env, "Bsta", 2, code)
+        | STRING(s) -> case env.addString(s) of [env, name] ->
+         case env.allocate of [s, env] -> case call(env, "Bstring", 1) of [env, ncode] ->
+        [env, code <+> move(M("$" ++ name), s) <+> ncode]
+        esac esac esac
+        | BUILTIN(name, narg) -> callf(env, "B" ++ name, narg, code)
         | BINOP(op) ->
             case env.pop2 of
                 [a, b, env] -> case env.allocate of [n, newEnv] ->
