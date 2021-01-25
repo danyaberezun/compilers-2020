@@ -621,7 +621,7 @@ fun compileSMEnv (env, stmt) {
         [env, {res, SEXP (size(args))}]
       esac
     | Case (x, branches) ->
-      case compileSMEnv (env, x) of [env, x] ->
+      case compileSMEnv (beginScope (env), x) of [env, x] ->
         case genLabels(env, 2) of [lEnd, lHack, env] ->
           case foldl (fun ([env, res], [pattern, body]) {
             case compileSMMatch (env, pattern) of [env, cont, match] ->
@@ -640,7 +640,7 @@ fun compileSMEnv (env, stmt) {
               esac
             esac
           }, [env, {}], branches) of [env, code] ->
-            [env, {
+            [endScope (env), {
               x,
               LABEL (lHack),
               code,
