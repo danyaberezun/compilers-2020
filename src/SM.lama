@@ -185,6 +185,21 @@ fun eval (env, w, insns) {
                       [rest, cst, nstate, world]
                     esac
                   | GLOBAL(x) -> assign(state, Glb(x), 0); [stack, cst, state, world]
+                  | ARRAY(l) -> case take(stack, l) of [stack, elems] -> 
+                      [listArray(elems):stack, cst, state, world] 
+                    esac
+                  | ELEM -> case stack of i:arr:stack -> 
+                      [arr[i]:stack, cst, state, world] 
+                    esac
+                  | STA ->  case stack of val:i:arr:stack -> 
+                      arr[i] := val; [val:stack, cst, state, world] 
+                    esac
+                  | STRING(s) -> [s:stack, cst, state, world]
+                  | BUILTIN(name, narg) -> case take(stack, narg) of [stack, args] ->
+                       case evalBuiltin(name, args, world)  of [res, world] -> 
+                           [res:stack, cst, state, world]
+                       esac
+                    esac
               esac;
             eval(nconf, tail)
      esac
@@ -419,14 +434,14 @@ fun addVars (env, names) {
 --    (use env.addArg).
 
 public fun compileSM (stmt) {
-  case compileSmWithEnv(stmt, initCompEnv()) of [insns, env] ->
+  case compileSmWithEnv(stmt, initCompEnv().enterScope.addFun("read", Builtin, 0).addFun("write", Builtin, 1)) of [insns, env] ->
      compileFuncs(
        singleton(LABEL("main")) +++
        singleton(BEGIN("main", 0, env.getLocals)) +++
        insns +++
        singleton(END)
        , 
-       env
+       env.endScope
      )[0]
   esac
 }
@@ -465,11 +480,13 @@ fun compileSmWithEnv(stmt, env) {
 fun compileSmWithEnvAndLbl(stmt, env, shouldJump, lblToJump) {
     local additional = if shouldJump then singleton(JMP(lblToJump)) else {} fi;
     case stmt of 
-      Read(x) -> [{READ, ST(lookupVar(env, x))} +++ additional, env]
-    | Write(expr) -> case compileSmWithEnv(expr, env) of [ins1, env1] -> [ins1 +++ singleton(WRITE) +++ additional, env1] esac
-    | Assn(x, expr) -> case compileSmWithEnv(x, env) of [ins1, env1] -> case compileSmWithEnv(expr, env1) of [ins2, env2] ->
-        [ins1 +++ ins2 +++ singleton(STI) +++ additional, env2]
-      esac esac
+    Assn(x, expr) -> case compileSmWithEnv(x, env) of [ins1, env1] -> 
+      case compileSmWithEnv(expr, env1) of [ins2, env2] ->
+              [ins1 +++ ins2 +++ 
+              case x of ElemRef(_, _) -> singleton(STA) | _ -> singleton(STI) esac 
+              +++ additional, env2]
+      esac
+    esac
     | Seq(stmt1, stmt2) -> case compileSmWithEnv(stmt1, env) of [res1, env1] ->
                            case compileSmWithEnvAndLbl(stmt2, env1, shouldJump, lblToJump) of [res2, env2] ->
                            [res1 +++ res2, env2]
@@ -593,14 +610,51 @@ fun compileSmWithEnvAndLbl(stmt, env, shouldJump, lblToJump) {
                 [insns1, env1] -> [glob +++ insns1 +++ additional, env1.endScope]
             esac
         esac
-    |  Call (f, argExprs) -> case lookupFun(env, f) of Fun(fn, n) ->
+    |  Call (f, argExprs) ->
             case foldl(fun([insns, env], expr) {
               case compileSmWithEnv(expr, env) of [insns1, env1] -> [insns +++ insns1, env1] esac
             }, [{}, env], argExprs) of
-          [insns, env] -> [insns +++ singleton(CALL(fn, n)) +++ additional, env]
+          [insns, env] ->
+          case lookupFun(env, f) of 
+          Fun(Builtin, _) ->
+            [insns +++ singleton(BUILTIN(f, argExprs.size)) +++ additional, env]
+          | Fun(fn, n) ->
+           [insns +++ singleton(CALL(fn, n)) +++ additional, env]
           esac
         esac
+    | ElemRef(arr, i) -> case compileSmWithEnv(arr, env) of [arrRes, env] ->
+                         case compileSmWithEnv(i, env) of [ires, env] -> 
+            [arrRes +++ ires +++ additional, env]
+      esac esac
+    | Elem(arr, i) -> case compileSmWithEnv(arr, env) of [arrRes, env] ->
+                      case compileSmWithEnv(i, env) of [ires, env] ->
+              [arrRes +++ ires +++ singleton(ELEM) +++ additional, env]
+      esac esac
+    | Array(arr) -> case foldl(
+      fun([arrRes, env], elem) {
+        case compileSmWithEnv(elem, env) of [eres, env] -> [arrRes +++ eres, env] esac
+      },
+      [{}, env],
+      arr
+    ) of [arrRes, env] ->
+        [arrRes +++ singleton(ARRAY(arr.size)) +++ additional, env]
+      esac
+    |  String(x) -> [singleton(STRING(x)) +++ additional, env]
+    | Builtin(name, args) -> case compileList(env, args) of [res, env] -> 
+        [res +++ singleton(BUILTIN(name, args.size)) +++ additional, env]
+      esac
         
   esac
 }
 (* End *)
+
+
+fun compileList(env, args) {
+  foldl(
+      fun([res, env], elem) {
+        case compileSmWithEnv(elem, env) of [eres, env] -> [res +++ eres, env] esac
+      },
+      [{}, env],
+      args
+    )
+}

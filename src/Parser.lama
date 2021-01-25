@@ -74,11 +74,7 @@ fun expandScope (defs, expr) {
     foldr (fun ([defs, expr], def) {     
              case def of
                 [ident, None]         -> [ident : defs, expr]
-<<<<<<< HEAD
-             |  [ident, Some (value)] -> [ident : defs, Seq (Ignore (Assn (Ref (ident), value)), expr)]
-=======
              |  [ident, Some (value)] -> [ident : defs, Seq (Ignore (Assn (Ref (ident), value(Val))), expr)]
->>>>>>> A08-scopes-functions-sm-x86
              esac
            },
            [{}, expr],
@@ -134,8 +130,6 @@ local primary    = memo $ eta syntax (
                                                                                                             esac
                                                                                                          }} |
                                       bexp=inbr[s("("), exp, s(")")] {fun(a) {bexp(a)} } |
-                                      loc=pos kRead x=inbr[s("("), lident, s(")")] { fun (a) {assertVoid(a, Read(x), loc)} } |
-                                      loc=pos kWrite e=inbr[s("("), exp, s(")")] { fun(a) { assertVoid(a, Write(e(Val)), loc) } } |
                                       loc=pos kSkip {fun(a) {assertVoid(a, Skip, loc)} } |
                                       
                                       kIf c=exp kThen s=scopeExpr ot=elifStmt kFi {fun(a) {If(c(Val), s(a), ot(a))} } |

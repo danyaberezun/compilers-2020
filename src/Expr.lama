@@ -108,7 +108,7 @@ fun dvar(v) {
 
 fun eval (c@[state, world], expr) {
     case expr of 
-      Read(x) -> state.checkVar(x); case readWorld(world) of [val, nworld] ->
+      Read(x) -> case readWorld(world) of [val, nworld] ->
           [[
             state<-[x, Var(val)],
             nworld
@@ -127,7 +127,10 @@ fun eval (c@[state, world], expr) {
       | Assn(x, expr) -> case evalList(c, {x, expr}) of [[state, world], var:res:_] ->
         [
         [
-          state<-[var, Var(res)],
+          case var of
+          Ref(x) -> state<-[x, Var(res)] |
+          ElemRef(arr, i) -> arr[i] := res; state
+          esac,
           world
         ],
         res
@@ -155,37 +158,52 @@ fun eval (c@[state, world], expr) {
           esac
       | Skip -> [c, Void]
       | Const(n) -> [c, n]
-      | Var(x) -> state.checkVar(x); [c, state.lookup(x).dvar]
+      | Var(x) -> [c, state.lookup(x).dvar]
       | Binop(op, lefto, righto) -> case evalList(c, {lefto, righto}) of [c, a:b:_] ->
                                     [c, evalOp(op, a, b)]
                                     esac
-      | Ref(x) -> [c, x]
+      | Ref(x) -> [c, Ref(x)]
       | Ignore(expr) -> [eval(c, expr).fst, Void]
       | Scope(defs, expr) -> case evalList([state.enterScope, world], defs) of [c, _] -> 
             case eval(c, expr) of [[s, w], res] -> [[s.leaveScope, w], res] esac
         esac
       | Local(vars) -> [[state.addNames(vars), world], Void]
       | Fun(name, args, body) -> [[state.addFunction(name, args, body), world], Void]
-      | Call(f, argExps) -> state.checkFun(f); case c.evalList(argExps) of [[s, w], argVals] -> case state.lookup(f) of Fun(args, body) ->
-            local news = foldl(
-                        fun (olds, [arg, val]) {olds.addName(arg, Var(val))}, 
-                        s.enterFunction, 
-                        zip(args, argVals)
-                      );
-            case eval([news, w],
-                       body
-                     ) of [[sres, w], res] ->
-                [[s.leaveFunction(sres.getGlobal), w], res]
+      | Call(f, argExps) -> case c.evalList(argExps) of [[s, w], argVals] -> case state.lookup(f) of Fun(args, body) ->
+            case body of 
+            External -> case evalBuiltin(f, argVals, w) of [res, w] -> [[s, w], res] esac|
+            _ ->   local news = foldl(
+                          fun (olds, [arg, val]) {olds.addName(arg, Var(val))}, 
+                          s.enterFunction, 
+                          zip(args, argVals)
+                        );
+              case eval([news, w],
+                        body
+                      ) of [[sres, w], res] ->
+                  [[s.leaveFunction(sres.getGlobal), w], res]
+              esac
             esac
         esac esac
-
+      | ElemRef(arr, i) -> case evalList(c, {arr, i}) of 
+        [c, {arrRes, ires}] -> [c, ElemRef(arrRes, ires)]
+        esac
+      | Elem(arr, i) -> case evalList(c, {arr, i}) of 
+        [c, {arrRes, ires}] -> [c, arrRes[ires]]
+        esac
+      | String(s) -> [c, s]
+      | Array(exps) -> case evalList(c, exps) of [c, ress] -> [c, listArray(ress)] esac
+      | Builtin(name, args) -> case evalList(c, args) of [[s, w], argRes] ->
+          case evalBuiltin(name, argRes, w) of [res, w] ->
+            [[s, w], res]
+          esac
+        esac
     esac
 }
 
 
 -- Evaluates a program with a given input and returns an output
 public fun evalExpr (input, expr) {
-  case eval ([emptyState (), createWorld (input)], expr) of
+  case eval ([emptyState ().enterScope.addName ("read", Fun ({}, External)).addName ("write", Fun (singleton ("a"), External)) , createWorld (input)], expr) of
     [c, _] -> c.snd.getOutput
   esac
 }
