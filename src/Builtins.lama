@@ -2,6 +2,7 @@
 import World;
 import List;
 import Data;
+import Array;
 
 fun stringify (e) {
   case e of
@@ -19,8 +20,11 @@ fun stringify (e) {
 public fun evalBuiltin (name, args, w) {
   case [name, args] of
     ["stringval", {a}]          -> [stringify(a), w]
+  | ["strcmp"   , {a@#string, b@#string}] -> [a === b, w]
+  | ["matchfailure", {}] -> failure ("interpreter: Match failure\n")
   | ["length"   , {a@#array}]   -> [a.length, w]
   | ["length"   , {a@#string}]  -> [a.length, w]
+  | ["length"   , {Sexp(_, args)}] -> [1 + size(args), w]
   | ["read"     , {}]           -> readWorld (w)
   | ["write"    , {x@#unboxed}] -> [0, writeWorld (x, w)]
   | _ ->

@@ -204,7 +204,7 @@ fun eval (c@[s, w], expr) {
     esac
   | Case (x, branches) ->
     case eval (c, x) of [c, x] ->
-      case foldl(fun (result, [pattern, body]) {
+      foldl(fun (result, [pattern, body]) {
         case result of
           None ->
             case patternMatch ([enterScope (s), w], pattern, x) of
@@ -216,10 +216,7 @@ fun eval (c@[s, w], expr) {
             esac
         | _ -> result
         esac
-      }, None, branches) of
-        None -> failure ("interpreter: Match failure on %s\n", x.string)
-      | t -> t
-      esac
+      }, None, branches)
     esac
   esac
 }

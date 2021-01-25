@@ -31,7 +31,8 @@ public fun showSMInsn (i) {
   | LDA    (x)       -> sprintf ("LDA %s", showLoc (x))
   | ST     (x)       -> sprintf ("ST %s", showLoc (x))
   | STI              -> "STI"
-  | SEXP   (s, n)    -> sprintf ("SEXP ""%s"", %d", s, n)
+  | SWAP             -> "SWAP"
+  | SEXP   (n)       -> sprintf ("SEXP %d", n)
   | CONST  (n)       -> sprintf ("CONST %d", n)
   | LABEL  (s)       -> sprintf ("LABEL %s", s)
   | JMP    (l)       -> sprintf ("JMP %s", l)
@@ -52,6 +53,13 @@ public fun showSMInsn (i) {
 
 public fun showSM (prg) {
   map (fun (i) {showSMInsn (i) ++ "\n"}, prg).stringcat
+}
+
+fun arrayify (x) {
+  case x of
+    Sexp (tag, args) -> listArray(tag : map(arrayify, args))
+  | _ -> x
+  esac
 }
 
 -- Evaluation environment: keeps a mapping between labels and (sub)programs
@@ -125,21 +133,30 @@ fun eval (env, w, insns) {
     case insns of
     {}     -> c
   | ins : insns_ ->
+     -- printf("%s (stack depth %d)\n", showSMInsn(ins), size(st));
+
       eval(case ins of
         CONST (x)  -> [ x : st, cst, s, w ]
       | STRING (x) -> [ x : st, cst, s, w ]
       | ARRAY (n)  -> case take (st, n) of [st, arr] -> [listArray (arr) : st, cst, s, w] esac
-      | BINOP (op) -> case st of a : b : rest -> [ evalOp (op, a, b) : rest, cst, s, w ] esac
+      | BINOP (op) -> case st of b : a : rest -> [ evalOp (op, a, b) : rest, cst, s, w ] esac
       | LD    (x)  -> [ lookup(s, x) : st, cst, s, w ]
       | LDA   (x)  -> [ Ref (x) : st, cst, s, w ]
       | ST    (x)  -> case st of a : rest -> assign(s, x, a); [ rest, cst, s, w ] esac
       | STI        -> case st of a : Ref (x) : rest -> assign (s, x, a); [ a : rest, cst, s, w ] esac
+      | SWAP       -> case st of a : b : rest -> [ b : a : rest, cst, s, w ] esac
       | STA        -> case st of a : idx : arr : rest -> arr[idx] := a; [ a : rest, cst, s, w ] esac
-      | ELEM       -> case st of idx : arr : rest -> [ arr[idx] : rest, cst, s, w ] esac
+      | ELEM       -> case st of idx : arr : rest -> [ arrayify(arr)[idx] : rest, cst, s, w ] esac
       | DUP        -> case st of a : rest -> [ a : a : rest, cst, s, w ] esac
       | DROP       -> case st of a : rest -> [ rest, cst, s, w ] esac
       | CJMP (cond, where) -> case st of a : rest -> [ rest, cst, s, w ] esac
       | CALL (func, argc) -> [st, [s, insns_] : cst, s, w]
+      | SEXP (n) ->
+        case take (st, n) of [st, args] ->
+          case st of tag : rest ->
+            [ Sexp (tag, args) : rest, cst, s, w ]
+          esac
+        esac
       | BUILTIN (name, argc) ->
         case take (st, argc) of [st, argv] ->
           case evalBuiltin (name, argv, w) of [retval, w] ->
@@ -396,6 +413,61 @@ fun addVars (env, names) {
 --    (use env.addArg).
 
 
+fun compileSMMatch (env, pattern) {
+  case pattern of
+    Var ("_") -> [env, fun (x) {x}, {CONST (1)}]
+  | Var (x) ->
+      case addVar(beginScope(env), x) of env ->
+        [env, fun (x) { endScope(x) }, {
+          DUP,
+          LDA(lookupVar(env, x)),
+          SWAP,
+          STI,
+          DROP,
+          CONST (1)
+        }]
+      esac
+  | Sexp (tag, args) ->
+      case genLabels (env, 2) of [lEnd, lFail, env] ->
+        case foldl(fun ([env, cont, res, i], arg) {
+          case compileSMMatch(env, arg) of [env2, cont2, code] ->
+            [env2, fun (x) { cont(cont2(x)) },
+            {
+              res,
+              DUP,
+              CONST (i+1),
+              ELEM,
+              code,
+              SWAP,
+              DROP,
+              CJMP ("z", lFail)
+            }, i+1]
+          esac
+        }, [env, fun (x) {x}, {
+          DUP,
+          CONST (0),
+          ELEM,
+          STRING (tag),
+          BUILTIN ("strcmp", 2),
+          CJMP ("z", lFail),
+          DUP,
+          BUILTIN ("length", 1),
+          CONST (size(args) + 1),
+          BINOP ("=="),
+          CJMP ("z", lFail)
+        }, 0], args) of [env, cont, res, _] ->
+          [env, cont, {
+            res,
+            CONST (1),
+            JMP (lEnd),
+            LABEL (lFail),
+            CONST (0),
+            LABEL (lEnd)
+          }]
+        esac
+      esac
+  esac
+}
 
 -- Compiles an expression into a stack machine code.
 fun compileSMEnv (env, stmt) {
@@ -403,7 +475,7 @@ fun compileSMEnv (env, stmt) {
       Binop (op, lhs, rhs) ->
       case compileSMEnv (env, lhs) of [env, lhs] ->
         case compileSMEnv (env, rhs) of [env, rhs] ->
-          [env, { rhs, lhs, BINOP(op) }]
+          [env, { lhs, rhs, BINOP(op) }]
         esac
       esac
     | Assn (lhs, a) ->
@@ -539,6 +611,44 @@ fun compileSMEnv (env, stmt) {
         esac
       }, [env, {}], args) of [env, res] ->
         [env, {res, BUILTIN (name, size(args))}]
+      esac
+    | Sexp (tag, args) ->
+      case foldl (fun ([env, res], arg) {
+        case compileSMEnv (env, arg) of [env, t] ->
+          [env, {res, t}]
+        esac
+      }, [env, {STRING (tag)}], args) of [env, res] ->
+        [env, {res, SEXP (size(args))}]
+      esac
+    | Case (x, branches) ->
+      case compileSMEnv (env, x) of [env, x] ->
+        case genLabels(env, 2) of [lEnd, lHack, env] ->
+          case foldl (fun ([env, res], [pattern, body]) {
+            case compileSMMatch (env, pattern) of [env, cont, match] ->
+              case compileSMEnv (env, body) of [env, body] ->
+                case genLabel(env) of [lSkip, env] ->
+                  [cont (env), {
+                    res,
+                    match,
+                    CJMP ("z", lSkip),
+                    DROP,
+                    body,
+                    JMP (lEnd),
+                    LABEL (lSkip)
+                  }]
+                esac
+              esac
+            esac
+          }, [env, {}], branches) of [env, code] ->
+            [env, {
+              x,
+              LABEL (lHack),
+              code,
+              JMP (lHack),
+              LABEL (lEnd)
+            }]
+          esac
+        esac
       esac
   esac
 }

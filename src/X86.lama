@@ -165,6 +165,11 @@ fun makeEnv (stack, stackSlots, globals, strings, stringIndex, barrier, stackMap
   fun peek () {
     stack.fst
   }
+
+  fun getStack() {
+    stack
+  }
+
   -- Adds a global variable; returns an updated environment
   fun addGlobal (name) {
     makeEnv (stack, stackSlots, addSet (globals, globalName (name)), strings, stringIndex, barrier, stackMap, fLabel, nLocals)
@@ -278,7 +283,8 @@ fun makeEnv (stack, stackSlots, globals, strings, stringIndex, barrier, stackMap
    liveRegisters,
    addString,
    getStrings,
-   staticSize]
+   staticSize,
+   getStack]
 }
 
 -- Exported accessors
@@ -362,6 +368,10 @@ fun staticSize (env) {
   env [19] ()
 }
 
+fun getStack (env) {
+  env [20] ()
+}
+
 -- Creates an initial environment
 fun initEnv () {
   makeEnv ({}, 0, emptySet (compare), emptySet (compare), 0, false, emptyMap (compare), "", 0)
@@ -420,6 +430,7 @@ fun memOpnd (opnd) {
   case opnd of
     S (_) -> true
   | M (_) -> true
+  | I (_, _) -> true
   | _     -> false
   esac
 }
@@ -508,6 +519,8 @@ fun compile (env, code) {
           esac
         }
 
+        printf("%s (stack size %d)\n", showSMInsn(i), size(getStack(env)));
+
         case i of
         (* Assignment *)
           CONST (n) ->
@@ -523,6 +536,7 @@ fun compile (env, code) {
               esac
             esac
         | ARRAY (n) -> callRuntime ("Barray", n)
+        | SEXP (n) -> callRuntime ("Bsexp", n + 1)
         | STA -> callRuntime ("Bsta", 2)
         | ELEM -> callRuntime ("Belem", 2)
         | BUILTIN (name, argc) -> callRuntime (sprintf("B%s", name), argc)
@@ -537,7 +551,7 @@ fun compile (env, code) {
             esac
         | BINOP (op) ->
             case env.pop2 of
-              [x, y, env] -> case env.allocate of
+              [y, x, env] -> case env.allocate of
                 [s, env] -> case op of
                   "/" -> [env, code <+ Sar1(x)
                                     <+ Sar1(y)
@@ -620,6 +634,12 @@ fun compile (env, code) {
           case env.pop of [s, env] ->
             [env, code]
           esac
+        | DUP ->
+          case env.peek of s ->
+            case env.allocate of [d, env] ->
+              [env, code <+> move (s, d)]
+            esac
+          esac
         | LDA (x) ->
           case env.allocate of [s, env] ->
             [env, code <+ Lea (env.loc(x), eax)
@@ -627,11 +647,20 @@ fun compile (env, code) {
             ]
           esac
         | STI ->
-          case env.pop of [s, env] ->
-            case env.peek of x ->
-              [env, code <+> move (s, I (0, x))
-                         <+  Mov (s, x)]
+          case env.pop2 of [s, addr, env] ->
+            case env.allocate of [d, env] ->
+              [env, code <+ Mov (addr, eax)
+                         <+ Mov (s, edx)
+                         <+ Mov (edx, I (0, eax))
+                         <+ Mov (edx, d)]
             esac
+          esac
+        | SWAP ->
+          case env.getStack of x : y : _ ->
+            [env, code <+  Mov (x, eax)
+                       <+> move (y, x)
+                       <+  Mov (eax, y)
+            ]
           esac
         | BEGIN (name, argc, varc) -> [
           enterFunction (env, name, varc),

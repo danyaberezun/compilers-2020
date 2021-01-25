@@ -163,7 +163,9 @@ local primary    = memo $ eta syntax (
   loc=pos kCase x=basic kOf branches=list0By[syntax (pattern=primary s["->"] body=exp {[pattern(Val), body]}), s("|")] kEsac { fun (a) {
     Case (x(Val), foldr (fun (branches, [pattern, body]) {
       [pattern, body(a)]:branches
-    }, {}, branches))
+    }, {}, branches +++ singleton([Var("_"), fun (a) {
+      assertValue (a, Builtin ("matchfailure", {}), loc)
+    }])))
   }}
 ),
 
