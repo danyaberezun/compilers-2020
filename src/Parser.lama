@@ -36,7 +36,7 @@ local primary = memo $ eta syntax (x=decimal {Const (stringInt (x))} |
           }
         );
 
-        memo $ eta expr (ops, primary) (id) -- TODO: change? 
+        memo $ eta expr (ops, primary)
       };
 
 local simpleStmt = memo $ eta syntax (
