@@ -60,7 +60,39 @@ fun fromLabel (env, lab) {
 -- Stack machine interpreter. Takes an environment, an SM-configuration and a program,
 -- returns a final configuration
 fun eval (env, c, insns) {
-  failure ("SM eval not implemented\n")
+  local stack = c[0], s = c[1], w = c[2];
+  if insns.size == 0 
+  then return c
+  fi;
+  case insns.hd of
+    READ -> 
+      local v_w = readWorld (w);
+      eval (env, [v_w[0]:stack, s, v_w[1]], insns.tl)
+  | WRITE -> 
+      local v = stack.hd, tale = stack.tl;
+      return eval (env, [tale, s, writeWorld (v, w)], insns.tl)
+  | BINOP (str) -> 
+      local y = stack.hd, x = stack.tl.hd, tale = stack.tl.tl;
+      eval (env, [evalOp (str, x, y):tale, s, w], insns.tl)
+  | LD (x) -> eval (env, [s (x):stack, s, w], insns.tl)
+  | LDA (x) -> eval (env, [Ref (x):stack, s, w], insns.tl)
+  | ST (x) -> eval (env, [stack.tl, s <- [x, stack.hd], w], insns.tl)
+  | STI -> 
+      case stack of
+        v:(Ref (x)):tale -> eval (env, [v:tale, s <- [x, v], w], insns.tl)
+      esac
+  | CONST (n) -> eval (env, [n:stack, s, w], insns.tl)
+  | LABEL (s) -> eval (env, c, insns.tl)
+  | JMP (l) -> eval (env, c, fromLabel (env, l))
+  | CJMP (v, l) -> 
+    case [v, stack.hd] of
+      ["z", 0] -> eval (env, [stack.tl, s, w], fromLabel (env, l))
+    | ["z", _] -> eval (env, [stack.tl, s, w], insns.tl)
+    | ["nz", 0] -> eval (env, [stack.tl, s, w], insns.tl)
+    | ["nz", _] -> eval (env, [stack.tl, s, w], fromLabel (env, l)) 
+    esac
+  | DROP -> eval (env, [stack.tl, s, w], insns.tl)
+  esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -98,9 +130,36 @@ fun genLabels (env, n) {
   listArray (inner (env, n))
 }
 
--- Compiles an expression into a stack machine code.
--- Takes an expression, returns a list of stack machine
+local cnt = 0;
+
+-- Compiles a statement into a stack machine code.
+-- Takes a statement, returns a list of stack machine
 -- instructions.
 public fun compileSM (stmt) {
-  failure ("compileSM not implemented\n")
+  case stmt of
+    Var (str) -> singleton (LD (str))
+  | Const (val) -> singleton (CONST (val))
+  | Binop (str, expr1, expr2) -> compileSM (expr1) +++ compileSM (expr2) +++ singleton (BINOP (str))
+  | Assn (e1, e2) -> compileSM (e1) +++ compileSM (e2) +++ singleton (STI)
+  | Read (str) -> singleton (READ) +++ singleton (ST (str))
+  | Write (expr) -> compileSM (expr) +++ singleton (WRITE)
+  | Seq (stmt1, stmt2) -> compileSM (stmt1) +++ compileSM (stmt2)
+  | If (expr, stmt1, stmt2) -> 
+      local l1 = sprintf ("l%d", cnt), l2 = sprintf ("l%d", cnt + 1);
+      cnt := cnt + 2;
+      compileSM (expr) +++ singleton (CJMP ("nz", l1)) +++ compileSM (stmt2) +++ 
+      singleton (JMP (l2)) +++ singleton (LABEL (l1)) +++ compileSM (stmt1) +++ singleton (LABEL (l2))
+  | While (expr, stmt) -> 
+      local l1 = sprintf ("l%d", cnt), l2 = sprintf ("l%d", cnt + 1);
+      cnt := cnt + 2;
+      singleton (JMP (l2)) +++ singleton (LABEL (l1)) +++ compileSM (stmt) +++ 
+      singleton (LABEL (l2)) +++ compileSM (expr) +++ singleton (CJMP ("nz", l1))
+  | Repeat (stmt, expr) -> 
+      local l = sprintf ("l%d", cnt);
+      cnt := cnt + 1;
+      singleton (LABEL (l)) +++ compileSM (stmt) +++ compileSM (expr) +++ singleton (CJMP ("z", l))
+  | Skip -> {}
+  | Ref (str) -> singleton (LDA (str))
+  | Ignore (expr) -> compileSM (expr) +++ singleton (DROP)
+  esac
 }
