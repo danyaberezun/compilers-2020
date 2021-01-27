@@ -64,7 +64,24 @@ local primary  = memo $ eta syntax (
                                                                                          | _    -> Var (x)
                                                                                          esac
                                                                                       }} |
-                                    $(failure ("the rest of primary parsing in not implemented\n"))),
+                                    inbr[s("("), exp, s(")")] |
+                                    loc=pos kSkip { fun (a) { assertVoid(a, Skip, loc) } } | 
+                                    loc=pos kRead l=inbr[s("("), lident, s(")")] { fun (a) { assertVoid(a, Read(l), loc) } } |
+                                    loc=pos kWrite e=inbr[s("("), exp, s(")")] { fun (a) { assertVoid(a, Write(e (Val)), loc) } } |
+                                    loc=pos kWhile e=exp s=inbr[kDo, exp, kOd] { fun (a) { assertVoid(a, While(e (Val), s (Void)), loc) } } |
+                                    loc=pos kRepeat e=exp kUntil p=inbr[s("("), exp, s(")")] { fun (a) { assertVoid(a, Repeat(e(Void), p(Val)), loc) } } |
+                                    loc=pos kFor init=exp s[","] p=exp s[","] step=exp e=inbr[kDo, exp, kOd] { 
+                                      fun (a) { 
+                                        assertVoid(a, Seq(init(Void), While(p(Val), Seq(e(Void), step(Void)))), loc)
+                                      }
+                                    } |
+                                    -kIf ifP -kFi),
+      ifP = memo $ eta syntax ( loc=pos e=exp kThen s1=exp el=elseP {fun (a) { If(e(Val), s1(a), el(a)) }} ),
+      elseP = memo $ eta syntax (
+        loc=pos empty { fun (a) { assertVoid(a, Skip, loc) } } | 
+        -kElif ifP |
+        -kElse s=exp
+      ),
       basic    = memo $ eta (expr ({[Right, singleton ([s (":="),
                                                         fun (l, loc, r) {
                                                           fun (a) {assertValue (a, Assn (l (Ref), r (Val)), loc)}
