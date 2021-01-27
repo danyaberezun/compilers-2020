@@ -5,18 +5,18 @@ import State;
 
 public fun evalOp (op, l, r) {
     case op of
-		  "+" -> l + r
-		| "-" -> l - r
-		| "*" -> l * r
-		| "/" -> l / r
+		  "+" -> l + r 
+		| "-" -> l - r 
+		| "*" -> l * r 
+		| "/" -> l / r 
 		| "%" -> l % r
-		| "==" -> l == r
-		| "!=" -> l != r
-		| "<" -> l < r
-		| ">" -> l > r
-		| "<=" -> l <= r
-		| ">=" -> l >= r
-		| "&&" -> l && r
+		| "==" -> l == r 
+		| "!=" -> l != r 
+		| "<" -> l < r 
+		| ">" -> l > r 
+		| "<=" -> l <= r 
+		| ">=" -> l >= r 
+		| "&&" -> l && r 
 		| "!!" -> l !! r
     esac
 }
@@ -31,8 +31,8 @@ public fun evalOp (op, l, r) {
 --        Binop (string, expr, expr)
 
 public fun evalExpr (st, expr) {
-	  case expr of
-	  		  Var (x)	-> st(x)
+  case expr of
+  		  Var (x)	-> st(x)
 		| Const (n)	-> n
 		| Binop (op, l, r) -> evalOp(op, evalExpr(st, l), evalExpr(st, r))
 	esac

@@ -27,15 +27,15 @@ public fun showSM (prg) {
 -- Stack machine interpreter. Takes an SM-configuration and a program,
 -- returns a final configuration
 fun eval (c@[st, state, w], insns) {
-failure ("SM eval not implemented\n")		case insns of
-	  READ : p -> local world = readWorld(w); eval([world[0] : st, state, world[1]], p)
-	| WRITE : p -> eval([st[1], state, writeWorld(st[0], w)], p)
-	| BINOP(op) : p -> eval([evalOp(op, st[1][0], st[0]) : st[1][1], state, w], p)
-	| CONST(n) : p -> eval([n : st, state, w], p)
-	| LD(x) : p -> eval([state(x) : st, state, w], p)
-	| ST(x) : p -> eval([st[1], state <- [x, st[0]], w], p)
-	| {} -> [st, state, w]
-esac
+	case insns of
+		  READ : p -> local world = readWorld(w); eval([world[0] : st, state, world[1]], p)
+		| WRITE : p -> eval([st[1], state, writeWorld(st[0], w)], p)
+		| BINOP(op) : p -> eval([evalOp(op, st[1][0], st[0]) : st[1][1], state, w], p)
+		| CONST(n) : p -> eval([n : st, state, w], p)
+		| LD(x) : p -> eval([state(x) : st, state, w], p)
+		| ST(x) : p -> eval([st[1], state <- [x, st[0]], w], p)
+		| {} -> [st, state, w]
+	esac
 }
 
 -- Runs a stack machine for a given input and a given program, returns an output
@@ -47,11 +47,11 @@ public fun evalSM (input, insns) {
 -- Takes an expression, returns a list (of, possibly, lists)
 -- of stack machine instructions
 fun compileExpr (expr) {
-    case expr of
-   	  Const(n) -> singleton(CONST(n))
-     | Var(elem) -> singleton(LD(elem))
-     | Binop(op, l, r) -> compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
-  esac
+     case expr of
+   		  Const(n) -> singleton(CONST(n))
+        | Var(elem) -> singleton(LD(elem))
+        | Binop(op, l, r) -> compileExpr(l) +++ compileExpr(r) +++ singleton(BINOP(op))
+    esac
 }
 
 -- Compiles a statement into a stack machine code.

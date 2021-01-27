@@ -17,7 +17,7 @@ import World;
 --        Write  (expr)             |
 
 fun eval (c, stmt) {
-	  case stmt of
+  case stmt of
           Assn(str, expr) -> [c[0] <- [str, evalExpr(c[0], expr)], c[1]]
         | Seq(s1, s2) -> eval(eval(c, s1), s2)
         | Skip -> c
