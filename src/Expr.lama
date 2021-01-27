@@ -64,7 +64,45 @@ fun evalList (c, exprs) {
 }
 
 fun eval (c@[s, w], expr) {
-  failure ("evalExpr not implemented\n")
+  case expr of
+    Var (str) -> [c, s (str)]
+  | Const (val) -> [c, val]
+  | Binop (str, e1, e2) -> 
+      case evalList (c, {e1, e2}) of
+        [c_, {l, r}] -> [c_, evalOp (str, l, r)]
+      esac
+  | Assn (e1, e2) -> 
+      case evalList (c, {e1, e2}) of
+        [[s_, w_], {Ref (x), v}] -> [[s_ <- [x, v], w_], v]
+      esac
+  | Seq (e1, e2) -> eval (eval (c, e1).fst, e2)
+  | Skip -> [c, Void]
+  | Read (str) -> 
+      case readWorld (w) of
+        [v, w_] -> [[s <- [str, v], w_], Void]
+      esac
+  | Write (e) -> 
+      case eval (c, e) of
+        [[s_, w_], v] -> [[s_, writeWorld (v, w_)], Void]
+      esac
+  | If (cond, e1, e2) -> 
+      case eval (c, cond) of
+        [c_, 0] -> eval (c_, e2)
+      | [c_, _] -> eval (c_, e1)
+      esac
+  | While (cond, e) ->
+      case eval (c, cond) of
+        [c_, 0] -> [c_, Void]
+      | [c_, _] -> eval (eval (c_, e).fst, While (cond, e))
+      esac
+  | Repeat (e, cond) -> 
+      case eval (eval (c, e).fst, cond) of
+        [c_, 0] -> eval (c_, Repeat (e, cond))
+      | [c_, _] -> [c_, Void]
+      esac
+  | Ref (str) -> [c, Ref (str)]
+  | Ignore (e) -> [eval (c, e).fst, Void]
+  esac
 }
 
 
