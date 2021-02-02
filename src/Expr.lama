@@ -3,26 +3,6 @@
 import List;
 import State;
 
-<<<<<<< HEAD
-=======
-public fun binopOp (str, x, y) {
-  case str of
-      "+"  -> x + y
-    | "-"  -> x - y
-    | "*" -> x * y
-    | "/" -> x / y
-    | "%" -> x % y
-    | "==" -> x == y
-    | "!=" -> x != y
-    | "<" -> x  < y
-    | "<=" -> x <= y
-    | ">" -> x > y
-    | ">=" -> x >= y
-    | "&&" -> x && y
-    | "!!" -> x !! y
-  esac
-}
->>>>>>> A04-control-flow-int
 
 -- The evaluator itself: takes a state and an expression,
 -- returns integer value
@@ -33,15 +13,29 @@ public fun binopOp (str, x, y) {
 --        Const (int)                |
 --        Binop (string, expr, expr)
 
+public fun evalOp (op, expr1, expr2) {
+	case op of
+		"+" -> expr1 + expr2 |
+		"-" -> expr1 - expr2 |
+		"*" -> expr1 * expr2 |
+		"/" -> expr1 / expr2 |
+		"%" -> expr1 % expr2 |
+		"==" -> expr1 == expr2 |
+		"!=" -> expr1 != expr2 |
+		"<" -> expr1 < expr2 |
+		"<=" -> expr1 <= expr2 |
+		">" -> expr1 > expr2 |
+		">=" -> expr1 >= expr2 |
+		"&&" -> expr1 && expr2 |
+		"!!" -> expr1 !! expr2 
+	esac
+}
+
+
 public fun evalExpr (st, expr) {
-<<<<<<< HEAD
-  failure ("evalExpr not implemented\n")
+  	case expr of 
+  	   Var   (x)  -> st(x)           |
+       Const (n)  ->  n              |  
+       Binop (op, expr1, expr2) -> evalOp(op, evalExpr(st, expr1), evalExpr(st, expr2))
+    esac
 }
-=======
-  case expr of 
-      Var (x)              -> st (x)
-    | Const (x)            -> x
-    | Binop (op,  s1, s2)  -> binopOp (op, evalExpr (st, s1), evalExpr (st, s2))
-  esac
-}
->>>>>>> A04-control-flow-int

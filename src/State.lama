@@ -2,12 +2,7 @@
 
 -- Empty state (undefined everywhere)
 public fun emptyState (x) {
-<<<<<<< HEAD
-  0
-  --failure ("undefined variable ""%s""\n", x)
-=======
   failure ("undefined variable ""%s""\n", x)
->>>>>>> A04-control-flow-int
 }
 
 -- Putting a binding into a state
